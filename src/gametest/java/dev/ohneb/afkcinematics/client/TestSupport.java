@@ -3,8 +3,10 @@ package dev.ohneb.afkcinematics.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.ohneb.afkcinematics.core.CinematicConfig;
 import dev.ohneb.afkcinematics.testmixin.KeyboardInvoker;
+import dev.ohneb.afkcinematics.testmixin.MouseInvoker;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -50,6 +52,17 @@ public final class TestSupport {
     }
 
     public static InputConstants.Key keyboardKey(int key) { return InputConstants.getKey(new KeyEvent(key, 0, 0)); }
+
+    public static void mouse(ClientGameTestContext context, int button, int action) {
+        context.runOnClient(client -> ((MouseInvoker)client.mouseHandler).press(AfkCinematics.window(), new MouseButtonInfo(button, 0), action));
+    }
+
+    public static long screenshots(Minecraft client) {
+        var path = client.gameDirectory.toPath().resolve("screenshots");
+        if (!java.nio.file.Files.isDirectory(path)) return 0;
+        try (var files = java.nio.file.Files.list(path)) { return files.filter(file -> file.toString().endsWith(".png")).count(); }
+        catch (java.io.IOException exception) { throw new AssertionError(exception); }
+    }
 
     public static Camera camera(Minecraft client) {
         //? if >=26.1 {

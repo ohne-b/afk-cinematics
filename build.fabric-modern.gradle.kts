@@ -28,7 +28,7 @@ java {
 
 sourceSets.main { java.exclude("**/NeoForgeClient.java") }
 
-if (minecraftVersion == "26.3") {
+if (minecraftVersion == "26.2" || minecraftVersion == "26.3") {
     fabricApi {
         configureTests {
             createSourceSet = true

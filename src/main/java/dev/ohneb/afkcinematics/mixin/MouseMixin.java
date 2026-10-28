@@ -3,6 +3,9 @@ package dev.ohneb.afkcinematics.mixin;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.ohneb.afkcinematics.client.AfkCinematics;
 import net.minecraft.client.MouseHandler;
+//? if >=26.2 {
+/*import net.minecraft.client.Minecraft;
+*///?}
 //? if >=1.21.9 {
 import net.minecraft.client.input.MouseButtonInfo;
 //?}
@@ -26,7 +29,13 @@ public abstract class MouseMixin {
     /*@Inject(method = "onPress", at = @At("HEAD"), cancellable = true)
     private void afkCinematics$button(long window, int code, int action, int modifiers, CallbackInfo ci) {
     *///?}
-        if (window == AfkCinematics.window() && AfkCinematics.input(InputConstants.Type.MOUSE.getOrCreate(code), action, false)) ci.cancel();
+        InputConstants.Key key = InputConstants.Type.MOUSE.getOrCreate(code);
+        //? if >=26.2 {
+        /*boolean screenshot = AfkCinematics.matches(Minecraft.getInstance().options.keyScreenshot, key);
+        *///?} else {
+        boolean screenshot = false;
+        //?}
+        if (window == AfkCinematics.window() && AfkCinematics.input(key, action, screenshot)) ci.cancel();
     }
 
     @Inject(method = "onMove", at = @At("HEAD"))

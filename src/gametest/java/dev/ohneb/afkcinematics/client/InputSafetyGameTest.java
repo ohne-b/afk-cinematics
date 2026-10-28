@@ -96,6 +96,36 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
                 });
             }
 
+            //? if >=26.2 {
+            /*for (int button : new int[]{InputConstants.MOUSE_BUTTON_LEFT, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.MOUSE_BUTTON_4}) {
+                var screenshotCount = new java.util.concurrent.atomic.AtomicLong();
+                context.runOnClient(client -> {
+                    screenshotCount.set(screenshots(client));
+                    client.options.keyScreenshot.setKey(InputConstants.Type.MOUSE.getOrCreate(button));
+                    KeyMapping.resetMapping();
+                });
+                try {
+                    start(context);
+                    mouse(context, button, InputConstants.PRESS);
+                    context.waitFor(client -> screenshots(client) > screenshotCount.get(), 120);
+                    context.runOnClient(client -> {
+                        require(AfkCinematics.showing(), "Mouse screenshot stopped the cinematic");
+                        require(!client.options.keyAttack.isDown() && !client.options.keyAttack.consumeClick(),
+                            "Mouse screenshot activated a shared Attack binding");
+                        require(!client.options.keyUse.isDown() && !client.options.keyUse.consumeClick(),
+                            "Mouse screenshot activated a shared Use binding");
+                    });
+                    mouse(context, button, InputConstants.RELEASE);
+                    context.runOnClient(client -> AfkCinematics.stop());
+                } finally {
+                    context.runOnClient(client -> {
+                        client.options.keyScreenshot.setKey(previousScreenshot.get());
+                        KeyMapping.resetMapping();
+                    });
+                }
+            }
+            *///?}
+
             start(context);
             key(context, InputConstants.KEY_Q, InputConstants.PRESS);
             context.runOnClient(client -> focused = false);

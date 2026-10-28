@@ -39,8 +39,9 @@ commands, tested revisions, results and limitations. Compilation is not gameplay
 evidence. Do not count pending checks as passes or repeat valid checks unnecessarily.
 Run `git diff --check` and check metadata, commands and documentation links.
 
-Client game tests run with `:1.21.11-fabric:runClientGameTest` or
-`:26.3-fabric:runClientGameTest`. They create isolated worlds under `build/run/`.
+Client game tests run with `:1.21.11-fabric:runClientGameTest`,
+`:26.2-fabric:runClientGameTest` or `:26.3-fabric:runClientGameTest`.
+They create isolated worlds under `build/run/`.
 On 1.21.11, `-PcompatTest` adds pinned Sodium, Iris, Dynamic FPS and Mod Menu versions.
 Shader packs are a separate local check; CI runs that profile without a shader pack.
 `-PsmokeTest` makes `runClient` check startup and settings, then exit. Its optional
