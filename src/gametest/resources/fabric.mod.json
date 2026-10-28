@@ -8,7 +8,8 @@
   "entrypoints": {
     "fabric-client-gametest": [
       "dev.ohneb.afkcinematics.client.CameraGameTest",
-      "dev.ohneb.afkcinematics.client.InputSafetyGameTest"
+      "dev.ohneb.afkcinematics.client.InputSafetyGameTest",
+      "dev.ohneb.afkcinematics.client.WorldGeometryGameTest"
     ]
   }
 }

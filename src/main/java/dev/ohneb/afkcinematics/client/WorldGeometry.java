@@ -28,13 +28,16 @@ public final class WorldGeometry implements Geometry {
             AABB box = new AABB(vector(previous), vector(next)).inflate(RADIUS);
             if (!level.getWorldBorder().isWithinBounds(box)) return false;
             var volume = Shapes.create(box);
-            for (BlockPos block : BlockPos.betweenClosed(BlockPos.containing(box.minX, box.minY, box.minZ),
-                    BlockPos.containing(box.maxX, box.maxY, box.maxZ))) {
+            // Moving pistons and other shapes can extend beyond their owning block.
+            for (BlockPos block : BlockPos.betweenClosed(BlockPos.containing(box.minX, box.minY, box.minZ).offset(-1, -1, -1),
+                    BlockPos.containing(box.maxX, box.maxY, box.maxZ).offset(1, 1, 1))) {
                 if (!level.hasChunkAt(block)) return false;
                 var state = level.getBlockState(block);
                 var shape = state.getVisualShape(level, block, CollisionContext.empty());
                 if (!shape.isEmpty() && Shapes.joinIsNotEmpty(volume, shape.move(block.getX(), block.getY(), block.getZ()), BooleanOp.AND)) return false;
-                if (!state.getFluidState().isEmpty()) return false;
+                var fluid = state.getFluidState();
+                if (!fluid.isEmpty() && Shapes.joinIsNotEmpty(volume,
+                    fluid.getShape(level, block).move(block.getX(), block.getY(), block.getZ()), BooleanOp.AND)) return false;
             }
             previous = next;
         }
