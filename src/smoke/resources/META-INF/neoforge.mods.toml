@@ -1,0 +1,15 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+
+[[mods]]
+modId="ohneb_afk_cinematics_smoke"
+version="1.0.0"
+displayName="AFK Cinematics startup tests"
+
+[[dependencies.ohneb_afk_cinematics_smoke]]
+modId="ohneb_afk_cinematics"
+type="required"
+versionRange="[0,)"
+ordering="AFTER"
+side="CLIENT"

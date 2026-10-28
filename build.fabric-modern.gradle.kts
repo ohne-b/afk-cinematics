@@ -29,6 +29,18 @@ java {
 sourceSets.main { java.exclude("**/NeoForgeClient.java") }
 
 
+if (providers.gradleProperty("smokeTest").isPresent) {
+    apply(from = rootProject.file("gradle/smoke.gradle.kts"))
+    loom.mods {
+        register("ohneb_afk_cinematics") { sourceSet(sourceSets.main.get()) }
+        register("ohneb_afk_cinematics_smoke") { sourceSet(sourceSets["smoke"]) }
+    }
+    loom.runs.named("client") {
+        source(sourceSets["smoke"])
+        vmArg("-Dafkcinematics.smoke.result=${rootProject.file("artifacts/smoke-${project.name}.txt").absolutePath}")
+    }
+}
+
 stonecutter {
     for ((old, currentName) in listOf(
         "ClickType" to "ContainerInput", "handleInventoryMouseClick" to "handleContainerInput",

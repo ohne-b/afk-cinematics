@@ -30,6 +30,41 @@ java {
 sourceSets.main { java.exclude("**/NeoForgeClient.java") }
 
 
+if (providers.gradleProperty("smokeTest").isPresent) {
+    apply(from = rootProject.file("gradle/smoke.gradle.kts"))
+    loom.mods {
+        register("ohneb_afk_cinematics") { sourceSet(sourceSets.main.get()) }
+        register("ohneb_afk_cinematics_smoke") { sourceSet(sourceSets["smoke"]) }
+    }
+    loom.runs.named("client") {
+        source(sourceSets["smoke"])
+        vmArg("-Dafkcinematics.smoke.result=${rootProject.file("artifacts/smoke-${project.name}.txt").absolutePath}")
+    }
+}
+
+
+if (minecraftVersion == "1.21.11") {
+    fabricApi {
+        configureTests {
+            createSourceSet = true
+            modId = "ohneb_afk_cinematics_tests"
+            enableGameTests = false
+            enableClientGameTests = true
+            clearRunDirectory = false
+            username = "CinematicTest"
+        }
+    }
+    sourceSets.named("gametest") {
+        java.setSrcDirs(listOf(rootProject.file("src/gametest/java")))
+        resources.setSrcDirs(listOf(rootProject.file("src/gametest/resources")))
+    }
+    loom.runs.named("clientGameTest") {
+        vmArg("-Dafkcinematics.test.artifacts=${rootProject.file("artifacts").absolutePath}")
+        // Use real packet timing; Fabric's packet synchronizer can stall world startup.
+        vmArg("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
+    }
+}
+
 stonecutter {
     replacements.string {
         direction = eval(current.version, ">1.21.10")

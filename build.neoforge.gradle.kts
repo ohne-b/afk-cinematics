@@ -38,6 +38,14 @@ neoForge {
 sourceSets.main { java.exclude("**/FabricClient.java", "**/ModMenuIntegration.java") }
 
 
+if (providers.gradleProperty("smokeTest").isPresent) {
+    apply(from = rootProject.file("gradle/smoke.gradle.kts"))
+    neoForge.mods { register("ohneb_afk_cinematics_smoke") { sourceSet(sourceSets["smoke"]) } }
+    neoForge.runs.named("client") {
+        systemProperty("afkcinematics.smoke.result", rootProject.file("artifacts/smoke-${project.name}.txt").absolutePath)
+    }
+}
+
 stonecutter {
     replacements.string {
         direction = eval(current.version, ">1.21.10")
