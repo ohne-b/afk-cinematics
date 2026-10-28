@@ -4,11 +4,15 @@ import dev.ohneb.afkcinematics.client.AfkCinematics;
 import dev.ohneb.afkcinematics.core.Pose;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-//? if >=26.2 {
+//? if >=26.1 {
 /*import net.minecraft.client.DeltaTracker;
 *///?} else {
 import net.minecraft.world.entity.Entity;
+//? if >1.21.10 {
 import net.minecraft.world.level.Level;
+//?} else {
+/*import net.minecraft.world.level.BlockGetter;
+*///?}
 //?}
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -22,7 +26,7 @@ public abstract class CameraMixin {
     @Shadow protected abstract void setRotation(float yaw, float pitch);
     @Shadow private boolean detached;
 
-    //? if >=26.2 {
+    //? if >=26.1 {
     /*@Inject(method = "update", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;alignWithEntity(F)V", shift = At.Shift.AFTER))
     private void afkCinematics$camera(DeltaTracker delta, CallbackInfo ci) {
         boolean wasShowing = AfkCinematics.showing();
@@ -30,7 +34,11 @@ public abstract class CameraMixin {
     }
     *///?} else {
     @Inject(method = "setup", at = @At("RETURN"))
+    //? if >1.21.10 {
     private void afkCinematics$camera(Level level, Entity entity, boolean detached, boolean mirrored, float delta, CallbackInfo ci) {
+    //?} else {
+    /*private void afkCinematics$camera(BlockGetter level, Entity entity, boolean detached, boolean mirrored, float delta, CallbackInfo ci) {
+    *///?}
         boolean wasShowing = AfkCinematics.showing();
         if (!apply() && wasShowing && !AfkCinematics.showing()) {
             var type = Minecraft.getInstance().options.getCameraType();

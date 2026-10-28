@@ -56,7 +56,7 @@ public final class AfkCinematics {
         }
         if (!store.readable()) LOGGER.warn(store.error());
         IDLE.reset(System.nanoTime());
-        focused = Minecraft.getInstance().isWindowActive();
+        focused = false;
     }
 
     public static CinematicConfig config() { return store.config(); }
@@ -149,7 +149,11 @@ public final class AfkCinematics {
 
     public static Pose cameraFrame(Camera camera) {
         if (session == null) {
+            //? if >1.21.10 {
             vanillaPose = new Pose(WorldGeometry.point(camera.position()), camera.yRot(), camera.xRot());
+            //?} else {
+            /*vanillaPose = new Pose(WorldGeometry.point(camera.getPosition()), camera.getYRot(), camera.getXRot());
+            *///?}
             return null;
         }
         if (!eligible() || player.position().distanceToSqr(anchor) > 0.0001) { stop(); return null; }

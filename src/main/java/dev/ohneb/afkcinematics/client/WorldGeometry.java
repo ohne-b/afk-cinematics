@@ -50,7 +50,7 @@ public final class WorldGeometry implements Geometry {
             if (!level.hasChunkAt(BlockPos.containing(point.x(), point.y(), point.z()))) return false;
         }
         return level.clip(new ClipContext(vector(camera), vector(subject), ClipContext.Block.VISUAL,
-            ClipContext.Fluid.ANY, CollisionContext.empty())).getType() == HitResult.Type.MISS;
+            ClipContext.Fluid.ANY, net.minecraft.client.Minecraft.getInstance().player)).getType() == HitResult.Type.MISS;
     }
 
     public static Vec3 vector(Vec point) { return new Vec3(point.x(), point.y(), point.z()); }
