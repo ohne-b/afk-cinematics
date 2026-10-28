@@ -1,0 +1,11 @@
+name: Feature request
+description: Suggest a change to AFK Cinematics.
+title: "feat: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would this improve?
+      description: Describe the situation and the behaviour you would like.
+    validations:
+      required: true

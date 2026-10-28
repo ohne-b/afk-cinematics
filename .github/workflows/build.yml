@@ -1,0 +1,127 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@0b6dd653ba04f4f93bf581ec31e66cbd7dcb644d # v4
+      - run: ./gradlew :core:test --console=plain
+        env:
+          JDK21: ${{ env.JAVA_HOME_21_X64 }}
+          JDK25: ${{ env.JAVA_HOME_25_X64 }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: core-tests
+          path: core/build/reports/
+
+  targets:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.targets.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - id: targets
+        shell: python
+        run: |
+          import json
+          import os
+          from pathlib import Path
+          targets = sorted(path.name for path in Path("versions").iterdir() if path.is_dir())
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("matrix=" + json.dumps({"target": targets}) + "\n")
+
+  build:
+    needs: targets
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.targets.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@0b6dd653ba04f4f93bf581ec31e66cbd7dcb644d # v4
+      - run: ./gradlew ":${BUILD_TARGET}:build" --console=plain
+        env:
+          BUILD_TARGET: ${{ matrix.target }}
+          JDK21: ${{ env.JAVA_HOME_21_X64 }}
+          JDK25: ${{ env.JAVA_HOME_25_X64 }}
+      - name: Install SDL rendering libraries
+        if: startsWith(matrix.target, '26.3-')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libegl1 libegl-mesa0
+      - name: Check startup and settings
+        timeout-minutes: 10
+        env:
+          SDL_VIDEO_FORCE_EGL: '1'
+          BUILD_TARGET: ${{ matrix.target }}
+          JDK21: ${{ env.JAVA_HOME_21_X64 }}
+          JDK25: ${{ env.JAVA_HOME_25_X64 }}
+        run: |
+          xvfb-run -a ./gradlew ":${BUILD_TARGET}:runClient" -PsmokeTest --console=plain
+          test -f "artifacts/smoke-${BUILD_TARGET}.txt"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: afk-cinematics-${{ matrix.target }}
+          path: versions/${{ matrix.target }}/build/libs/*.jar
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: reports-${{ matrix.target }}
+          path: |
+            versions/${{ matrix.target }}/build/reports/
+            versions/${{ matrix.target }}/run/logs/
+
+  game-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@0b6dd653ba04f4f93bf581ec31e66cbd7dcb644d # v4
+      - name: Exercise cinematics in an isolated world
+        timeout-minutes: 15
+        env:
+          JDK21: ${{ env.JAVA_HOME_21_X64 }}
+          JDK25: ${{ env.JAVA_HOME_25_X64 }}
+        run: xvfb-run -a ./gradlew :1.21.11-fabric:runClientGameTest --console=plain
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: game-tests
+          path: |
+            artifacts/*.png
+            versions/1.21.11-fabric/build/run/clientGameTest/logs/
+            versions/1.21.11-fabric/build/run/clientGameTest/crash-reports/
