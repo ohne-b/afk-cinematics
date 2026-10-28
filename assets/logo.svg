@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1074" height="930" viewBox="90 160 1074 930" fill="none">
+<title>Character scan — centered geometric figure</title>
+<desc>Editable vector scan logo with a centered, faceted block character with balanced head, torso, and leg proportions, cyan scan brackets and rotation arrow. Transparent background.</desc>
+<defs><linearGradient id="Cyan" x1="627" y1="193" x2="627" y2="1059" gradientUnits="userSpaceOnUse"><stop stop-color="#02DEE2"/><stop offset="1" stop-color="#00CBD3"/></linearGradient><mask id="Arrow-clearance" maskUnits="userSpaceOnUse" x="0" y="0" width="1254" height="1254"><rect width="1254" height="1254" fill="#fff"/><path d="M378 472 Q378 465 371 468 C218 511 122 579 122 660 C122 774 347 864 628 864 C759 864 878 844 960 805 L968 842 Q971 862 985 850 L1060 718 Q1068 704 1050 702 L932 688 Q909 686 916 704 L944 744 C861 778 746 796 628 796 C389 796 192 728 192 640 C192 580 268 530 378 498 Z" fill="#000" stroke="#000" stroke-width="24" stroke-linejoin="round"/></mask></defs>
+<g id="Scan-corners" fill="none" stroke="url(#Cyan)" stroke-width="54" stroke-linecap="round" stroke-linejoin="round">
+<path id="Top-left-corner" d="M342 220 H224 Q197 220 197 247 V362"/>
+<path id="Top-right-corner" d="M912 220 H1030 Q1057 220 1057 247 V362"/>
+<path id="Bottom-left-corner" d="M342 1032 H224 Q197 1032 197 1005 V890"/>
+<path id="Bottom-right-corner" d="M912 1032 H1030 Q1057 1032 1057 1005 V890"/>
+</g>
+<path transform="translate(0 -40)" id="Orbit-rear" mask="url(#Arrow-clearance)" fill="url(#Cyan)" d="M878 472 Q878 465 885 468 C1038 511 1132 579 1132 660 C1132 703 1103 744 1053 777 Q1049 780 1045 775 L1014 735 C1046 706 1062 674 1062 640 C1062 580 988 530 878 498 Z"/>
+<g id="Minecraft-character">
+<g id="Legs">
+<path id="Left-leg" fill="#1C232C" d="M 490.2 830 L 616.2 838 V 1054 L 490.2 984 Z"/>
+<path id="Right-leg" fill="#1A2029" d="M 637.8 838 L 763.8 830 V 984 L 637.8 1054 Z"/>
+</g>
+<g id="Torso">
+<path id="Torso-base" fill="#1C232C" d="M 504.6 494 L 627 562 L 749.4 494 L 789 516 V 734 Q 627 762 465 734 V 516 Z"/>
+<path id="Torso-right-shade" fill="#1A2029" d="M 627 562 L 749.4 494 L 789 516 V 734 Q 708 748 627 748 Z"/>
+</g>
+<g id="Arms">
+<path id="Left-shoulder" fill="#252D37" d="M 441.6 450 L 488.4 476 L 441.6 502 L 394.8 476 Z"/>
+<path id="Right-shoulder" fill="#252D37" d="M 812.4 450 L 859.2 476 L 812.4 502 L 765.6 476 Z"/>
+<path id="Left-arm" fill="#1C232C" d="M 385.8 498 L 450.6 534 V 732 L 385.8 696 Z"/>
+<path id="Right-arm" fill="#1A2029" d="M 803.4 534 L 868.2 498 V 696 L 803.4 732 Z"/>
+</g>
+<g id="Head">
+<path id="Head-top" fill="#222A34" d="M 627 210 L 771 282 L 627 354 L 483 282 Z"/>
+<path id="Head-left" fill="#1C232C" d="M 473.4 299.6 L 617.4 371.6 V 522 L 473.4 450 Z"/>
+<path id="Head-right" fill="#1A2029" d="M 636.6 371.6 L 780.6 299.6 V 450 L 636.6 522 Z"/>
+</g>
+</g>
+<path transform="translate(0 -40)" id="Orbit-arrow" fill="url(#Cyan)" d="M378 472 Q378 465 371 468 C218 511 122 579 122 660 C122 774 347 864 628 864 C759 864 878 844 960 805 L968 842 Q971 862 985 850 L1060 718 Q1068 704 1050 702 L932 688 Q909 686 916 704 L944 744 C861 778 746 796 628 796 C389 796 192 728 192 640 C192 580 268 530 378 498 Z"/>
+</svg>

@@ -3,6 +3,7 @@
   "id": "ohneb_afk_cinematics",
   "version": "${version}",
   "name": "AFK Cinematics",
+  "icon": "assets/ohneb_afk_cinematics/icon.png",
   "description": "Calm camera shots while you take a break.",
   "authors": ["ohne-b"],
   "license": "MIT",
