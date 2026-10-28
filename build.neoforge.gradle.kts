@@ -65,7 +65,8 @@ tasks.processResources {
     inputs.property("minecraft", minecraftVersion)
     inputs.property("neoforge", neoForgeVersion)
     filesMatching("META-INF/neoforge.mods.toml") {
-        expand("version" to project.version, "minecraft" to minecraftVersion, "neoforge" to neoForgeVersion)
+        expand("version" to project.version, "minecraft" to minecraftVersion, "neoforge" to neoForgeVersion,
+            "logo_key" to if (stonecutter.eval(minecraftVersion, ">=26.2")) "iconFile" else "logoFile")
     }
     exclude("fabric.mod.json")
 }
