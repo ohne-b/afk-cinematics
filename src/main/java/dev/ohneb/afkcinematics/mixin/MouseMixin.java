@@ -28,9 +28,12 @@ public abstract class MouseMixin {
     @Shadow private boolean ignoreFirstMove;
     @Shadow private double xpos;
     @Shadow private double ypos;
+    //? if <1.21.9 {
+    /*@Shadow private int fakeRightMouse;
+    *///?}
     @Unique private final Map<Integer, Integer> afkCinematics$physicalButtons = new HashMap<>();
 
-    // Control-click must be normalized by vanilla before choosing the suppressed binding.
+    // Resolve the effective button before touchscreen filtering can discard a release.
     //? if >=26.3 {
     /*@Inject(method = "onButton", at = @At("HEAD"), cancellable = true)
     private void afkCinematics$button(long window, MouseButtonInfo button, int action, CallbackInfo ci) {
@@ -45,10 +48,13 @@ public abstract class MouseMixin {
         int code = button.button();
         int physicalCode = raw.button();
     //?} else {
-    /*@Inject(method = "onPress", at = @At(value = "INVOKE",
-        target = "Lnet/minecraft/client/Minecraft;getOverlay()Lnet/minecraft/client/gui/screens/Overlay;", ordinal = 0), cancellable = true)
+    /*@Inject(method = "onPress", at = @At("HEAD"), cancellable = true)
     private void afkCinematics$button(long window, int code, int action, int modifiers, CallbackInfo ci) {
         int physicalCode = code;
+        // Legacy vanilla normalizes inline; inspect its state without changing its counter.
+        if (Minecraft.ON_OSX && code == InputConstants.MOUSE_BUTTON_LEFT
+            && (action == InputConstants.PRESS && (modifiers & 2) != 0 || action == InputConstants.RELEASE && fakeRightMouse > 0))
+            code = InputConstants.MOUSE_BUTTON_RIGHT;
     *///?}
         if (window != AfkCinematics.window()) return;
         code = afkCinematics$physicalButtons.getOrDefault(physicalCode, code);

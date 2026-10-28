@@ -170,6 +170,16 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
                         "Synthetic focus release lost the physical Control-click association");
                     require(!client.options.keyUse.isDown(), "Use stayed down after refocused Control-click release");
                 });
+                key(context, InputConstants.KEY_LCONTROL, InputConstants.PRESS);
+                context.waitFor(client -> AfkCinematics.showing(), 120);
+                mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS, 2);
+                mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS, 2);
+                mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE);
+                context.runOnClient(client -> require(AfkCinematics.suppressed(
+                    InputConstants.Type.MOUSE.getOrCreate(InputConstants.MOUSE_BUTTON_RIGHT)),
+                    "Releasing Control-click forgot the still-held physical RIGHT button"));
+                key(context, InputConstants.KEY_LCONTROL, InputConstants.RELEASE);
+                mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.RELEASE);
                 start(context);
                 context.runOnClient(client -> AfkCinematics.stop());
             } finally {

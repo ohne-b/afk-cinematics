@@ -60,7 +60,7 @@ if (providers.gradleProperty("smokeTest").isPresent) {
 }
 
 
-if (minecraftVersion == "1.21.11") {
+if (minecraftVersion == "1.21.11" || minecraftVersion == "1.21.8") {
     fabricApi {
         configureTests {
             createSourceSet = true
@@ -72,6 +72,10 @@ if (minecraftVersion == "1.21.11") {
         }
     }
     stonecutter.tasks.configureSource(sourceSets["gametest"])
+    if (minecraftVersion == "1.21.8") {
+        sourceSets["gametest"].java.setSrcDirs(listOf(rootProject.file("src/legacytest/java")))
+        sourceSets["gametest"].resources.setSrcDirs(listOf(rootProject.file("src/legacytest/resources")))
+    }
     loom.runs.named("clientGameTest") {
         vmArg("-Dafkcinematics.test.artifacts=${rootProject.file("artifacts/gametest-${project.name}").absolutePath}")
         // Use real packet timing; Fabric's packet synchronizer can stall world startup.

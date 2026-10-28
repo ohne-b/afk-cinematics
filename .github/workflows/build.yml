@@ -110,6 +110,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - target: 1.21.8-fabric
+            profile: legacy-input
           - target: 1.21.11-fabric
             profile: vanilla
           - target: 1.21.11-fabric
