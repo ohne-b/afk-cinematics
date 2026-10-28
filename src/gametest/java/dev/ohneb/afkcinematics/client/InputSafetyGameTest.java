@@ -157,6 +157,21 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
                 mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS);
                 context.runOnClient(client -> require(client.options.keyUse.isDown(), "A fresh right-click was suppressed"));
                 mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.RELEASE);
+                key(context, InputConstants.KEY_LCONTROL, InputConstants.PRESS);
+                context.waitFor(client -> AfkCinematics.showing(), 120);
+                mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS, 2);
+                context.runOnClient(client -> focused = false);
+                mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE);
+                context.runOnClient(client -> focused = true);
+                key(context, InputConstants.KEY_LCONTROL, InputConstants.RELEASE);
+                mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE);
+                context.runOnClient(client -> {
+                    require(!AfkCinematics.suppressed(InputConstants.Type.MOUSE.getOrCreate(InputConstants.MOUSE_BUTTON_RIGHT)),
+                        "Synthetic focus release lost the physical Control-click association");
+                    require(!client.options.keyUse.isDown(), "Use stayed down after refocused Control-click release");
+                });
+                start(context);
+                context.runOnClient(client -> AfkCinematics.stop());
             } finally {
                 mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE);
                 key(context, InputConstants.KEY_LCONTROL, InputConstants.RELEASE);
