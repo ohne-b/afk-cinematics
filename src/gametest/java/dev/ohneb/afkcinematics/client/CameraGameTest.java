@@ -55,7 +55,7 @@ public final class CameraGameTest implements FabricClientGameTest {
             context.waitTicks(50);
             context.runOnClient(client -> {
                 require(AfkCinematics.showing(), "Cinematic stopped without activity");
-                require(client.gameRenderer.getMainCamera().position().distanceTo(client.player.getEyePosition()) > 1,
+                require(camera(client).position().distanceTo(client.player.getEyePosition()) > 1,
                     "Camera did not leave the player's eyes");
                 require(client.player.getYRot() == rotation.get().x && client.player.getXRot() == rotation.get().y,
                     "Cinematic rotated the player");
@@ -90,14 +90,14 @@ public final class CameraGameTest implements FabricClientGameTest {
             });
             key(context, InputConstants.KEY_W, InputConstants.RELEASE);
             start(context);
-            context.runOnClient(client -> client.setScreen(new InventoryScreen(client.player)));
+            context.runOnClient(client -> AfkCinematics.showScreen(new InventoryScreen(client.player)));
             context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Opening inventory left the cinematic active"));
-            context.runOnClient(client -> client.setScreen(null));
+            context.runOnClient(client -> AfkCinematics.showScreen(null));
 
             start(context);
             context.waitTicks(40);
             var obstacle = new AtomicReference<BlockPos>();
-            context.runOnClient(client -> obstacle.set(BlockPos.containing(client.gameRenderer.getMainCamera().position())));
+            context.runOnClient(client -> obstacle.set(BlockPos.containing(camera(client).position())));
             world.getServer().runOnServer(server -> server.getPlayerList().getPlayers().getFirst().level()
                 .setBlockAndUpdate(obstacle.get(), Blocks.STONE.defaultBlockState()));
             context.waitFor(client -> !AfkCinematics.ownsCamera());
@@ -116,7 +116,7 @@ public final class CameraGameTest implements FabricClientGameTest {
             context.waitForScreen(SettingsScreen.class);
             screenshot(context, "settings");
             context.runOnClient(client -> {
-                client.setScreen(null);
+                AfkCinematics.showScreen(null);
                 AfkCinematics.config().automatic = true;
                 AfkCinematics.config().idleSeconds = 10;
             });
@@ -150,7 +150,11 @@ public final class CameraGameTest implements FabricClientGameTest {
                 reload.set(client.reloadResourcePacks());
                 require(!AfkCinematics.ownsCamera(), "Resource reload did not release the camera");
             });
+            //? if >=26.2 {
+            /*context.waitFor(client -> reload.get().isDone() && client.gui.overlay() == null, 400);
+            *///?} else {
             context.waitFor(client -> reload.get().isDone() && client.getOverlay() == null, 400);
+            //?}
 
             context.runOnClient(client -> {
                 client.options.getSoundSourceOptionInstance(SoundSource.MASTER).set(0.1);
@@ -161,13 +165,13 @@ public final class CameraGameTest implements FabricClientGameTest {
             });
             start(context);
             context.waitFor(client -> CinematicMusic.manages(), 80);
-            context.runOnClient(client -> client.setScreen(new PauseScreen(true)));
+            context.runOnClient(client -> AfkCinematics.showScreen(new PauseScreen(true)));
             context.waitFor(client -> client.isPaused(), 40);
             context.waitFor(client -> !CinematicMusic.manages(), 80);
             context.runOnClient(client -> {
                 require(((MusicManagerAccess)client.getMusicManager()).afkCinematics$current() == null,
                     "Paused cinematic retained its music instance");
-                client.setScreen(null);
+                AfkCinematics.showScreen(null);
                 AfkCinematics.config().music = false;
             });
         }

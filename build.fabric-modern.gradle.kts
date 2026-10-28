@@ -28,6 +28,24 @@ java {
 
 sourceSets.main { java.exclude("**/NeoForgeClient.java") }
 
+if (minecraftVersion == "26.3") {
+    fabricApi {
+        configureTests {
+            createSourceSet = true
+            modId = "ohneb_afk_cinematics_tests"
+            enableGameTests = false
+            enableClientGameTests = true
+            clearRunDirectory = false
+            username = "CinematicTest"
+        }
+    }
+    stonecutter.tasks.configureSource(sourceSets["gametest"])
+    loom.runs.named("clientGameTest") {
+        vmArg("-Dafkcinematics.test.artifacts=${rootProject.file("artifacts/gametest-${project.name}").absolutePath}")
+        vmArg("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
+    }
+}
+
 
 if (providers.gradleProperty("smokeTest").isPresent) {
     apply(from = rootProject.file("gradle/smoke.gradle.kts"))
@@ -43,16 +61,13 @@ if (providers.gradleProperty("smokeTest").isPresent) {
 
 stonecutter {
     for ((old, currentName) in listOf(
-        "ClickType" to "ContainerInput", "handleInventoryMouseClick" to "handleContainerInput",
         "keybinding.v1.KeyBindingHelper" to "keymapping.v1.KeyMappingHelper",
         "KeyBindingHelper.registerKeyBinding" to "KeyMappingHelper.registerKeyMapping"
     )) replacements.string { replace(old, currentName); direction = true }
     if (eval(current.version, ">=26.1")) {
         for ((old, currentName) in listOf(
             "GuiGraphics" to "GuiGraphicsExtractor", "\"render\"" to "\"extractRenderState\"",
-            "render(" to "extractRenderState(", "drawString" to "text", "drawCenteredString" to "centeredText",
-            "renderWidget" to "extractWidgetRenderState", "renderContents" to "extractContents",
-            "renderItemDecorations" to "itemDecorations", "renderItem(" to "item("
+            "render(" to "extractRenderState(", "drawString" to "text", "drawCenteredString" to "centeredText"
         )) replacements.string { replace(old, currentName); direction = true }
     }
 }

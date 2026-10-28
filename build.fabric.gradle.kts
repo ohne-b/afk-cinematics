@@ -11,6 +11,12 @@ repositories {
         forRepository { maven("https://api.modrinth.com/maven") }
         filter { includeGroup("maven.modrinth") }
     }
+    if (providers.gradleProperty("compatTest").isPresent) {
+        exclusiveContent {
+            forRepository { maven("https://maven.lostluma.net/releases") }
+            filter { includeGroup("net.lostluma") }
+        }
+    }
 }
 
 dependencies {
@@ -20,6 +26,17 @@ dependencies {
     modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api")}")
     modCompileOnly("maven.modrinth:modmenu:${property("modmenu_version")}")
     implementation(project(":core"))
+    if (minecraftVersion == "1.21.11" && providers.gradleProperty("compatTest").isPresent) {
+        modLocalRuntime("maven.modrinth:sodium:rkdTcxoT")
+        modLocalRuntime("maven.modrinth:iris:ka9PDlsN")
+        modLocalRuntime("maven.modrinth:dynamic-fps:Fab7e5Th")
+        // Loom development runs do not load these mods' nested libraries.
+        runtimeOnly("net.lostluma:battery:2.0.0")
+        runtimeOnly("org.antlr:antlr4-runtime:4.13.1")
+        runtimeOnly("io.github.douira:glsl-transformer:3.0.0-pre3")
+        runtimeOnly("org.anarres:jcpp:1.4.14")
+        modLocalRuntime("maven.modrinth:modmenu:${property("modmenu_version")}")
+    }
 }
 
 java {
@@ -54,12 +71,9 @@ if (minecraftVersion == "1.21.11") {
             username = "CinematicTest"
         }
     }
-    sourceSets.named("gametest") {
-        java.setSrcDirs(listOf(rootProject.file("src/gametest/java")))
-        resources.setSrcDirs(listOf(rootProject.file("src/gametest/resources")))
-    }
+    stonecutter.tasks.configureSource(sourceSets["gametest"])
     loom.runs.named("clientGameTest") {
-        vmArg("-Dafkcinematics.test.artifacts=${rootProject.file("artifacts").absolutePath}")
+        vmArg("-Dafkcinematics.test.artifacts=${rootProject.file("artifacts/gametest-${project.name}").absolutePath}")
         // Use real packet timing; Fabric's packet synchronizer can stall world startup.
         vmArg("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
     }

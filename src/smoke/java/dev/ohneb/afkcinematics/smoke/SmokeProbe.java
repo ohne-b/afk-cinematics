@@ -13,6 +13,7 @@ final class SmokeProbe {
     private SmokeProbe() { }
 
     static void tick(String loader) {
+        if (SceneProbe.started()) { SceneProbe.tick(loader); return; }
         if (AfkCinematics.screen() == null || ++ticks < 50) return;
         try {
             if (!opened) {
@@ -25,11 +26,16 @@ final class SmokeProbe {
             } else {
                 if (!(AfkCinematics.screen() instanceof SettingsScreen) || AfkCinematics.ownsCamera())
                     throw new AssertionError("Invalid settings or camera state");
-                Path result = Path.of(System.getProperty("afkcinematics.smoke.result"));
-                Files.createDirectories(result.getParent());
-                Files.writeString(result, "Startup, mixin targets and settings render passed (" + loader + ").\n");
-                Minecraft.getInstance().stop();
+                if (System.getProperty("afkcinematics.smoke.world") != null) SceneProbe.start();
+                else finish("Startup, mixin targets and settings render passed (" + loader + ").");
             }
         } catch (Exception exception) { throw new AssertionError("Startup smoke test failed", exception); }
+    }
+
+    static void finish(String message) throws Exception {
+        Path result = Path.of(System.getProperty("afkcinematics.smoke.result"));
+        Files.createDirectories(result.getParent());
+        Files.writeString(result, message + "\n");
+        Minecraft.getInstance().stop();
     }
 }

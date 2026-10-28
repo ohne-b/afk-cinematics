@@ -43,6 +43,7 @@ if (providers.gradleProperty("smokeTest").isPresent) {
     neoForge.mods { register("ohneb_afk_cinematics_smoke") { sourceSet(sourceSets["smoke"]) } }
     neoForge.runs.named("client") {
         systemProperty("afkcinematics.smoke.result", rootProject.file("artifacts/smoke-${project.name}.txt").absolutePath)
+        providers.gradleProperty("sceneWorld").orNull?.let { systemProperty("afkcinematics.smoke.world", it) }
     }
 }
 
@@ -52,15 +53,9 @@ stonecutter {
         replace("ResourceLocation", "Identifier")
     }
     if (eval(current.version, ">=26.1")) {
-        replacements.string { replace("ClickType", "ContainerInput"); direction = true }
-        replacements.string { replace("handleInventoryMouseClick", "handleContainerInput"); direction = true }
-    }
-    if (eval(current.version, ">=26.1")) {
         for ((old, currentName) in listOf(
             "GuiGraphics" to "GuiGraphicsExtractor", "\"render\"" to "\"extractRenderState\"",
-            "render(" to "extractRenderState(", "drawString" to "text", "drawCenteredString" to "centeredText",
-            "renderWidget" to "extractWidgetRenderState", "renderContents" to "extractContents",
-            "renderItemDecorations" to "itemDecorations", "renderItem(" to "item("
+            "render(" to "extractRenderState(", "drawString" to "text", "drawCenteredString" to "centeredText"
         )) replacements.string { replace(old, currentName); direction = true }
     }
 }
