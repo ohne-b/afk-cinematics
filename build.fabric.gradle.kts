@@ -18,6 +18,7 @@ dependencies {
     mappings(loom.officialMojangMappings())
     modImplementation("net.fabricmc:fabric-loader:${property("fabric_loader")}")
     modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api")}")
+    modCompileOnly("maven.modrinth:modmenu:${property("modmenu_version")}")
     implementation(project(":core"))
 }
 

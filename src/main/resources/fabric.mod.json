@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "ohneb_afk_cinematics",
+  "version": "${version}",
+  "name": "AFK Cinematics",
+  "description": "Calm camera shots while you take a break.",
+  "authors": ["ohne-b"],
+  "license": "MIT",
+  "environment": "client",
+  "contact": {
+    "sources": "https://github.com/ohne-b/afk-cinematics",
+    "issues": "https://github.com/ohne-b/afk-cinematics/issues"
+  },
+  "entrypoints": {
+    "client": ["dev.ohneb.afkcinematics.platform.FabricClient"],
+    "modmenu": ["dev.ohneb.afkcinematics.platform.ModMenuIntegration"]
+  },
+  "mixins": ["ohneb_afk_cinematics.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "fabric-api": "*",
+    "minecraft": "${minecraft}",
+    "java": ">=${java}"
+  },
+  "suggests": {"modmenu": "*"}
+}

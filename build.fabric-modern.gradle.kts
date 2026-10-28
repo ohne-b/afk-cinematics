@@ -17,6 +17,7 @@ dependencies {
     minecraft("com.mojang:minecraft:$minecraftVersion")
     implementation("net.fabricmc:fabric-loader:${property("fabric_loader")}")
     implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api")}")
+    compileOnly("maven.modrinth:modmenu:${property("modmenu_version")}")
     implementation(project(":core"))
 }
 

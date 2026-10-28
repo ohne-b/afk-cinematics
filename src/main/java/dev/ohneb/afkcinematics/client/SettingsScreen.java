@@ -1,0 +1,148 @@
+package dev.ohneb.afkcinematics.client;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import dev.ohneb.afkcinematics.core.CinematicConfig;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractSliderButton;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
+//? if >=1.21.9 {
+import net.minecraft.client.input.KeyEvent;
+//?}
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+
+public final class SettingsScreen extends Screen {
+    private final Screen parent;
+    private int offset;
+    private int maxOffset;
+    private Component error = Component.empty();
+
+    public SettingsScreen(Screen parent) {
+        super(text("settings"));
+        this.parent = parent;
+        AfkCinematics.stop();
+    }
+
+    @Override protected void init() {
+        CinematicConfig config = AfkCinematics.config();
+        int columns = width >= 320 ? 2 : 1;
+        int contentWidth = Math.min(width - 24, 320);
+        int buttonWidth = (contentWidth - (columns - 1) * 6) / columns;
+        int x = (width - contentWidth) / 2;
+        List<AbstractWidget> widgets = new ArrayList<>();
+        widgets.add(toggle("enabled", () -> config.enabled, value -> config.enabled = value));
+        widgets.add(toggle("automatic", () -> config.automatic, value -> config.automatic = value));
+        widgets.add(new AbstractSliderButton(0, 0, buttonWidth, 20, Component.empty(), (config.idleSeconds - 10) / 590.0) {
+            { updateMessage(); }
+            @Override protected void updateMessage() { setMessage(text("delay", (int)Math.round(value * 590) + 10)); }
+            @Override protected void applyValue() { config.idleSeconds = (int)Math.round(value * 590) + 10; }
+        });
+        widgets.getLast().setTooltip(Tooltip.create(text("delay.help")));
+        widgets.add(Button.builder(value("motion", config.motion), button -> {
+            config.motion = CinematicConfig.Motion.values()[(config.motion.ordinal() + 1) % CinematicConfig.Motion.values().length];
+            button.setMessage(value("motion", config.motion));
+        }).build());
+        widgets.add(Button.builder(value("distance", config.distance), button -> {
+            config.distance = CinematicConfig.Distance.values()[(config.distance.ordinal() + 1) % CinematicConfig.Distance.values().length];
+            button.setMessage(value("distance", config.distance));
+        }).build());
+        widgets.add(toggle("hideHud", () -> config.hideHud, value -> config.hideHud = value));
+        widgets.add(toggle("letterbox", () -> config.letterbox, value -> config.letterbox = value));
+        widgets.add(toggle("music", () -> config.music, value -> config.music = value));
+        widgets.add(toggle("unfocused", () -> config.unfocused, value -> config.unfocused = value));
+        int visibleRows = Math.max(1, (height - 80) / 22);
+        maxOffset = Math.max(0, (widgets.size() + columns - 1) / columns - visibleRows);
+        offset = Math.clamp(offset, 0, maxOffset);
+        for (int index = 0; index < widgets.size(); index++) {
+            int row = index / columns - offset;
+            if (row < 0 || row >= visibleRows) continue;
+            AbstractWidget widget = widgets.get(index);
+            widget.setX(x + (index % columns) * (buttonWidth + 6));
+            widget.setY(28 + row * 22);
+            widget.setWidth(buttonWidth);
+            widget.active = AfkCinematics.store().readable();
+            addRenderableWidget(widget);
+        }
+        int half = Math.min(130, (width - 30) / 2);
+        var preview = Button.builder(text("preview"), button -> {
+            if (save()) { AfkCinematics.showScreen(null); AfkCinematics.requestStart(); }
+        }).bounds(width / 2 - half - 3, height - 26, half, 20).build();
+        preview.active = minecraft.level != null && config.enabled && AfkCinematics.conflict().isEmpty() && AfkCinematics.store().readable();
+        preview.setTooltip(Tooltip.create(text("preview.help")));
+        addRenderableWidget(preview);
+        addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> onClose())
+            .bounds(width / 2 + 3, height - 26, half, 20).build());
+    }
+
+    private Button toggle(String key, BooleanSupplier get, Consumer<Boolean> set) {
+        Button button = Button.builder(label(key, get.getAsBoolean() ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF), b -> {
+            set.accept(!get.getAsBoolean());
+            b.setMessage(label(key, get.getAsBoolean() ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF));
+        }).build();
+        button.setTooltip(Tooltip.create(text(key + ".help")));
+        return button;
+    }
+
+    private static Component value(String key, Enum<?> value) { return label(key, text(value.name().toLowerCase(Locale.ROOT))); }
+    private static Component label(String key, Component value) { return Component.translatable("options.generic_value", text(key), value); }
+    private static Component text(String key, Object... values) { return Component.translatable("ohneb_afk_cinematics." + key, values); }
+
+    private boolean save() {
+        if (!AfkCinematics.store().readable()) return true;
+        if (AfkCinematics.store().save()) return true;
+        error = text("save_error");
+        return false;
+    }
+
+    @Override public void onClose() { if (save()) AfkCinematics.showScreen(parent); }
+
+    @Override public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
+        if (maxOffset == 0 || vertical == 0) return super.mouseScrolled(x, y, horizontal, vertical);
+        offset = Math.clamp(offset - (int)Math.signum(vertical), 0, maxOffset);
+        rebuildWidgets();
+        return true;
+    }
+
+    //? if >=1.21.9 {
+    @Override public boolean keyPressed(KeyEvent event) {
+        int key = event.key();
+    //?} else {
+    /*@Override public boolean keyPressed(int key, int scan, int modifiers) {
+    *///?}
+        if (maxOffset > 0 && (key == InputConstants.KEY_PAGEUP || key == InputConstants.KEY_PAGEDOWN)) {
+            offset = Math.clamp(offset + (key == InputConstants.KEY_PAGEUP ? -1 : 1), 0, maxOffset);
+            rebuildWidgets();
+            return true;
+        }
+        //? if >=1.21.9 {
+        return super.keyPressed(event);
+        //?} else {
+        /*return super.keyPressed(key, scan, modifiers);
+        *///?}
+    }
+
+    @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        super.render(graphics, mouseX, mouseY, delta);
+        graphics.drawCenteredString(font, title, width / 2, 10, 0xFFFFFFFF);
+        Component status = error;
+        if (!AfkCinematics.store().readable()) status = text("read_error");
+        else if (!AfkCinematics.conflict().isEmpty()) status = text("conflict", AfkCinematics.conflict());
+        else if (status.getString().isEmpty() && maxOffset > 0) status = text("scroll");
+        if (!status.getString().isEmpty()) {
+            var lines = font.split(status, width - 24);
+            for (int i = 0; i < Math.min(2, lines.size()); i++) {
+                var line = lines.get(i);
+                graphics.drawString(font, line, (width - font.width(line)) / 2, height - 49 + i * 10, 0xFFCCCCCC);
+            }
+        }
+    }
+}
