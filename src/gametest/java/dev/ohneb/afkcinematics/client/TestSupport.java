@@ -17,6 +17,7 @@ import net.minecraft.world.level.block.Blocks;
 public final class TestSupport {
     public static Boolean focused;
     public static int heldKey = -1;
+    public static boolean simulateControlClick;
 
     private TestSupport() { }
 
@@ -54,7 +55,11 @@ public final class TestSupport {
     public static InputConstants.Key keyboardKey(int key) { return InputConstants.getKey(new KeyEvent(key, 0, 0)); }
 
     public static void mouse(ClientGameTestContext context, int button, int action) {
-        context.runOnClient(client -> ((MouseInvoker)client.mouseHandler).press(AfkCinematics.window(), new MouseButtonInfo(button, 0), action));
+        mouse(context, button, action, 0);
+    }
+
+    public static void mouse(ClientGameTestContext context, int button, int action, int modifiers) {
+        context.runOnClient(client -> ((MouseInvoker)client.mouseHandler).press(AfkCinematics.window(), new MouseButtonInfo(button, modifiers), action));
     }
 
     public static long screenshots(Minecraft client) {

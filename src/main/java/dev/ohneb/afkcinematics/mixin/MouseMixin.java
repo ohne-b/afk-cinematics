@@ -1,6 +1,9 @@
 package dev.ohneb.afkcinematics.mixin;
 
 import com.mojang.blaze3d.platform.InputConstants;
+//? if >=1.21.9 && <26.3 {
+import com.mojang.blaze3d.platform.Window;
+//?}
 import dev.ohneb.afkcinematics.client.AfkCinematics;
 import net.minecraft.client.MouseHandler;
 //? if >=26.2 {
@@ -14,6 +17,9 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+//? if >=1.21.9 && <26.3 {
+import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
+//?}
 
 @Mixin(MouseHandler.class)
 public abstract class MouseMixin {
@@ -21,12 +27,21 @@ public abstract class MouseMixin {
     @Shadow private double xpos;
     @Shadow private double ypos;
 
-    //? if >=1.21.9 {
-    @Inject(method = "onButton", at = @At("HEAD"), cancellable = true)
+    // Control-click must be normalized by vanilla before choosing the suppressed binding.
+    //? if >=26.3 {
+    /*@Inject(method = "onButton", at = @At("HEAD"), cancellable = true)
     private void afkCinematics$button(long window, MouseButtonInfo button, int action, CallbackInfo ci) {
         int code = button.button();
+    *///?} else if >=1.21.9 {
+    @Inject(method = "onButton", at = @At(value = "INVOKE_ASSIGN",
+        target = "Lnet/minecraft/client/MouseHandler;simulateRightClick(Lnet/minecraft/client/input/MouseButtonInfo;Z)Lnet/minecraft/client/input/MouseButtonInfo;"),
+        locals = LocalCapture.CAPTURE_FAILHARD, cancellable = true)
+    private void afkCinematics$button(long window, MouseButtonInfo raw, int action, CallbackInfo ci,
+                                      Window gameWindow, boolean pressed, MouseButtonInfo button) {
+        int code = button.button();
     //?} else {
-    /*@Inject(method = "onPress", at = @At("HEAD"), cancellable = true)
+    /*@Inject(method = "onPress", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/Minecraft;getOverlay()Lnet/minecraft/client/gui/screens/Overlay;", ordinal = 0), cancellable = true)
     private void afkCinematics$button(long window, int code, int action, int modifiers, CallbackInfo ci) {
     *///?}
         InputConstants.Key key = InputConstants.Type.MOUSE.getOrCreate(code);

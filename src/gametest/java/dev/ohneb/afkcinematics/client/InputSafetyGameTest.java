@@ -126,6 +126,49 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
             }
             *///?}
 
+            //? if <26.3 {
+            var previousToggle = new AtomicReference<InputConstants.Key>();
+            context.runOnClient(client -> {
+                AfkCinematics.stop();
+                previousToggle.set(((KeyMappingAccess)AfkCinematics.TOGGLE).afkCinematics$key());
+                AfkCinematics.TOGGLE.setKey(keyboardKey(InputConstants.KEY_LCONTROL));
+                client.options.keyScreenshot.setKey(InputConstants.Type.MOUSE.getOrCreate(InputConstants.MOUSE_BUTTON_LEFT));
+                KeyMapping.resetMapping();
+                simulateControlClick = true;
+            });
+            try {
+                key(context, InputConstants.KEY_LCONTROL, InputConstants.PRESS);
+                context.waitFor(client -> AfkCinematics.showing(), 120);
+                mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS, 2);
+                context.runOnClient(client -> {
+                    require(!AfkCinematics.showing(), "Control-click was treated as a left-button screenshot");
+                    require(AfkCinematics.suppressed(InputConstants.Type.MOUSE.getOrCreate(InputConstants.MOUSE_BUTTON_RIGHT)),
+                        "Control-click did not suppress the effective Use button");
+                    require(!client.options.keyUse.isDown() && !client.options.keyUse.consumeClick(),
+                        "Control-click activated Use while waking the camera");
+                });
+                key(context, InputConstants.KEY_LCONTROL, InputConstants.RELEASE);
+                mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE);
+                context.runOnClient(client -> {
+                    require(!AfkCinematics.suppressed(InputConstants.Type.MOUSE.getOrCreate(InputConstants.MOUSE_BUTTON_RIGHT)),
+                        "Control-click release did not clear the effective button");
+                    require(!client.options.keyUse.isDown(), "Use stayed down after Control-click release");
+                });
+                mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS);
+                context.runOnClient(client -> require(client.options.keyUse.isDown(), "A fresh right-click was suppressed"));
+                mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.RELEASE);
+            } finally {
+                mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE);
+                key(context, InputConstants.KEY_LCONTROL, InputConstants.RELEASE);
+                context.runOnClient(client -> {
+                    simulateControlClick = false;
+                    AfkCinematics.TOGGLE.setKey(previousToggle.get());
+                    client.options.keyScreenshot.setKey(previousScreenshot.get());
+                    KeyMapping.resetMapping();
+                });
+            }
+            //?}
+
             start(context);
             key(context, InputConstants.KEY_Q, InputConstants.PRESS);
             context.runOnClient(client -> focused = false);

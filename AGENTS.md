@@ -12,6 +12,7 @@ gameplay input, alter inventory, keep a server session active, or change persist
 game options to produce a cinematic. Restore control before processing wake input.
 An attack, use or drop action that wakes the camera must stay suppressed until release.
 Keep suppression across world/player replacement and vanilla key-state restoration.
+Track the effective mouse button after vanilla's platform-specific remapping.
 Inactive release events can be synthetic; they do not establish physical release.
 
 Validate the swept camera volume and subject visibility using loaded terrain only.
