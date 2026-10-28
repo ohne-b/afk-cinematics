@@ -8,6 +8,7 @@
     "HudMixin",
     "KeyboardMixin",
     "KeyMappingAccess",
+    "KeyMappingMixin",
     "MinecraftMixin",
     "MouseMixin",
     "MusicManagerAccess",

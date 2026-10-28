@@ -2,6 +2,6 @@
   "required": true,
   "package": "dev.ohneb.afkcinematics.testmixin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["KeyboardInvoker"],
+  "client": ["KeyboardInvoker", "PhysicalInputMixin", "FocusMixin"],
   "injectors": {"defaultRequire": 1}
 }

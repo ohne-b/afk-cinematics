@@ -4,6 +4,19 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class InputTest {
+    @Test void lifecycleResetRetainsSuppressionUntilRelease() {
+        var input = new InputState();
+        input.press(17, true);
+        input.press(18, false);
+        input.resetHeld();
+        assertTrue(input.held());
+        assertTrue(input.suppressed(17));
+        assertTrue(input.press(17, false));
+        assertTrue(input.release(17));
+        assertFalse(input.held());
+        assertFalse(input.suppressed(17));
+    }
+
     @Test void blockedInputStaysBlockedThroughRepeatsUntilRelease() {
         var input = new InputState();
         assertTrue(input.press(17, true));

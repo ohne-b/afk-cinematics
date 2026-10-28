@@ -6,6 +6,9 @@
   "environment": "client",
   "mixins": ["ohneb_afk_cinematics_tests.mixins.json"],
   "entrypoints": {
-    "fabric-client-gametest": ["dev.ohneb.afkcinematics.client.CameraGameTest"]
+    "fabric-client-gametest": [
+      "dev.ohneb.afkcinematics.client.CameraGameTest",
+      "dev.ohneb.afkcinematics.client.InputSafetyGameTest"
+    ]
   }
 }

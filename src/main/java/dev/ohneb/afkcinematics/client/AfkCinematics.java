@@ -75,7 +75,7 @@ public final class AfkCinematics {
         if (client.level != world || client.player != player || client.getConnection() != connection) {
             stop();
             CinematicMusic.clear();
-            INPUT.clear();
+            INPUT.resetHeld();
             world = client.level;
             player = client.player;
             connection = client.getConnection();
@@ -84,7 +84,7 @@ public final class AfkCinematics {
         }
         boolean focus = client.isWindowActive();
         if (focus != focused) {
-            INPUT.clear();
+            INPUT.resetHeld();
             if (focus || !config().unfocused) stop();
             focused = focus;
         }
@@ -164,7 +164,7 @@ public final class AfkCinematics {
 
     public static boolean input(InputConstants.Key key, int action, boolean screenshot) {
         if (store == null || screenshot) return false;
-        long token = ((long) key.getType().ordinal() << 32) | (key.getValue() & 0xffffffffL);
+        long token = token(key);
         if (screen() == null && (matches(TOGGLE, key) || matches(SETTINGS, key))) {
             if (action == InputConstants.PRESS) {
                 if (matches(SETTINGS, key)) openSettings();
@@ -175,7 +175,18 @@ public final class AfkCinematics {
         }
         if (action == InputConstants.RELEASE) {
             IDLE.reset(System.nanoTime());
-            return INPUT.release(token);
+            // Focus loss can synthesize releases while the physical key is still held.
+            if (!Minecraft.getInstance().isWindowActive() && INPUT.suppressed(token)) return true;
+            if (INPUT.release(token)) {
+                KeyMapping.set(key, false);
+                for (KeyMapping binding : Minecraft.getInstance().options.keyMappings) {
+                    if (matches(binding, key)) {
+                        binding.setDown(false);
+                        ((KeyMappingAccess)binding).afkCinematics$clicks(0);
+                    }
+                }
+            }
+            return false;
         }
         var options = Minecraft.getInstance().options;
         boolean dangerous = matches(options.keyAttack, key) || matches(options.keyUse, key) || matches(options.keyDrop, key);
@@ -188,8 +199,14 @@ public final class AfkCinematics {
         return ((KeyMappingAccess) mapping).afkCinematics$key().equals(key);
     }
 
+    public static boolean suppressed(InputConstants.Key key) { return INPUT != null && INPUT.suppressed(token(key)); }
+
+    private static long token(InputConstants.Key key) {
+        return ((long)key.getType().ordinal() << 32) | (key.getValue() & 0xffffffffL);
+    }
+
     public static void mouseMoved(double x, double y) {
-        if (Math.abs(x) + Math.abs(y) > 0.01) stop();
+        if (Minecraft.getInstance().isWindowActive() && Math.abs(x) + Math.abs(y) > 0.01) stop();
     }
 
     public static void openSettings() {

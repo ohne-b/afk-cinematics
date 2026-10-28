@@ -2,14 +2,12 @@ package dev.ohneb.afkcinematics.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.ohneb.afkcinematics.core.CinematicConfig;
-import dev.ohneb.afkcinematics.testmixin.KeyboardInvoker;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
-import net.minecraft.client.input.KeyEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -23,10 +21,12 @@ import dev.ohneb.afkcinematics.mixin.MusicManagerAccess;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.CompletableFuture;
+import static dev.ohneb.afkcinematics.client.TestSupport.*;
 
 @SuppressWarnings("UnstableApiUsage")
 public final class CameraGameTest implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
+        configure(context);
         context.runOnClient(client -> {
             client.options.pauseOnLostFocus = false;
             AfkCinematics.config().unfocused = true;
@@ -42,10 +42,7 @@ public final class CameraGameTest implements FabricClientGameTest {
                 player.getInventory().clearContent();
                 player.getInventory().setItem(0, new ItemStack(Items.EMERALD, 32));
                 player.inventoryMenu.broadcastFullState();
-                BlockPos floor = player.blockPosition().below();
-                for (BlockPos block : BlockPos.betweenClosed(floor.offset(-9, 0, -9), floor.offset(9, 6, 9)))
-                    player.level().setBlockAndUpdate(block, (block.getY() == floor.getY() ? Blocks.STONE : Blocks.AIR).defaultBlockState());
-                player.teleportTo(floor.getX() + 0.5, floor.getY() + 1, floor.getZ() + 0.5);
+                floor(player);
                 position.set(player.position());
             });
             context.waitFor(client -> client.player.onGround() && !client.player.isCreative()
@@ -130,18 +127,20 @@ public final class CameraGameTest implements FabricClientGameTest {
             });
 
             context.runOnClient(client -> {
-                client.setWindowActive(true);
+                focused = true;
                 AfkCinematics.config().unfocused = false;
             });
             start(context);
-            context.runOnClient(client -> client.setWindowActive(false));
+            context.runOnClient(client -> focused = false);
             context.waitFor(client -> !AfkCinematics.ownsCamera());
             context.runOnClient(client -> AfkCinematics.config().unfocused = true);
             start(context);
             context.waitTicks(10);
             context.runOnClient(client -> {
                 require(AfkCinematics.showing(), "Background option did not preserve the cinematic");
-                client.setWindowActive(true);
+                AfkCinematics.mouseMoved(100, 100);
+                require(AfkCinematics.showing(), "Unfocused mouse movement stopped the background camera");
+                focused = true;
             });
             context.waitFor(client -> !AfkCinematics.ownsCamera());
 
@@ -172,17 +171,10 @@ public final class CameraGameTest implements FabricClientGameTest {
                 AfkCinematics.config().music = false;
             });
         }
-        context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Disconnect left a camera owner"));
-    }
-
-    private static void start(ClientGameTestContext context) {
-        context.waitTicks(3);
-        context.runOnClient(client -> AfkCinematics.requestStart());
-        context.waitFor(client -> AfkCinematics.showing(), 120);
-    }
-
-    private static void key(ClientGameTestContext context, int key, int action) {
-        context.runOnClient(client -> ((KeyboardInvoker)client.keyboardHandler).press(AfkCinematics.window(), action, new KeyEvent(key, 0, 0)));
+        context.runOnClient(client -> {
+            require(!AfkCinematics.ownsCamera(), "Disconnect left a camera owner");
+            focused = null;
+        });
     }
 
     private static void screenshot(ClientGameTestContext context, String name) {
@@ -190,5 +182,4 @@ public final class CameraGameTest implements FabricClientGameTest {
         context.takeScreenshot(TestScreenshotOptions.of(name).withDestinationDir(Path.of(System.getProperty("afkcinematics.test.artifacts"))));
     }
 
-    private static void require(boolean valid, String message) { if (!valid) throw new AssertionError(message); }
 }

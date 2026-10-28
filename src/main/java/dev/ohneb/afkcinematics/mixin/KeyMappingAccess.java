@@ -8,4 +8,5 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(KeyMapping.class)
 public interface KeyMappingAccess {
     @Accessor("key") InputConstants.Key afkCinematics$key();
+    @Accessor("clickCount") void afkCinematics$clicks(int count);
 }
