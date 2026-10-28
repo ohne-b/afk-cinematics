@@ -79,4 +79,20 @@ class CameraTest {
         assertNotNull(shot);
         assertEquals(shot.sample(0), shot.sample(shot.duration()));
     }
+
+    @Test void successiveShotsStayWithinTheLocalCameraRange() {
+        var config = new CinematicConfig();
+        config.distance = CinematicConfig.Distance.WIDE;
+        for (int seed = 0; seed < 3; seed++) {
+            var session = new CinematicSession(SUBJECT, ENTRY, 0, config, OPEN, new Random(seed));
+            for (int tick = 0; tick < 12000; tick++) {
+                long now = tick * 50_000_000L;
+                session.tick(now);
+                Pose pose = session.frame(now);
+                assertNotNull(pose);
+                Vec offset = pose.position().subtract(SUBJECT);
+                assertTrue(Math.hypot(offset.x(), offset.z()) <= 6.000001, "Successive shots drifted beyond six blocks");
+            }
+        }
+    }
 }

@@ -69,7 +69,7 @@ public final class ShotSearch {
             }
             case STILL -> { }
         }
-        Shot candidate = new Shot(type, subject, start, control, end, 15 + random.nextDouble() * 10);
+        Shot candidate = new Shot(type, subject, start, limitDistance(control), limitDistance(end), 15 + random.nextDouble() * 10);
         // A first-person fallback would rotate the view into the player's own body.
         if (Math.hypot(offset.x(), offset.z()) < 1.25) return null;
         return geometry.valid(candidate, previous.position()) ? candidate : null;
@@ -78,5 +78,12 @@ public final class ShotSearch {
     private static Vec rotate(Vec vector, double angle) {
         double sin = Math.sin(angle), cos = Math.cos(angle);
         return new Vec(vector.x() * cos - vector.z() * sin, vector.y(), vector.x() * sin + vector.z() * cos);
+    }
+
+    private Vec limitDistance(Vec point) {
+        Vec offset = point.subtract(subject);
+        double radius = Math.hypot(offset.x(), offset.z());
+        if (radius <= 6) return point;
+        return subject.add(new Vec(offset.x() * 6 / radius, offset.y(), offset.z() * 6 / radius));
     }
 }
