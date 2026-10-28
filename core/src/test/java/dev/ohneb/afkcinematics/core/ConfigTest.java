@@ -35,8 +35,9 @@ class ConfigTest {
 
     @Test void reportsAnUnwritableDestinationWithoutRemovingIt() throws Exception {
         Path path = directory.resolve("directory");
-        Files.createDirectory(path);
         var store = new ConfigStore(path);
+        Files.createDirectory(path);
+        assertTrue(store.readable());
         assertFalse(store.save());
         assertTrue(Files.isDirectory(path));
     }

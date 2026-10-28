@@ -31,6 +31,7 @@
   "ohneb_afk_cinematics.hint": "Move to return",
   "ohneb_afk_cinematics.unavailable": "Stand still with no menu open to start a cinematic.",
   "ohneb_afk_cinematics.save_error": "Could not save settings. Check the config folder permissions.",
+  "ohneb_afk_cinematics.close_unsaved": "Close without saving",
   "ohneb_afk_cinematics.read_error": "Settings could not be read. The existing file has been preserved.",
   "ohneb_afk_cinematics.conflict": "Camera disabled while %s is installed.",
   "ohneb_afk_cinematics.scroll": "Scroll or use Page Up / Page Down for more settings."

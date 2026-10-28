@@ -25,6 +25,8 @@ public final class SettingsScreen extends Screen {
     private int offset;
     private int maxOffset;
     private Component error = Component.empty();
+    private boolean saveFailed;
+    private Button close;
 
     public SettingsScreen(Screen parent) {
         super(text("settings"));
@@ -79,7 +81,7 @@ public final class SettingsScreen extends Screen {
         preview.active = minecraft.level != null && config.enabled && AfkCinematics.conflict().isEmpty() && AfkCinematics.store().readable();
         preview.setTooltip(Tooltip.create(text("preview.help")));
         addRenderableWidget(preview);
-        addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> onClose())
+        close = addRenderableWidget(Button.builder(saveFailed ? text("close_unsaved") : CommonComponents.GUI_DONE, button -> onClose())
             .bounds(width / 2 + 3, height - 26, half, 20).build());
     }
 
@@ -100,10 +102,12 @@ public final class SettingsScreen extends Screen {
         if (!AfkCinematics.store().readable()) return true;
         if (AfkCinematics.store().save()) return true;
         error = text("save_error");
+        saveFailed = true;
+        close.setMessage(text("close_unsaved"));
         return false;
     }
 
-    @Override public void onClose() { if (save()) AfkCinematics.showScreen(parent); }
+    @Override public void onClose() { if (saveFailed || save()) AfkCinematics.showScreen(parent); }
 
     @Override public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
         if (maxOffset == 0 || vertical == 0) return super.mouseScrolled(x, y, horizontal, vertical);
