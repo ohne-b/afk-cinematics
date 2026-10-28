@@ -1,9 +1,12 @@
 package dev.ohneb.afkcinematics.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.ohneb.afkcinematics.core.CinematicConfig;
 import dev.ohneb.afkcinematics.testmixin.KeyboardInvoker;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Blocks;
@@ -44,6 +47,16 @@ public final class TestSupport {
 
     public static void key(ClientGameTestContext context, int key, int action) {
         context.runOnClient(client -> ((KeyboardInvoker)client.keyboardHandler).press(AfkCinematics.window(), action, new KeyEvent(key, 0, 0)));
+    }
+
+    public static InputConstants.Key keyboardKey(int key) { return InputConstants.getKey(new KeyEvent(key, 0, 0)); }
+
+    public static Camera camera(Minecraft client) {
+        //? if >=26.1 {
+        /*return client.gameRenderer.mainCamera();
+        *///?} else {
+        return client.gameRenderer.getMainCamera();
+        //?}
     }
 
     public static void require(boolean valid, String message) { if (!valid) throw new AssertionError(message); }

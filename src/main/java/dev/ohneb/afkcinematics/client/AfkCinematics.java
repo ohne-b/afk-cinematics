@@ -163,16 +163,8 @@ public final class AfkCinematics {
     }
 
     public static boolean input(InputConstants.Key key, int action, boolean screenshot) {
-        if (store == null || screenshot) return false;
+        if (store == null) return false;
         long token = token(key);
-        if (screen() == null && (matches(TOGGLE, key) || matches(SETTINGS, key))) {
-            if (action == InputConstants.PRESS) {
-                if (matches(SETTINGS, key)) openSettings();
-                else if (ownsCamera() || manualWait > 0) stop();
-                else requestStart();
-            }
-            return true;
-        }
         if (action == InputConstants.RELEASE) {
             IDLE.reset(System.nanoTime());
             // Focus loss can synthesize releases while the physical key is still held.
@@ -190,6 +182,20 @@ public final class AfkCinematics {
         }
         var options = Minecraft.getInstance().options;
         boolean dangerous = matches(options.keyAttack, key) || matches(options.keyUse, key) || matches(options.keyDrop, key);
+        if (screenshot && action == InputConstants.PRESS) {
+            // Vanilla consumes the press, but a shared gameplay binding can receive repeats.
+            if (ownsCamera() && dangerous) INPUT.suppress(token);
+            return false;
+        }
+        if (screenshot && !INPUT.suppressed(token)) return false;
+        if (screen() == null && (matches(TOGGLE, key) || matches(SETTINGS, key))) {
+            if (action == InputConstants.PRESS) {
+                if (matches(SETTINGS, key)) openSettings();
+                else if (ownsCamera() || manualWait > 0) stop();
+                else requestStart();
+            }
+            return true;
+        }
         boolean suppressed = INPUT.press(token, ownsCamera() && dangerous);
         stop();
         return suppressed;

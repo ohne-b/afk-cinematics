@@ -39,7 +39,7 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
             var previousUse = new AtomicReference<InputConstants.Key>();
             context.runOnClient(client -> {
                 previousUse.set(((KeyMappingAccess)client.options.keyUse).afkCinematics$key());
-                client.options.keyUse.setKey(InputConstants.Type.KEYSYM.getOrCreate(InputConstants.KEY_U));
+                client.options.keyUse.setKey(keyboardKey(InputConstants.KEY_U));
                 KeyMapping.resetMapping();
             });
             try {
@@ -50,7 +50,7 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
                 context.runOnClient(client -> {
                     AfkCinematics.showScreen(null);
                     KeyMapping.setAll();
-                    KeyMapping.click(InputConstants.Type.KEYSYM.getOrCreate(InputConstants.KEY_U));
+                    KeyMapping.click(keyboardKey(InputConstants.KEY_U));
                     require(!client.options.keyUse.isDown(), "Focus restoration reactivated suppressed Use");
                     require(!client.options.keyUse.consumeClick(), "Suppressed Use retained a queued click");
                 });
@@ -65,6 +65,33 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
                     heldKey = -1;
                     client.options.keyUse.setKey(previousUse.get());
                     client.options.keyUse.setDown(false);
+                    KeyMapping.resetMapping();
+                });
+            }
+
+            var previousScreenshot = new AtomicReference<InputConstants.Key>();
+            context.runOnClient(client -> {
+                previousScreenshot.set(((KeyMappingAccess)client.options.keyScreenshot).afkCinematics$key());
+                client.options.keyScreenshot.setKey(keyboardKey(InputConstants.KEY_Q));
+                KeyMapping.resetMapping();
+            });
+            try {
+                start(context);
+                key(context, InputConstants.KEY_Q, InputConstants.PRESS);
+                context.waitTicks(2);
+                context.runOnClient(client -> require(AfkCinematics.showing(), "Screenshot press stopped the cinematic"));
+                key(context, InputConstants.KEY_Q, InputConstants.REPEAT);
+                context.waitTicks(5);
+                world.getServer().runOnServer(server -> {
+                    var player = server.getPlayerList().getPlayers().getFirst();
+                    require(player.getInventory().countItem(Items.EMERALD) == 32, "Shared Screenshot/Drop binding dropped an item");
+                    require(player.level().getEntitiesOfClass(ItemEntity.class, player.getBoundingBox().inflate(12)).isEmpty(),
+                        "Screenshot repeat spawned a dropped item");
+                });
+                key(context, InputConstants.KEY_Q, InputConstants.RELEASE);
+            } finally {
+                context.runOnClient(client -> {
+                    client.options.keyScreenshot.setKey(previousScreenshot.get());
                     KeyMapping.resetMapping();
                 });
             }

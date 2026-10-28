@@ -19,6 +19,7 @@ public final class InputState {
     }
 
     public boolean held() { return !held.isEmpty(); }
+    public void suppress(long input) { suppressed.add(input); }
     public boolean suppressed(long input) { return suppressed.contains(input); }
     public void resetHeld() { held.retainAll(suppressed); }
 }
