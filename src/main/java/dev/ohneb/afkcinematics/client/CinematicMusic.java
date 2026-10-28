@@ -22,7 +22,9 @@ public final class CinematicMusic {
         var access = access();
         boolean wanted = AfkCinematics.showing() && AfkCinematics.config().music;
         if (owned != null) {
-            if (access.afkCinematics$current() != owned || owned.isStopped() || !client.getSoundManager().isActive(owned)) clear();
+            // Paused sound engines do not advance tickable fades.
+            if ((!wanted && client.isPaused()) || access.afkCinematics$current() != owned
+                || owned.isStopped() || !client.getSoundManager().isActive(owned)) clear();
             else owned.fading = !wanted;
         }
         if (wanted && owned == null && access.afkCinematics$current() == null

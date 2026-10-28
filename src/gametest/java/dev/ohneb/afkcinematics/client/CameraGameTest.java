@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Difficulty;
@@ -17,8 +18,11 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.sounds.SoundSource;
+import dev.ohneb.afkcinematics.mixin.MusicManagerAccess;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CompletableFuture;
 
 @SuppressWarnings("UnstableApiUsage")
 public final class CameraGameTest implements FabricClientGameTest {
@@ -123,6 +127,49 @@ public final class CameraGameTest implements FabricClientGameTest {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
                 AfkCinematics.config().automatic = false;
+            });
+
+            context.runOnClient(client -> {
+                client.setWindowActive(true);
+                AfkCinematics.config().unfocused = false;
+            });
+            start(context);
+            context.runOnClient(client -> client.setWindowActive(false));
+            context.waitFor(client -> !AfkCinematics.ownsCamera());
+            context.runOnClient(client -> AfkCinematics.config().unfocused = true);
+            start(context);
+            context.waitTicks(10);
+            context.runOnClient(client -> {
+                require(AfkCinematics.showing(), "Background option did not preserve the cinematic");
+                client.setWindowActive(true);
+            });
+            context.waitFor(client -> !AfkCinematics.ownsCamera());
+
+            start(context);
+            var reload = new AtomicReference<CompletableFuture<Void>>();
+            context.runOnClient(client -> {
+                reload.set(client.reloadResourcePacks());
+                require(!AfkCinematics.ownsCamera(), "Resource reload did not release the camera");
+            });
+            context.waitFor(client -> reload.get().isDone() && client.getOverlay() == null, 400);
+
+            context.runOnClient(client -> {
+                client.options.getSoundSourceOptionInstance(SoundSource.MASTER).set(0.1);
+                client.options.getSoundSourceOptionInstance(SoundSource.MUSIC).set(0.1);
+                client.getMusicManager().stopPlaying();
+                ((MusicManagerAccess)client.getMusicManager()).afkCinematics$delay(12000);
+                AfkCinematics.config().music = true;
+            });
+            start(context);
+            context.waitFor(client -> CinematicMusic.manages(), 80);
+            context.runOnClient(client -> client.setScreen(new PauseScreen(true)));
+            context.waitFor(client -> client.isPaused(), 40);
+            context.waitFor(client -> !CinematicMusic.manages(), 80);
+            context.runOnClient(client -> {
+                require(((MusicManagerAccess)client.getMusicManager()).afkCinematics$current() == null,
+                    "Paused cinematic retained its music instance");
+                client.setScreen(null);
+                AfkCinematics.config().music = false;
             });
         }
         context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Disconnect left a camera owner"));
