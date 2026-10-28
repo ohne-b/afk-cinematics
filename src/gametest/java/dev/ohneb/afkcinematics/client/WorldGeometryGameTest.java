@@ -26,6 +26,8 @@ public final class WorldGeometryGameTest implements FabricClientGameTest {
                     client.level.setBlockEntity(MovingPistonBlock.newMovingBlockEntity(origin, moving,
                         Blocks.STONE.defaultBlockState(), Direction.EAST, true, false));
                     require(!geometry.clear(point, point), "Camera missed a piston shape extending from the adjacent block");
+                    require(!geometry.visible(point.add(new Vec(0, 0, -2)), point.add(new Vec(0, 0, 2))),
+                        "Sightline missed a moving shape whose owning block is outside the ray");
                     client.level.removeBlockEntity(origin);
                     client.level.setBlock(origin, Blocks.WATER.defaultBlockState(), 3);
                     require(geometry.clear(point, point), "Adjacent water blocked a camera volume outside the fluid");

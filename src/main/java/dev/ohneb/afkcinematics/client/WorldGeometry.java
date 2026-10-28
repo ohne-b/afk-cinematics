@@ -4,9 +4,7 @@ import dev.ohneb.afkcinematics.core.Geometry;
 import dev.ohneb.afkcinematics.core.Vec;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -46,14 +44,19 @@ public final class WorldGeometry implements Geometry {
 
     @Override
     public boolean visible(Vec camera, Vec subject) {
-        int steps = Math.max(1, (int) Math.ceil(camera.distance(subject)));
-        if (steps > 16) return false;
-        for (int i = 0; i <= steps; i++) {
-            Vec point = camera.lerp(subject, (double) i / steps);
-            if (!level.hasChunkAt(BlockPos.containing(point.x(), point.y(), point.z()))) return false;
+        if (camera.distance(subject) > 16) return false;
+        Vec3 start = vector(camera), end = vector(subject);
+        AABB ray = new AABB(start, end);
+        // A ray can cross a moving shape without crossing the block that owns it.
+        for (BlockPos block : BlockPos.betweenClosed(BlockPos.containing(ray.minX, ray.minY, ray.minZ).offset(-1, -1, -1),
+                BlockPos.containing(ray.maxX, ray.maxY, ray.maxZ).offset(1, 1, 1))) {
+            if (!level.hasChunkAt(block)) return false;
+            var state = level.getBlockState(block);
+            if (state.getVisualShape(level, block, CollisionContext.empty()).clip(start, end, block) != null) return false;
+            var fluid = state.getFluidState();
+            if (!fluid.isEmpty() && fluid.getShape(level, block).clip(start, end, block) != null) return false;
         }
-        return level.clip(new ClipContext(vector(camera), vector(subject), ClipContext.Block.VISUAL,
-            ClipContext.Fluid.ANY, net.minecraft.client.Minecraft.getInstance().player)).getType() == HitResult.Type.MISS;
+        return true;
     }
 
     public static Vec3 vector(Vec point) { return new Vec3(point.x(), point.y(), point.z()); }
