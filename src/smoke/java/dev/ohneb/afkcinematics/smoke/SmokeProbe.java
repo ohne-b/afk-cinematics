@@ -14,6 +14,7 @@ final class SmokeProbe {
 
     static void tick(String loader) {
         if (SceneProbe.started()) { SceneProbe.tick(loader); return; }
+        if (!Minecraft.getInstance().isGameLoadFinished()) return;
         if (AfkCinematics.screen() == null || ++ticks < 50) return;
         try {
             if (!opened) {
