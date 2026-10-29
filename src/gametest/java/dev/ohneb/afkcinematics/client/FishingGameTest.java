@@ -104,6 +104,30 @@ public final class FishingGameTest implements FabricClientGameTest {
                 "The shared wake key reeled the bobber"));
             start(context);
             context.waitTicks(20);
+            context.runOnClient(client -> {
+                var mouse = (dev.ohneb.afkcinematics.testmixin.MouseInvoker)client.mouseHandler;
+                var button = new net.minecraft.client.input.MouseButtonInfo(InputConstants.MOUSE_BUTTON_RIGHT, 0);
+                mouse.press(AfkCinematics.window(), button, InputConstants.PRESS);
+                require(client.options.keyUse.isDown(), "The real rod press was not accepted");
+                focused = false;
+                mouse.press(AfkCinematics.window(), button, InputConstants.RELEASE);
+                require(!AfkCinematics.ownsCamera() && !client.options.keyUse.isDown() && !client.options.keyUse.consumeClick(),
+                    "An inactive rod release left use pressed or queued");
+                var token = InputConstants.Type.MOUSE.getOrCreate(InputConstants.MOUSE_BUTTON_RIGHT);
+                require(AfkCinematics.suppressed(token), "An inactive release lost rod suppression");
+                focused = true;
+                net.minecraft.client.KeyMapping.set(token, true);
+                net.minecraft.client.KeyMapping.click(token);
+                require(!client.options.keyUse.isDown() && !client.options.keyUse.consumeClick(),
+                    "Restoring focus revived the held rod press");
+                mouse.press(AfkCinematics.window(), button, InputConstants.RELEASE);
+                require(!AfkCinematics.suppressed(token), "The active rod release retained suppression");
+            });
+            context.waitTicks(5);
+            world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst().fishing != null,
+                "Focus loss dispatched the queued rod press"));
+            start(context);
+            context.waitTicks(20);
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
                 player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.APPLE, 16));
