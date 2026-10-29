@@ -82,10 +82,10 @@ def validate_run(run, sha):
     if not (run.get("repository", {}).get("full_name") == REPOSITORY
             and run.get("head_repository", {}).get("full_name") == REPOSITORY
             and run.get("path") == ".github/workflows/build.yml"
-            and run.get("event") == "push" and run.get("head_branch") == "main"
+            and run.get("event") == "workflow_dispatch" and run.get("head_branch") == "main"
             and run.get("head_sha") == sha and run.get("status") == "completed"
             and run.get("conclusion") == "success"):
-        raise ValueError("Use a successful Build push run for this exact main commit")
+        raise ValueError("Use a successful manual Build run for this exact main commit")
 
 
 def validate_jar(path, target, version, license_text):

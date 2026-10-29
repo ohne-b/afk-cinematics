@@ -46,9 +46,11 @@ class ReleaseTest(unittest.TestCase):
 
     def test_run_provenance_rejects_wrong_or_incomplete_builds(self):
         run = {"repository": {"full_name": release.REPOSITORY}, "head_repository": {"full_name": release.REPOSITORY},
-               "path": ".github/workflows/build.yml", "event": "push", "head_branch": "main",
+               "path": ".github/workflows/build.yml", "event": "workflow_dispatch", "head_branch": "main",
                "head_sha": "a" * 40, "status": "completed", "conclusion": "success"}
         release.validate_run(run, "a" * 40)
+        with self.assertRaises(ValueError):
+            release.validate_run(dict(run, event="push"), "a" * 40)
         for key, value in {"repository": {"full_name": "other/repo"}, "head_repository": {},
                            "event": "pull_request", "head_branch": "feature/test", "path": "other.yml",
                            "head_sha": "b" * 40, "status": "in_progress", "conclusion": "failure"}.items():
