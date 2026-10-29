@@ -67,6 +67,12 @@ conventional PR titles. Split substantial work into meaningful changes. Keep PR
 descriptions about the resulting behavior and validation, without conversational
 history. Incomplete work stays in a draft PR.
 
+Start branches from current canonical `main`. Fetch and incorporate it before final
+validation and independent review, and again before merging if it has advanced.
+Resolve conflicts and rerun affected checks; do not repeat unrelated successful CI.
+Use the PR template to record the base, tested revision, evidence and review outcome.
+Ordinary changes go through PRs rather than direct pushes to `main`.
+
 Verify the Git author and committer before committing. Maintainer contributions use
 the verified public `ohne-b` noreply identity, never a private name or email address.
 Keep credentials out of source, artifacts, logs and screenshots.
