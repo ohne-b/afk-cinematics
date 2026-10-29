@@ -44,7 +44,7 @@ public final class ShotTypesGameTest implements FabricClientGameTest {
                 client.player.getYRot(), client.player.getXRot()));
             for (Shot.Type type : Shot.Type.values()) {
                 context.runOnClient(client -> {
-                    AfkCinematics.config().subject = type == Shot.Type.OVERHEAD ? CinematicConfig.Subject.SCENERY : CinematicConfig.Subject.PLAYER;
+                    AfkCinematics.config().subject = type.sceneryOnly() ? CinematicConfig.Subject.SCENERY : CinematicConfig.Subject.PLAYER;
                     AfkCinematics.config().shots = EnumSet.of(type);
                     AfkCinematics.config().pace = CinematicConfig.Pace.SHORT;
                     AfkCinematics.config().letterbox = true;

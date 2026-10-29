@@ -55,6 +55,8 @@ Use `-PnaturalSeconds=3600` for an hour of continuous scenery validation; the de
 Use `-PcinematicCapture=<new-name>` for timestamped frames from a fixed snowy-forest
 view. Capture labels must be new so earlier footage is preserved.
 Add `-PcinematicScene=plains` or `-PcinematicScene=cavern` for the other view fixtures.
+Use `-PcinematicShots=FLY_THROUGH,TRAVERSE` to restrict a recording to selected moves.
+Recordings bypass still-capture holds in the test fixture so the camera keeps moving.
 
 Every PR requires independent critical review by a human or a separate read-only
 reviewer who did not write it. Provide these instructions, acceptance criteria, the

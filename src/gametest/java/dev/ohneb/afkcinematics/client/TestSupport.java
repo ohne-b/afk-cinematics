@@ -22,6 +22,7 @@ public final class TestSupport {
     public static Boolean holdCoveredScenery;
     public static java.util.List<String> sceneryFrames;
     public static java.util.List<String> cameraTimings;
+    public static boolean recordingFrames;
     public static String cameraStop;
     public static Shot revealedShot;
     public static boolean checkTransitions;
