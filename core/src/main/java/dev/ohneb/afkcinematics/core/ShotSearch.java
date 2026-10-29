@@ -112,7 +112,8 @@ public final class ShotSearch {
                 if (scene.scenery()) focusEnd = subject.add(end.subtract(start).scale(0.35));
             }
             case CRANE -> {
-                double lift = (offset.y() > 2.5 ? -1 : 1) * (scene.scenery() ? 3.5 : 2) * amount;
+                double travel = scene.scenery() ? 3.5 : 2;
+                double lift = (offset.y() > travel + 0.5 ? -1 : 1) * travel * amount;
                 end = start.add(tangent.scale(0.8 * amount * sign)).add(new Vec(0, lift, 0));
                 control = start.lerp(end, 0.5).add(new Vec(0, lift * 0.2, 0));
             }

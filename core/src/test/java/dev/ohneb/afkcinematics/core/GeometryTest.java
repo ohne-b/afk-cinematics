@@ -29,6 +29,18 @@ class GeometryTest {
         }
     }
 
+    @Test void aCraneAboveTheOldThresholdRisesWhenThereIsNoRoomToDescend() {
+        for (int distance : new int[]{8, 12}) {
+            Vec focus = new Vec(0, 0.35, 0), vantage = new Vec(0, 3.35, -distance);
+            var config = new CinematicConfig();
+            config.shots = EnumSet.of(Shot.Type.CRANE);
+            Shot shot = new ShotSearch(new Scene(focus, vantage, true, 1), Pose.lookingAt(vantage, focus),
+                0, config, null, true, true, new Random(2)).next(surface());
+            assertNotNull(shot, "A safe upward crane was lost at distance " + distance);
+            assertTrue(shot.end().y() > shot.start().y());
+        }
+    }
+
     @Test void entryVisibilityCoversThePathBetweenClearEndpoints() {
         Vec focus = new Vec(0, 0, 0), start = new Vec(1, 0, -4), entry = new Vec(-1, 0, -4);
         Geometry geometry = obstacle(new Vec(0.013, 0, -2), false);
