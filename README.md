@@ -12,7 +12,8 @@ Calm camera shots while you take a break from Minecraft. Move to return to your
 normal view. Client-side, for Fabric and NeoForge.
 
 This is an independent implementation by [ohne-b](https://github.com/ohne-b).
-Development targets Minecraft 1.21 through 26.3. No release has been published.
+The first alpha targets Minecraft 1.21 through 26.3. Download the jar for your version
+and loader from [GitHub Releases](https://github.com/ohne-b/afk-cinematics/releases).
 
 ## Install and use
 
