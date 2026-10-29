@@ -45,8 +45,11 @@ They create isolated worlds under `build/run/`.
 `:1.21.8-fabric:runClientGameTest` covers the legacy touchscreen input path.
 On 1.21.11, `-PcompatTest` adds pinned Sodium, Iris, Dynamic FPS and Mod Menu versions.
 Shader packs are a separate local check; CI runs that profile without a shader pack.
-`-PsmokeTest` makes `runClient` check startup and settings, then exit. Its optional
-`-PsceneWorld=<name>` fixture must be a copy of a generated test world, never a player save.
+`-PsmokeTest` makes `runClient` check startup and settings, then exit. Add
+`-PsceneWorld=create` to create a flat test world and check player shots, a cramped
+scenery fallback, the rendered camera and unchanged server state. CI runs this on
+every target. `-PsceneWorld=<name>` may reuse a copied test fixture, never a player save.
+The Fabric suite also checks natural terrain and records camera timings in `artifacts/`.
 
 Every PR requires independent critical review by a human or a separate read-only
 reviewer who did not write it. Provide these instructions, acceptance criteria, the

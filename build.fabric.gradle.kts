@@ -49,6 +49,7 @@ sourceSets.main { java.exclude("**/NeoForgeClient.java") }
 
 if (providers.gradleProperty("smokeTest").isPresent) {
     apply(from = rootProject.file("gradle/smoke.gradle.kts"))
+    stonecutter.tasks.configureSource(sourceSets["smoke"])
     loom.mods {
         register("ohneb_afk_cinematics") { sourceSet(sourceSets.main.get()) }
         register("ohneb_afk_cinematics_smoke") { sourceSet(sourceSets["smoke"]) }
@@ -56,6 +57,7 @@ if (providers.gradleProperty("smokeTest").isPresent) {
     loom.runs.named("client") {
         source(sourceSets["smoke"])
         vmArg("-Dafkcinematics.smoke.result=${rootProject.file("artifacts/smoke-${project.name}.txt").absolutePath}")
+        providers.gradleProperty("sceneWorld").orNull?.let { vmArg("-Dafkcinematics.smoke.world=$it") }
     }
 }
 

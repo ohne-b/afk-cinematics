@@ -79,7 +79,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libegl1 libegl-mesa0
-      - name: Check startup and settings
+      - name: Check startup, player shots and scenery
         timeout-minutes: 10
         env:
           SDL_VIDEO_FORCE_EGL: '1'
@@ -87,8 +87,8 @@ jobs:
           JDK21: ${{ env.JAVA_HOME_21_X64 }}
           JDK25: ${{ env.JAVA_HOME_25_X64 }}
         run: |
-          xvfb-run -a ./gradlew ":${BUILD_TARGET}:runClient" -PsmokeTest --console=plain
-          test -f "artifacts/smoke-${BUILD_TARGET}.txt"
+          xvfb-run -a ./gradlew ":${BUILD_TARGET}:runClient" -PsmokeTest -PsceneWorld=create --console=plain
+          cat "artifacts/smoke-${BUILD_TARGET}.txt"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: afk-cinematics-${{ matrix.target }}
@@ -101,6 +101,7 @@ jobs:
           path: |
             versions/${{ matrix.target }}/build/reports/
             versions/${{ matrix.target }}/run/logs/
+            versions/${{ matrix.target }}/run/crash-reports/
 
   game-tests:
     runs-on: ubuntu-latest
