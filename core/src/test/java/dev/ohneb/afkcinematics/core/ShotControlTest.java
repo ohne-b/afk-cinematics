@@ -94,7 +94,7 @@ class ShotControlTest {
             public boolean visible(Vec a, Vec b, double margin) { return true; }
             public Scene scenery(Vec anchor, Pose original, double bearing, int probe) {
                 probes[0]++;
-                return probe == 0 ? new Scene(new Vec(8, 1, 0), new Vec(8, 3, -8), true, 1) : null;
+                return probe == 0 ? new Scene(new Vec(8, 1, 0), new Vec(8, 3, -8), Scene.Kind.LANDSCAPE, 1) : null;
             }
         }, new Random(2));
         Pose previous = ENTRY;

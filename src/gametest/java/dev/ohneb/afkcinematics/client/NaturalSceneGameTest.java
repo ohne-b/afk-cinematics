@@ -126,7 +126,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                     Shot latestShot = context.computeOnClient(client -> {
                         require(AfkCinematics.showing(), "Natural scenery stopped unexpectedly: " + cameraStop);
                         var point = WorldGeometry.point(camera(client).position());
-                        require(Scene.inRange(point, playerPose.position()) && new WorldGeometry(client.level).clear(point, point),
+                        require(Scene.inRange(point, playerPose.position()) && new WorldGeometry(client.level, AfkCinematics.underwater()).clear(point, point),
                             "Natural scenery left the validated camera range");
                         require(WorldGeometry.point(client.player.position()).distance(playerPose.position()) < 0.0001
                             && client.player.getYRot() == playerPose.yaw() && client.player.getXRot() == playerPose.pitch(),

@@ -59,7 +59,7 @@ final class ShotPlanner {
         if (search == null) {
             if (!triedPlayer && (!sceneryFirst || triedScenery)) {
                 triedPlayer = true;
-                selected = new Scene(anchor, original.position(), false, 0);
+                selected = new Scene(anchor, original.position(), Scene.Kind.PLAYER, 0);
                 cut = lastScene != null;
                 entering = true;
             } else if (!triedScenery) {
@@ -79,7 +79,7 @@ final class ShotPlanner {
             search = new ShotSearch(selected, previous, bearing, config, lastType, entering, cut, random);
             attempts = 0;
         }
-        Shot shot = search.next(geometry);
+        Shot shot = search.next(geometry.forScene(selected));
         if (shot != null && Scene.inRange(shot.start(), anchor) && Scene.inRange(shot.control(), anchor)
             && Scene.inRange(shot.end(), anchor)) return new Plan(shot, selected, cut, entering);
         if (search.exhausted() || selected.scenery() && ++attempts >= SCENERY_ATTEMPTS) search = null;

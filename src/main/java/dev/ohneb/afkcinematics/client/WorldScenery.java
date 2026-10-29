@@ -12,9 +12,13 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.phys.HitResult;
 
 final class WorldScenery {
@@ -37,11 +41,11 @@ final class WorldScenery {
         if (!inside(level, vantage) || !geometry.clear(vantage, vantage)) return null;
         Vec direction = new Vec(Math.sin(angle), -0.08, Math.cos(angle));
         direction = direction.scale(1 / direction.length());
-        double distance = Math.min(12, depth(level, vantage, direction) - 0.5);
+        double distance = Math.min(12, depth(level, vantage, direction, false) - 0.5);
         if (distance < 3) return null;
         Vec focus = vantage.add(direction.scale(distance));
-        double quality = quality(level, vantage, focus, false);
-        var scene = new Scene(focus, vantage, true, quality);
+        double quality = quality(level, vantage, focus, false, false);
+        var scene = new Scene(focus, vantage, Scene.Kind.LANDSCAPE, quality);
         return quality > 0 && scene.near(anchor) && inside(level, focus) && geometry.visible(vantage, focus) ? scene : null;
     }
 
@@ -52,6 +56,7 @@ final class WorldScenery {
         int centerZ = (int)Math.floor(anchor.z() + Math.cos(angle) * radius);
         Scene best = null;
         double viewAngle = angle + Math.PI + Math.toRadians(25);
+        boolean low = index % 2 == 1;
         for (int dx = -2; dx <= 2; dx += 2) {
             for (int dz = -2; dz <= 2; dz += 2) {
                 int x = centerX + dx, z = centerZ + dz;
@@ -62,29 +67,81 @@ final class WorldScenery {
                 BlockPos block = new BlockPos(x, y, z);
                 BlockState state = level.getBlockState(block);
                 if (state.isAir() || state.is(Blocks.BEDROCK)) continue;
+                if (low && state.getFluidState().is(FluidTags.WATER)) {
+                    Scene water = underwater(level, geometry, anchor, block, viewAngle);
+                    if (water != null && (best == null || water.interest() > best.interest())) best = water;
+                    continue;
+                }
+                if (low) {
+                    block = ground(level, block);
+                    if (block == null) continue;
+                    y = block.getY();
+                    state = level.getBlockState(block);
+                }
                 var shape = state.getVisualShape(level, block, CollisionContext.empty());
                 double top = shape.isEmpty() ? 0.3 : shape.max(Direction.Axis.Y);
                 if (!state.getFluidState().isEmpty()) top = Math.max(top, state.getFluidState().getHeight(level, block));
                 Vec target = new Vec(x + 0.5, y + top + 0.35, z + 0.5);
                 if (Math.hypot(target.x() - anchor.x(), target.z() - anchor.z()) > 18) continue;
-                Vec vantage = target.add(new Vec(Math.sin(viewAngle) * 12, 2, Math.cos(viewAngle) * 12));
+                double distance = low ? 8 : 12;
+                Vec vantage = target.add(new Vec(Math.sin(viewAngle) * distance, low ? 0.3 : 2, Math.cos(viewAngle) * distance));
                 BlockPos column = BlockPos.containing(vantage.x(), vantage.y(), vantage.z());
                 if (!level.getChunkSource().hasChunk(column.getX() >> 4, column.getZ() >> 4)) continue;
-                double ground = level.getHeight(Heightmap.Types.WORLD_SURFACE, column.getX(), column.getZ());
-                vantage = new Vec(vantage.x(), Math.max(vantage.y(), ground + 1.5), vantage.z());
-                Scene scene = new Scene(target, vantage, true, 0);
+                double floor = level.getHeight(Heightmap.Types.WORLD_SURFACE, column.getX(), column.getZ());
+                if (low) {
+                    BlockPos ground = ground(level, new BlockPos(column.getX(), (int)floor - 1, column.getZ()));
+                    if (ground == null) continue;
+                    var floorShape = level.getBlockState(ground).getVisualShape(level, ground, CollisionContext.empty());
+                    floor = ground.getY() + (floorShape.isEmpty() ? 1 : floorShape.max(Direction.Axis.Y));
+                }
+                vantage = new Vec(vantage.x(), Math.max(vantage.y(), floor + (low ? 0.6 : 1.5)), vantage.z());
+                Scene.Kind kind = low ? Scene.Kind.GROUND : Scene.Kind.LANDSCAPE;
+                Scene scene = new Scene(target, vantage, kind, 0);
                 if (!scene.near(anchor) || !inside(level, vantage) || !geometry.clear(vantage, vantage)
                     || !geometry.visible(vantage, target)) continue;
-                double quality = quality(level, vantage, target, true);
+                double quality = quality(level, vantage, target, true, false);
                 if (quality <= 0) continue;
-                double score = quality + interest(state) * 0.08;
-                if (best == null || score > best.interest()) best = new Scene(target, vantage, true, score);
+                double score = quality + interest(state) * 0.08 + (low ? 0.75 : 0);
+                if (best == null || score > best.interest()) best = new Scene(target, vantage, kind, score);
             }
         }
         return best;
     }
 
-    static double quality(ClientLevel level, Vec vantage, Vec focus, boolean outdoors) {
+    private static BlockPos ground(ClientLevel level, BlockPos top) {
+        for (int depth = 0; depth < 24; depth++) {
+            BlockPos block = top.below(depth);
+            if (level.isOutsideBuildHeight(block)) return null;
+            BlockState state = level.getBlockState(block);
+            if (!state.getFluidState().isEmpty()) return null;
+            if (!state.is(BlockTags.LEAVES) && !state.is(BlockTags.LOGS)
+                && !state.getCollisionShape(level, block, CollisionContext.empty()).isEmpty()) return block;
+        }
+        return null;
+    }
+
+    private static Scene underwater(ClientLevel level, WorldGeometry geometry, Vec anchor, BlockPos surface, double angle) {
+        double waterTop = surface.getY() + level.getFluidState(surface).getHeight(level, surface);
+        for (int depth = 1; depth <= 12; depth++) {
+            BlockPos block = surface.below(depth);
+            if (level.isOutsideBuildHeight(block)) return null;
+            BlockState state = level.getBlockState(block);
+            if (state.getFluidState().is(FluidTags.WATER)) continue;
+            var shape = state.getVisualShape(level, block, CollisionContext.empty());
+            if (depth < 3 || shape.isEmpty()) return null;
+            Vec focus = new Vec(block.getX() + 0.5, block.getY() + shape.max(Direction.Axis.Y) + 1, block.getZ() + 0.5);
+            Vec vantage = new Vec(focus.x() + Math.sin(angle) * 6, Math.min(waterTop - 1.2, focus.y() + 1.3),
+                focus.z() + Math.cos(angle) * 6);
+            var scene = new Scene(focus, vantage, Scene.Kind.WATER, 0);
+            var wet = geometry.forScene(scene);
+            if (!scene.near(anchor) || !inside(level, vantage) || !wet.clear(vantage, vantage) || !wet.visible(vantage, focus)) return null;
+            double quality = quality(level, vantage, focus, false, true);
+            return quality > 0 ? new Scene(focus, vantage, Scene.Kind.WATER, quality + 1.5) : null;
+        }
+        return null;
+    }
+
+    static double quality(ClientLevel level, Vec vantage, Vec focus, boolean outdoors, boolean water) {
         var client = Minecraft.getInstance();
         var window = client.getWindow();
         Pose pose = Pose.lookingAt(vantage, focus);
@@ -92,11 +149,11 @@ final class WorldScenery {
         Vec[] rays = ViewQuality.directions(pose, AfkCinematics.config().lens.fieldOfView(client.options.fov().get(), aspect),
             aspect, AfkCinematics.config().letterbox);
         double[] depths = new double[rays.length];
-        for (int i = 0; i < rays.length; i++) depths[i] = depth(level, vantage, rays[i]);
+        for (int i = 0; i < rays.length; i++) depths[i] = depth(level, vantage, rays[i], water);
         return ViewQuality.score(depths, pose.pitch(), outdoors);
     }
 
-    static double depth(ClientLevel level, Vec vantage, Vec direction) {
+    static double depth(ClientLevel level, Vec vantage, Vec direction, boolean water) {
         Vec end = vantage.add(direction.scale(ViewQuality.RANGE));
         int minX = (int)Math.floor(Math.min(vantage.x(), end.x())) >> 4;
         int maxX = (int)Math.floor(Math.max(vantage.x(), end.x())) >> 4;
@@ -109,7 +166,11 @@ final class WorldScenery {
         }
         // These bounded rays rank the view; WorldGeometry independently proves safety.
         var hit = level.clip(new ClipContext(WorldGeometry.vector(vantage), WorldGeometry.vector(end),
-            ClipContext.Block.VISUAL, ClipContext.Fluid.ANY, CollisionContext.empty()));
+            ClipContext.Block.VISUAL, ClipContext.Fluid.ANY, CollisionContext.empty()) {
+            @Override public VoxelShape getFluidShape(FluidState fluid, BlockGetter world, BlockPos position) {
+                return water && fluid.is(FluidTags.WATER) ? Shapes.empty() : super.getFluidShape(fluid, world, position);
+            }
+        });
         return hit.getType() == HitResult.Type.MISS ? ViewQuality.RANGE
             : hit.getLocation().distanceTo(WorldGeometry.vector(vantage));
     }

@@ -10,7 +10,7 @@ class LensTest {
         public boolean clear(Vec from, Vec to, double margin) { return true; }
         public boolean visible(Vec from, Vec to, double margin) { return true; }
         public Scene scenery(Vec anchor, Pose original, double bearing, int probe) {
-            return probe == 0 ? new Scene(new Vec(8, 2, 0), new Vec(8, 4, -8), true, 5) : null;
+            return probe == 0 ? new Scene(new Vec(8, 2, 0), new Vec(8, 4, -8), Scene.Kind.LANDSCAPE, 5) : null;
         }
     };
 

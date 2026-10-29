@@ -123,7 +123,7 @@ public final class SceneryGameTest implements FabricClientGameTest {
             var point = WorldGeometry.point(camera(client).position());
             require(AfkCinematics.scenery() && AfkCinematics.fade() == 0, "Scenery view stopped before inspection");
             require(Scene.inRange(point, initial.position()), "Scenery escaped the player-centered range");
-            require(new WorldGeometry(client.level).clear(point, point), "Scenery camera clipped terrain");
+            require(new WorldGeometry(client.level, AfkCinematics.underwater()).clear(point, point), "Scenery camera clipped terrain");
             require(surface ? point.y() > origin.getY() + 10 : point.y() < origin.getY() + 9,
                 "Scenery did not use the expected surface/cavern viewpoint");
             require(WorldGeometry.point(client.player.position()).distance(initial.position()) < 0.0001

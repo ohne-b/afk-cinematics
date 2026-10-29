@@ -78,6 +78,7 @@ public final class AfkCinematics {
     }
     public static double fade() { return session == null ? 0 : session.fade(); }
     public static boolean scenery() { return session != null && session.scenery(); }
+    public static boolean underwater() { return session != null && session.underwater(); }
     public static int frameLimit() {
         if (!showing() || !eligible()) return 0;
         var client = Minecraft.getInstance();

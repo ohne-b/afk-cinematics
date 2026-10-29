@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class SceneryTest {
     private static final Vec PLAYER = new Vec(0, 1, 0);
     private static final Pose ENTRY = new Pose(new Vec(0, 1.6, 0), 0, 0);
-    private static final Scene SURFACE = new Scene(new Vec(8, 20, 0), new Vec(8, 22, -8), true, 3);
+    private static final Scene SURFACE = new Scene(new Vec(8, 20, 0), new Vec(8, 22, -8), Scene.Kind.LANDSCAPE, 3);
 
     @Test void crampedPlayerFallsBackToSceneryWithoutTravellingThroughWalls() {
         var session = session(CinematicConfig.Subject.MIXED, cavern(new boolean[]{false}));
@@ -58,7 +58,7 @@ class SceneryTest {
     }
 
     @Test void elevatedStillAndPanoramaViewsKeepTheirPosition() {
-        var elevated = new Scene(PLAYER, new Vec(8, 14.15, 0), true, 1);
+        var elevated = new Scene(PLAYER, new Vec(8, 14.15, 0), Scene.Kind.LANDSCAPE, 1);
         Geometry open = new Geometry() {
             public boolean clear(Vec a, Vec b, double margin) { return true; }
             public boolean visible(Vec a, Vec b, double margin) { return true; }
@@ -156,7 +156,7 @@ class SceneryTest {
             public boolean visible(Vec a, Vec b, double margin) { return true; }
             public Scene scenery(Vec anchor, Pose original, double bearing, int probe) {
                 probes[0]++;
-                return new Scene(new Vec(200, 200, 0), new Vec(200, 202, -8), true, 100);
+                return new Scene(new Vec(200, 200, 0), new Vec(200, 202, -8), Scene.Kind.LANDSCAPE, 100);
             }
         });
         for (int tick = 0; tick < 30; tick++) session.tick(tick * 50_000_000L);
@@ -165,7 +165,7 @@ class SceneryTest {
     }
 
     @Test void mixedModeRemembersTheLastSceneryAcrossPlayerShots() {
-        Scene second = new Scene(new Vec(-8, 20, 0), new Vec(-8, 22, -8), true, 2);
+        Scene second = new Scene(new Vec(-8, 20, 0), new Vec(-8, 22, -8), Scene.Kind.LANDSCAPE, 2);
         Geometry open = new Geometry() {
             public boolean clear(Vec a, Vec b, double margin) { return true; }
             public boolean visible(Vec a, Vec b, double margin) { return true; }
@@ -196,7 +196,7 @@ class SceneryTest {
             public boolean visible(Vec a, Vec b, double margin) { return true; }
             public Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return probe == 0 ? SURFACE : null; }
         };
-        Scene player = new Scene(PLAYER, ENTRY.position(), false, 0);
+        Scene player = new Scene(PLAYER, ENTRY.position(), Scene.Kind.PLAYER, 0);
         for (Scene last : new Scene[]{player, SURFACE}) {
             Random repeat = new Random(4) {
                 @Override public double nextDouble() { return last.scenery() ? 0 : 0.99; }

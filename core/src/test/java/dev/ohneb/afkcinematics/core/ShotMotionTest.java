@@ -31,7 +31,7 @@ class ShotMotionTest {
     }
 
     @Test void dollyAtTheOuterLimitTravelsInwardInsteadOfBecomingAStill() {
-        var scene = new Scene(SUBJECT, SUBJECT.add(new Vec(0, 2, -12)), true, 1);
+        var scene = new Scene(SUBJECT, SUBJECT.add(new Vec(0, 2, -12)), Scene.Kind.LANDSCAPE, 1);
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.DOLLY);
         for (int seed = 0; seed < 8; seed++) {
@@ -44,7 +44,7 @@ class ShotMotionTest {
     }
 
     @Test void lateralSceneryTravelCreatesParallaxAndReducedMotionStaysSmaller() {
-        var scene = new Scene(SUBJECT, SUBJECT.add(new Vec(0, 2, -8)), true, 1);
+        var scene = new Scene(SUBJECT, SUBJECT.add(new Vec(0, 2, -8)), Scene.Kind.LANDSCAPE, 1);
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.DRIFT);
         var pose = Pose.lookingAt(scene.vantage(), SUBJECT);
@@ -58,7 +58,7 @@ class ShotMotionTest {
     }
 
     @Test void cameraDrivesKeepMovingInOneDirectionAndRespectReducedMotion() {
-        var scene = new Scene(SUBJECT, SUBJECT.add(new Vec(0, 2, -8)), true, 1);
+        var scene = new Scene(SUBJECT, SUBJECT.add(new Vec(0, 2, -8)), Scene.Kind.LANDSCAPE, 1);
         var config = new CinematicConfig();
         for (Shot.Type type : new Shot.Type[]{Shot.Type.FLYOVER, Shot.Type.LOW_PASS, Shot.Type.REVEAL}) {
             config.shots = EnumSet.of(type);

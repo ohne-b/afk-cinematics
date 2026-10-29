@@ -10,9 +10,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class ShotSequenceTest {
     private static final Vec ANCHOR = new Vec(0, 1, 0);
     private static final Pose ENTRY = new Pose(new Vec(0, 1.6, 0), 0, 0);
-    private static final Scene FIRST = new Scene(new Vec(-8, 10, 0), new Vec(-8, 12, -8), true, 8);
-    private static final Scene SECOND = new Scene(new Vec(8, 10, 0), new Vec(8, 12, -8), true, 7.9);
-    private static final Scene THIRD = new Scene(new Vec(0, 10, 8), new Vec(0, 12, 0), true, 7.8);
+    private static final Scene FIRST = new Scene(new Vec(-8, 10, 0), new Vec(-8, 12, -8), Scene.Kind.LANDSCAPE, 8);
+    private static final Scene SECOND = new Scene(new Vec(8, 10, 0), new Vec(8, 12, -8), Scene.Kind.LANDSCAPE, 7.9);
+    private static final Scene THIRD = new Scene(new Vec(0, 10, 8), new Vec(0, 12, 0), Scene.Kind.LANDSCAPE, 7.8);
 
     @Test void aPreparedTakeDoesNotFreezeOrReplaceTheCurrentMotionEarly() {
         var accepted = new ArrayList<Shot>();

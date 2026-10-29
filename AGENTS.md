@@ -30,6 +30,8 @@ minimized-window throttling. Do not simulate activity to avoid idle limits.
 Separate scenery viewpoints use covered cuts: render a fully opaque old frame,
 then a fully opaque destination frame, and revalidate before revealing it. Keep all
 viewpoints within the player-centered range; never interpolate through terrain.
+Underwater takes require a fully submerged camera volume. Use each view's environment
+for planning and covered handoffs; water may be passable, lava and solid shapes are not.
 Prepare the next take without freezing the current shot. Revalidate at handoff and
 cover changes of viewpoint or direction. Manual Next discards the prepared plan.
 
