@@ -43,6 +43,7 @@ if (minecraftVersion == "26.2" || minecraftVersion == "26.3") {
     loom.runs.named("clientGameTest") {
         vmArg("-Dafkcinematics.test.artifacts=${rootProject.file("artifacts/gametest-${project.name}").absolutePath}")
         providers.gradleProperty("naturalSeconds").orNull?.let { vmArg("-Dafkcinematics.test.naturalSeconds=$it") }
+        providers.gradleProperty("cinematicCapture").orNull?.let { vmArg("-Dafkcinematics.test.capture=$it") }
         vmArg("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
     }
 }

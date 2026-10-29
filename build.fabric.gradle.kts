@@ -81,6 +81,7 @@ if (minecraftVersion == "1.21.11" || minecraftVersion == "1.21.8") {
     loom.runs.named("clientGameTest") {
         vmArg("-Dafkcinematics.test.artifacts=${rootProject.file("artifacts/gametest-${project.name}").absolutePath}")
         providers.gradleProperty("naturalSeconds").orNull?.let { vmArg("-Dafkcinematics.test.naturalSeconds=$it") }
+        providers.gradleProperty("cinematicCapture").orNull?.let { vmArg("-Dafkcinematics.test.capture=$it") }
         // Use real packet timing; Fabric's packet synchronizer can stall world startup.
         vmArg("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
     }

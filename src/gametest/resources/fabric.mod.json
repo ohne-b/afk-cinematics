@@ -12,6 +12,7 @@
       "dev.ohneb.afkcinematics.client.CameraGameTest",
       "dev.ohneb.afkcinematics.client.InputSafetyGameTest",
       "dev.ohneb.afkcinematics.client.WorldGeometryGameTest",
+      "dev.ohneb.afkcinematics.client.ViewQualityGameTest",
       "dev.ohneb.afkcinematics.client.SettingsGameTest",
       "dev.ohneb.afkcinematics.client.TransitionsGameTest",
       "dev.ohneb.afkcinematics.client.ShotTypesGameTest",
