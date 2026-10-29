@@ -2,6 +2,7 @@ package dev.ohneb.afkcinematics.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.ohneb.afkcinematics.core.CinematicConfig;
+import dev.ohneb.afkcinematics.core.Shot;
 import dev.ohneb.afkcinematics.testmixin.KeyboardInvoker;
 import dev.ohneb.afkcinematics.testmixin.MouseInvoker;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -31,6 +32,8 @@ public final class TestSupport {
             config.unfocused = true;
             config.music = false;
             config.motion = CinematicConfig.Motion.GENTLE;
+            config.pace = CinematicConfig.Pace.RELAXED;
+            config.shots = java.util.EnumSet.allOf(Shot.Type.class);
             config.distance = CinematicConfig.Distance.NORMAL;
         });
     }
