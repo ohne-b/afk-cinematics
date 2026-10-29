@@ -51,7 +51,7 @@ or AmbientSounds 6.3.11 / CreativeCore 2.14.24 on Fabric 26.3, for water-depth c
 `-PsmokeTest` makes `runClient` check startup and settings, then exit. Add
 `-PsceneWorld=create` to create a flat test world and check player shots, a cramped
 scenery fallback, the rendered camera and unchanged server state. CI runs this on
-every target. `-PsceneWorld=<name>` may reuse a copied test fixture, never a player save.
+NeoForge 1.21.11 and 26.3. `-PsceneWorld=<name>` may reuse a copied test fixture, never a player save.
 The Fabric suite also checks natural terrain and records camera timings in `artifacts/`.
 Use `-PnaturalSeconds=3600` for an hour of continuous scenery validation; the default is 40 seconds.
 Use `-PcinematicCapture=<new-name>` for timestamped frames from a fixed snowy-forest
@@ -59,6 +59,12 @@ view. Capture labels must be new so earlier footage is preserved.
 Add `-PcinematicScene=plains` or `-PcinematicScene=cavern` for the other view fixtures.
 Use `-PcinematicShots=FLY_THROUGH,TRAVERSE` to restrict a recording to selected moves.
 Recordings bypass still-capture holds in the test fixture so the camera keeps moving.
+
+PRs run core and release-tool tests, four builds (both loaders on 1.21.11 and 26.3),
+and two Fabric gameplay profiles (1.21.11 compatibility and 26.3 vanilla).
+Merging does not repeat these checks. A manual **Build** run compiles all 34 targets
+and runs all five Fabric profiles before a release. Changes to other version
+boundaries still need their affected-target checks before merging.
 
 Every PR requires independent critical review by a human or a separate read-only
 reviewer who did not write it. Provide these instructions, acceptance criteria, the
@@ -106,8 +112,9 @@ required; test the helper with `python -m unittest discover -s .github/scripts -
 
 ### Publishing and distribution
 
-After explicit release authorization, run **Publish release** from `main` with the
-reviewed version, full merged commit SHA and its successful **Build** push run ID.
+After the release PR is merged, run **Build** manually from `main` once. After it
+succeeds and release publication is authorized, run **Publish release** from `main`
+with the reviewed version, full merged commit SHA and that manual Build run ID.
 The default is validation only: it verifies all target jars and prepares a downloadable
 bundle without creating tags, releases or platform versions. It reuses CI artifacts;
 if they expired, rerun Build for that same revision rather than substituting local jars.
