@@ -60,12 +60,12 @@ class SceneryTest {
     @Test void elevatedStillAndPanoramaViewsKeepTheirPosition() {
         var elevated = new Scene(PLAYER, new Vec(8, 14.15, 0), true, 1);
         Geometry open = new Geometry() {
-            public boolean clear(Vec a, Vec b) { return true; }
-            public boolean visible(Vec a, Vec b) { return true; }
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
         };
         Geometry ledge = new Geometry() {
-            public boolean clear(Vec a, Vec b) { return a.y() >= 14 && b.y() >= 14; }
-            public boolean visible(Vec a, Vec b) { return true; }
+            public boolean clear(Vec a, Vec b, double margin) { return a.y() >= 14 && b.y() >= 14; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
         };
         for (Shot.Type type : new Shot.Type[]{Shot.Type.STILL, Shot.Type.PAN}) {
             var config = new CinematicConfig();
@@ -81,8 +81,8 @@ class SceneryTest {
 
     @Test void subjectModesDoNotSilentlyChooseTheOtherSubject() {
         Geometry playerOnly = new Geometry() {
-            public boolean clear(Vec a, Vec b) { return true; }
-            public boolean visible(Vec a, Vec b) { return true; }
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
             public Scene scenery(Vec anchor, Pose original, double bearing, int probe) {
                 fail("Player mode queried scenery"); return null;
             }
@@ -92,8 +92,8 @@ class SceneryTest {
         assertNotNull(player.frame(0));
         assertFalse(player.scenery());
         var scenery = session(CinematicConfig.Subject.SCENERY, new Geometry() {
-            public boolean clear(Vec a, Vec b) { return true; }
-            public boolean visible(Vec a, Vec b) { return true; }
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
         });
         for (int tick = 0; tick < 30; tick++) scenery.tick(tick * 50_000_000L);
         assertTrue(scenery.ended());
@@ -102,8 +102,8 @@ class SceneryTest {
 
     @Test void mixedModeAlternatesSubjectsAndStaysWithinThePlayerRange() {
         Geometry open = new Geometry() {
-            public boolean clear(Vec a, Vec b) { return true; }
-            public boolean visible(Vec a, Vec b) { return true; }
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
             public Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return probe == 0 ? SURFACE : null; }
         };
         var session = session(CinematicConfig.Subject.MIXED, open);
@@ -152,8 +152,8 @@ class SceneryTest {
     @Test void invalidDistantCandidatesHaveAFiniteSearchBudget() {
         int[] probes = {0};
         var session = session(CinematicConfig.Subject.SCENERY, new Geometry() {
-            public boolean clear(Vec a, Vec b) { return true; }
-            public boolean visible(Vec a, Vec b) { return true; }
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
             public Scene scenery(Vec anchor, Pose original, double bearing, int probe) {
                 probes[0]++;
                 return new Scene(new Vec(200, 200, 0), new Vec(200, 202, -8), true, 100);
@@ -167,8 +167,8 @@ class SceneryTest {
     @Test void mixedModeRemembersTheLastSceneryAcrossPlayerShots() {
         Scene second = new Scene(new Vec(-8, 20, 0), new Vec(-8, 22, -8), true, 2);
         Geometry open = new Geometry() {
-            public boolean clear(Vec a, Vec b) { return true; }
-            public boolean visible(Vec a, Vec b) { return true; }
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
             public Scene scenery(Vec anchor, Pose original, double bearing, int probe) {
                 return probe == 0 ? SURFACE : probe == 1 ? second : null;
             }
@@ -199,11 +199,11 @@ class SceneryTest {
 
     private Geometry cavern(boolean[] obstructed) {
         return new Geometry() {
-            public boolean clear(Vec a, Vec b) {
+            public boolean clear(Vec a, Vec b, double margin) {
                 return a.distance(ENTRY.position()) < 0.01 && b.distance(ENTRY.position()) < 0.01
                     || !obstructed[0] && a.y() > 10 && b.y() > 10;
             }
-            public boolean visible(Vec a, Vec b) { return a.y() > 10; }
+            public boolean visible(Vec a, Vec b, double margin) { return a.y() > 10; }
             public Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return probe == 0 ? SURFACE : null; }
         };
     }

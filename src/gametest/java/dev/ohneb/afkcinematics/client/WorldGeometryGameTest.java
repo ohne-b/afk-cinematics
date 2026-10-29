@@ -32,6 +32,11 @@ public final class WorldGeometryGameTest implements FabricClientGameTest {
                     client.level.removeBlockEntity(origin);
                     client.level.setBlock(origin, Blocks.WATER.defaultBlockState(), 3);
                     require(geometry.clear(point, point), "Adjacent water blocked a camera volume outside the fluid");
+                    require(!geometry.clear(point, point, 0.3), "Curved camera margin missed adjacent water");
+                    require(geometry.visible(point.add(new Vec(0, 0, -2)), point.add(new Vec(0, 0, 2))),
+                        "Adjacent water blocked an outside sightline");
+                    require(!geometry.visible(point.add(new Vec(0, 0, -2)), point.add(new Vec(0, 0, 2)), 0.6),
+                        "Swept sightline margin missed adjacent water");
                     var wet = new Vec(origin.getX() + 0.5, origin.getY() + 0.5, origin.getZ() + 0.5);
                     require(!geometry.clear(wet, wet), "Camera volume was allowed inside water");
                     client.level.setBlock(origin, Blocks.STONE.defaultBlockState(), 3);

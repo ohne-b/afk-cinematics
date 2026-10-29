@@ -9,8 +9,8 @@ class CameraTest {
     private static final Vec SUBJECT = new Vec(0, 1, 0);
     private static final Pose ENTRY = new Pose(new Vec(0, 1.6, 0), 0, 0);
     private static final Geometry OPEN = new Geometry() {
-        public boolean clear(Vec from, Vec to) { return true; }
-        public boolean visible(Vec from, Vec target) { return true; }
+        public boolean clear(Vec from, Vec to, double margin) { return true; }
+        public boolean visible(Vec from, Vec target, double margin) { return true; }
     };
 
     @Test void turnsAcrossTheShortSideOfTheAngleBoundary() {
@@ -38,8 +38,8 @@ class CameraTest {
 
     @Test void blockedPathsCannotBeAcceptedJustBecauseEndpointsAreClear() {
         Geometry wall = new Geometry() {
-            public boolean clear(Vec from, Vec to) { return !(Math.min(from.x(), to.x()) < 0 && Math.max(from.x(), to.x()) >= 0); }
-            public boolean visible(Vec from, Vec target) { return true; }
+            public boolean clear(Vec from, Vec to, double margin) { return !(Math.min(from.x(), to.x()) < 0 && Math.max(from.x(), to.x()) >= 0); }
+            public boolean visible(Vec from, Vec target, double margin) { return true; }
         };
         var shot = new Shot(Shot.Type.DRIFT, new Vec(-2, 2, -4), new Vec(0, 2, -4), new Vec(2, 2, -4), SUBJECT, SUBJECT, 20);
         assertFalse(wall.valid(shot, shot.start()));
@@ -48,8 +48,8 @@ class CameraTest {
     @Test void changedObstacleStopsAnAlreadyValidatedShot() {
         boolean[] blocked = {false};
         Geometry changing = new Geometry() {
-            public boolean clear(Vec from, Vec to) { return !blocked[0]; }
-            public boolean visible(Vec from, Vec target) { return true; }
+            public boolean clear(Vec from, Vec to, double margin) { return !blocked[0]; }
+            public boolean visible(Vec from, Vec target, double margin) { return true; }
         };
         var session = new CinematicSession(SUBJECT, ENTRY, 0, new CinematicConfig(), changing, new Random(1));
         session.tick(0);
@@ -61,8 +61,8 @@ class CameraTest {
 
     @Test void lookingDownDoesNotRejectAWideEntryAboveFlatGround() {
         Geometry ground = new Geometry() {
-            public boolean clear(Vec from, Vec to) { return from.y() > 0.25 && to.y() > 0.25; }
-            public boolean visible(Vec from, Vec target) { return from.y() > 0 && target.y() > 0; }
+            public boolean clear(Vec from, Vec to, double margin) { return Math.min(from.y(), to.y()) - margin > 0.25; }
+            public boolean visible(Vec from, Vec target, double margin) { return Math.min(from.y(), target.y()) - margin > 0; }
         };
         var config = new CinematicConfig();
         config.distance = CinematicConfig.Distance.WIDE;
@@ -77,8 +77,8 @@ class CameraTest {
 
     @Test void noSpaceAndLongFrameGapsStopWithoutAnInvalidPose() {
         Geometry closed = new Geometry() {
-            public boolean clear(Vec from, Vec to) { return false; }
-            public boolean visible(Vec from, Vec target) { return false; }
+            public boolean clear(Vec from, Vec to, double margin) { return false; }
+            public boolean visible(Vec from, Vec target, double margin) { return false; }
         };
         var session = new CinematicSession(SUBJECT, ENTRY, 0, new CinematicConfig(), closed, new Random(1));
         for (int i = 0; i < 70; i++) session.tick(i * 50_000_000L);

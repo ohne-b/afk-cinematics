@@ -17,6 +17,7 @@ Track the effective mouse button after vanilla's platform-specific remapping.
 Inactive release events can be synthetic; they do not establish physical release.
 
 Validate the swept camera volume and subject visibility using loaded terrain only.
+Planning must bound the camera curve and moving sightline between samples.
 Apply the pose before culling and render extraction. Keep world access on the client
 thread; rendering consumes an immutable pose. Stop safely on invalid state or an
 obstructed path. Every stop path uses the same cleanup.
