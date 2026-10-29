@@ -38,11 +38,12 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
             });
             context.waitFor(client -> client.player.onGround() && client.player.getInventory().countItem(Items.SNOWBALL) == 16);
             context.waitTicks(10);
-            for (KeyMapping control : new KeyMapping[]{AfkCinematics.SETTINGS, AfkCinematics.TOGGLE}) {
+            for (KeyMapping control : new KeyMapping[]{AfkCinematics.SETTINGS, AfkCinematics.TOGGLE, AfkCinematics.NEXT}) {
                 var oldUse = new AtomicReference<InputConstants.Key>();
                 var oldControl = new AtomicReference<InputConstants.Key>();
                 world.getServer().runOnServer(server -> supply(server.getPlayerList().getPlayers().getFirst()));
                 context.waitFor(client -> client.player.getInventory().countItem(Items.SNOWBALL) == 16);
+                if (control == AfkCinematics.NEXT) start(context);
                 context.runOnClient(client -> {
                     oldUse.set(((KeyMappingAccess)client.options.keyUse).afkCinematics$key());
                     oldControl.set(((KeyMappingAccess)control).afkCinematics$key());
@@ -53,8 +54,10 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
                 });
                 try {
                     key(context, InputConstants.KEY_U, InputConstants.PRESS);
-                    if (control == AfkCinematics.TOGGLE) {
+                    if (control != AfkCinematics.SETTINGS) {
                         context.waitFor(client -> AfkCinematics.showing(), 120);
+                        if (control == AfkCinematics.NEXT) context.runOnClient(client -> require(AfkCinematics.ownsCamera(),
+                            "Next shot stopped the cinematic"));
                         context.runOnClient(client -> AfkCinematics.showScreen(new InventoryScreen(client.player)));
                     } else context.runOnClient(client -> require(AfkCinematics.screen() instanceof SettingsScreen,
                         "Settings control did not open the screen"));
