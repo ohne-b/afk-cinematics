@@ -15,6 +15,7 @@
       "dev.ohneb.afkcinematics.client.FrameLimitGameTest",
       "dev.ohneb.afkcinematics.client.ToastGameTest",
       "dev.ohneb.afkcinematics.client.PlayerNamesGameTest",
+      "dev.ohneb.afkcinematics.client.ScreenshotGameTest",
       "dev.ohneb.afkcinematics.client.InputSafetyGameTest",
       "dev.ohneb.afkcinematics.client.WorldGeometryGameTest",
       "dev.ohneb.afkcinematics.client.ViewQualityGameTest",

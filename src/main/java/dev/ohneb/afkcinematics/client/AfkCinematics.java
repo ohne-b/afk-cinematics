@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
 public final class AfkCinematics {
@@ -178,6 +179,24 @@ public final class AfkCinematics {
 
     public static void nextShot() { if (session != null) session.nextShot(); }
 
+    public static Runnable holdForScreenshot() {
+        CinematicSession owner = session;
+        if (owner == null || !owner.showing()) return () -> { };
+        owner.beginCapture(System.nanoTime());
+        var released = new AtomicBoolean();
+        return () -> {
+            if (released.compareAndSet(false, true)) Minecraft.getInstance().execute(() -> {
+                if (session == owner) owner.endCapture(System.nanoTime());
+            });
+        };
+    }
+
+    public static boolean fabrishotKey(InputConstants.Key key) {
+        for (KeyMapping binding : Minecraft.getInstance().options.keyMappings)
+            if (binding.getName().equals("key.fabrishot.screenshot") && matches(binding, key)) return true;
+        return false;
+    }
+
     public static Pose cameraFrame(Camera camera) {
         appliedCamera = null;
         if (session == null) {
@@ -217,11 +236,11 @@ public final class AfkCinematics {
         var options = Minecraft.getInstance().options;
         boolean dangerous = matches(options.keyAttack, key) || matches(options.keyUse, key) || matches(options.keyDrop, key);
         if (screenshot && action == InputConstants.PRESS) {
-            // Vanilla consumes the press, but a shared gameplay binding can receive repeats.
-            if (ownsCamera() && dangerous) INPUT.suppress(token);
+            // Capture handlers read the event directly; shared bindings and repeats stay suppressed.
+            if (ownsCamera()) INPUT.suppress(token);
             return false;
         }
-        if (screenshot && !INPUT.suppressed(token)) return false;
+        if (screenshot) return INPUT.suppressed(token);
         if (screen() == null && (matches(TOGGLE, key) || matches(SETTINGS, key) || matches(NEXT, key))) {
             INPUT.suppress(token);
             if (action == InputConstants.PRESS) {

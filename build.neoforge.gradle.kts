@@ -35,7 +35,7 @@ neoForge {
     }
 }
 
-sourceSets.main { java.exclude("**/FabricClient.java", "**/ModMenuIntegration.java") }
+sourceSets.main { java.exclude("**/FabricClient.java", "**/ModMenuIntegration.java", "**/FabrishotMixin.java") }
 
 
 if (providers.gradleProperty("smokeTest").isPresent) {
@@ -70,6 +70,7 @@ tasks.processResources {
             "logo_key" to if (stonecutter.eval(minecraftVersion, ">=26.2")) "iconFile" else "logoFile")
     }
     exclude("fabric.mod.json")
+    exclude("ohneb_afk_cinematics.fabric.mixins.json")
 }
 
 tasks.jar {

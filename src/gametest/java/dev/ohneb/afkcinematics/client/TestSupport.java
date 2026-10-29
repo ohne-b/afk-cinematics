@@ -27,6 +27,8 @@ public final class TestSupport {
     public static boolean checkTransitions;
     public static int coveredCuts;
     public static int playerNameFrames;
+    public static boolean checkScreenshotView;
+    public static int cinematicScreenshots;
 
     private TestSupport() { }
 

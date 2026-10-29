@@ -34,6 +34,8 @@ Underwater takes require a fully submerged camera volume. Use each view's enviro
 for planning and covered handoffs; water may be passable, lava and solid shapes are not.
 Prepare the next take without freezing the current shot. Revalidate at handoff and
 cover changes of viewpoint or direction. Manual Next discards the prepared plan.
+Screenshot holds pause the take's timing, not terrain validation. Release each hold
+only for its owning session; a finished capture must not resume a newer session.
 
 Use isolated worlds for tests. Never access player saves or public servers in automated
 tests. A build does not establish visual quality or compatibility. Use a separate
