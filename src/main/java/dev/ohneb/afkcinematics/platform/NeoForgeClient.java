@@ -28,6 +28,7 @@ public final class NeoForgeClient {
     private static void keys(RegisterKeyMappingsEvent event) {
         event.register(AfkCinematics.TOGGLE);
         event.register(AfkCinematics.SETTINGS);
+        event.register(AfkCinematics.NEXT);
     }
     private static void tick(ClientTickEvent.Post event) { AfkCinematics.tick(); }
     private static void commands(RegisterClientCommandsEvent event) { event.getDispatcher().register(ClientCommands.root()); }
