@@ -19,6 +19,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static dev.ohneb.afkcinematics.client.TestSupport.*;
@@ -98,6 +99,13 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
                     key(context, InputConstants.KEY_U, InputConstants.PRESS);
                     key(context, InputConstants.KEY_U, InputConstants.RELEASE);
                     context.waitFor(client -> client.player.getInventory().countItem(Items.SNOWBALL) == 15, 60);
+                    var serverCount = new AtomicInteger(-1);
+                    for (int tick = 0; tick < 60 && serverCount.get() != 15; tick++) {
+                        world.getServer().runOnServer(server -> serverCount.set(
+                            server.getPlayerList().getPlayers().getFirst().getInventory().countItem(Items.SNOWBALL)));
+                        context.waitTicks(1);
+                    }
+                    require(serverCount.get() == 15, "Fresh Use did not reach the server after release");
                     world.getServer().runOnServer(server -> {
                         var player = server.getPlayerList().getPlayers().getFirst();
                         player.level().getEntitiesOfClass(Projectile.class, player.getBoundingBox().inflate(64)).forEach(Projectile::discard);
