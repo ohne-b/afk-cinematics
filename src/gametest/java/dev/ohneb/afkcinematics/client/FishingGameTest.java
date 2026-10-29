@@ -63,6 +63,30 @@ public final class FishingGameTest implements FabricClientGameTest {
                 AfkCinematics.config().shots.add(Shot.Type.FLOAT);
             });
             screenshot(context, "fishing-angler");
+            var releaseCapture = context.computeOnClient(client -> AfkCinematics.holdForScreenshot());
+            var heldView = context.computeOnClient(client -> new dev.ohneb.afkcinematics.core.Pose(
+                WorldGeometry.point(camera(client).position()), camera(client).yRot(), camera(client).xRot()));
+            BlockPos obstruction = context.computeOnClient(client -> {
+                var angler = client.player.position().add(0, client.player.getBbHeight() * .65, 0);
+                var view = camera(client).position();
+                return BlockPos.containing(angler.lerp(view, 3 / angler.distanceTo(view)));
+            });
+            world.getServer().runOnServer(server -> server.overworld().setBlockAndUpdate(obstruction, Blocks.STONE.defaultBlockState()));
+            context.waitFor(client -> client.level.getBlockState(obstruction).is(Blocks.STONE));
+            context.runOnClient(client -> {
+                var angler = WorldGeometry.point(client.player.position().add(0, client.player.getBbHeight() * .65, 0));
+                var cast = FishingActivity.target(client.player.fishing, 1, angler).add(angler);
+                var geometry = new WorldGeometry(client.level).forScene(null);
+                require(!geometry.visible(heldView.position(), angler) && geometry.visible(heldView.position(), cast)
+                    && new net.minecraft.world.phys.AABB(obstruction).clip(WorldGeometry.vector(heldView.position()),
+                        WorldGeometry.vector(heldView.lookAhead(32))).isEmpty(), "The fixture must obscure only the angler");
+            });
+            context.waitFor(client -> !AfkCinematics.ownsCamera(), 30);
+            context.runOnClient(client -> releaseCapture.run());
+            world.getServer().runOnServer(server -> server.overworld().setBlockAndUpdate(obstruction, Blocks.AIR.defaultBlockState()));
+            context.waitFor(client -> client.level.getBlockState(obstruction).isAir());
+            start(context);
+            context.waitFor(client -> AfkCinematics.fade() == 0 && AfkCinematics.showing(), 60);
             Shot waitingTake = context.computeOnClient(client -> revealedShot);
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();

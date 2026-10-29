@@ -346,7 +346,8 @@ public final class AfkCinematics {
         Pose pose = session.frame(now);
         if (pose != null && movingGeometry != null) {
             pose = movingGeometry.apply(pose, session.focus(), session.fade(), session.take(), session.capturing());
-            if (pose != null && bobber != null && !movingGeometry.sees(pose, bobber)) pose = null;
+            if (pose != null && bobber != null && (!movingGeometry.sees(pose, bobber)
+                || !movingGeometry.sees(pose, new Vec(0, 0, 0)))) pose = null;
             if (pose == null) { stop(); return null; }
         }
         if (session.ended()) stop();
