@@ -7,7 +7,8 @@ Keep idle timing, shot selection and camera math in `core/`. Minecraft world que
 rendering, input and loader integration belong in `src/main/`. Only one controller
 owns the cinematic. Bind its lifetime to the current player, world and connection.
 
-Change the rendered camera only. Never move or rotate the player, send synthetic
+Change the rendered camera only; preserve the selected camera entity, including
+another mod's camera. Never move or rotate the player, send synthetic
 gameplay input, alter inventory, keep a server session active, or change persistent
 game options to produce a cinematic. Restore control before processing wake input.
 An attack, use or drop action that wakes the camera must stay suppressed until release.
