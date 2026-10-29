@@ -55,10 +55,12 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                 start(context);
                 context.waitFor(client -> AfkCinematics.scenery() && AfkCinematics.fade() == 0, 200);
                 int duration = Math.clamp(Integer.getInteger("afkcinematics.test.naturalSeconds", 40), 40, 3600);
-                long lastReveal = System.nanoTime();
+                long started = System.nanoTime();
+                long lastReveal = started;
                 boolean fading = false;
                 int completedShots = 0;
-                for (int tick = 0; tick < duration * 20; tick++) {
+                long nextReport = 60;
+                for (int tick = 0; System.nanoTime() - started < duration * 1_000_000_000L; tick++) {
                     boolean uncovered = context.computeOnClient(client -> {
                         require(AfkCinematics.showing(), "Natural scenery stopped unexpectedly: " + cameraStop);
                         var point = WorldGeometry.point(camera(client).position());
@@ -82,8 +84,11 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                         context.takeScreenshot(TestScreenshotOptions.of("natural-scenery-" + tick).withDestinationDir(artifacts));
                     }
                     context.waitTicks(1);
-                    if ((tick + 1) % 1200 == 0) LOGGER.info("Natural scenery validation: {} of {} seconds, {} completed shots",
-                        (tick + 1) / 20, duration, completedShots);
+                    long elapsed = (System.nanoTime() - started) / 1_000_000_000L;
+                    if (elapsed >= nextReport) {
+                        LOGGER.info("Natural scenery validation: {} of {} seconds, {} completed shots", elapsed, duration, completedShots);
+                        nextReport = elapsed + 60;
+                    }
                 }
                 world.getServer().runOnServer(server -> {
                     var player = server.getPlayerList().getPlayers().getFirst();
