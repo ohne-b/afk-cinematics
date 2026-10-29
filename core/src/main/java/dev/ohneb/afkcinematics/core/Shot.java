@@ -1,7 +1,7 @@
 package dev.ohneb.afkcinematics.core;
 
 public record Shot(Type type, Vec start, Vec control, Vec end, Vec focusStart, Vec focusEnd, double duration) {
-    public enum Type { ARC, DOLLY, DRIFT, CRANE, OVERHEAD, PAN, STILL }
+    public enum Type { ARC, DOLLY, DRIFT, CRANE, OVERHEAD, FLYOVER, LOW_PASS, REVEAL, PAN, STILL }
 
     public Shot {
         if (type == null || start == null || control == null || end == null || focusStart == null || focusEnd == null

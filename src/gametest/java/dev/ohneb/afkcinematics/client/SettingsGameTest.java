@@ -45,7 +45,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
                 context.takeScreenshot(TestScreenshotOptions.of("camera-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
-                    press(settings, "Shot types: 7 enabled");
+                    press(settings, "Shot types: " + Shot.Type.values().length + " enabled");
                     for (Shot.Type type : Shot.Type.values()) {
                         if (type == Shot.Type.PAN) continue;
                         String label = Component.translatable("ohneb_afk_cinematics.shot." + type.name().toLowerCase(Locale.ROOT)).getString();
@@ -55,6 +55,14 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     require(!button(settings, "Panorama: ON").active, "The last enabled shot could be disabled");
                 });
                 context.takeScreenshot(TestScreenshotOptions.of("shot-options").withDestinationDir(artifacts));
+                context.runOnClient(client -> {
+                    var settings = (SettingsScreen)AfkCinematics.screen();
+                    press(settings, "Moving only");
+                    require(fixture.config().shots.equals(EnumSet.complementOf(EnumSet.of(Shot.Type.PAN, Shot.Type.STILL))),
+                        "Moving-only selection included stationary shots or omitted a drive");
+                    press(settings, "Enable all");
+                    require(fixture.config().shots.equals(EnumSet.allOf(Shot.Type.class)), "Enable all omitted shot types");
+                });
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
                     press(settings, "Display");

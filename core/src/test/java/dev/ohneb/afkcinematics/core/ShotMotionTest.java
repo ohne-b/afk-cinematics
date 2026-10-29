@@ -56,4 +56,36 @@ class ShotMotionTest {
         assertTrue(gentle.start().distance(gentle.end()) >= 2.5);
         assertTrue(reduced.start().distance(reduced.end()) < gentle.start().distance(gentle.end()) * 0.4);
     }
+
+    @Test void cameraDrivesKeepMovingInOneDirectionAndRespectReducedMotion() {
+        var scene = new Scene(SUBJECT, SUBJECT.add(new Vec(0, 2, -8)), true, 1);
+        var config = new CinematicConfig();
+        for (Shot.Type type : new Shot.Type[]{Shot.Type.FLYOVER, Shot.Type.LOW_PASS, Shot.Type.REVEAL}) {
+            config.shots = EnumSet.of(type);
+            config.motion = CinematicConfig.Motion.GENTLE;
+            var entry = Pose.lookingAt(scene.vantage(), SUBJECT);
+            Shot shot = new ShotSearch(scene, entry, 0, config, null, true, true, new Random(2)).next(OPEN);
+            assertNotNull(shot);
+            Vec travel = shot.end().subtract(shot.start());
+            assertTrue(travel.length() > 4, type + " did not create a substantial camera drive");
+            for (int sample = 2; sample < 98; sample++) {
+                Vec step = shot.sample(shot.duration() * sample / 100).position()
+                    .subtract(shot.sample(shot.duration() * (sample - 1) / 100).position());
+                assertTrue(step.x() * travel.x() + step.y() * travel.y() + step.z() * travel.z() > 0,
+                    type + " stopped or reversed within the take");
+                if (type == Shot.Type.FLYOVER) {
+                    assertEquals(shot.sample(0).yaw(), shot.sample(shot.duration() * sample / 100).yaw(), 1e-9);
+                    assertEquals(shot.sample(0).pitch(), shot.sample(shot.duration() * sample / 100).pitch(), 1e-9);
+                }
+            }
+            if (type == Shot.Type.LOW_PASS) assertEquals(SUBJECT.y() + 0.25, shot.start().y(), 1e-9);
+            if (type == Shot.Type.REVEAL) {
+                assertTrue(shot.end().y() - shot.start().y() > 3);
+                assertTrue(shot.end().distance(SUBJECT) > shot.start().distance(SUBJECT));
+            }
+            config.motion = CinematicConfig.Motion.REDUCED;
+            Shot reduced = new ShotSearch(scene, entry, 0, config, null, true, true, new Random(2)).next(OPEN);
+            assertTrue(reduced.start().distance(reduced.end()) < travel.length() * 0.4);
+        }
+    }
 }

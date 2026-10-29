@@ -55,6 +55,7 @@ class ConfigTest {
         assertEquals(CinematicConfig.Lens.CINEMATIC, store.config().lens);
         store.config().subject = CinematicConfig.Subject.SCENERY;
         store.config().lens = CinematicConfig.Lens.GAME;
+        store.config().shots = EnumSet.of(Shot.Type.FLYOVER, Shot.Type.LOW_PASS, Shot.Type.REVEAL);
         assertTrue(store.save());
         assertEquals(store.config().shots, new ConfigStore(path).config().shots);
         assertEquals(CinematicConfig.Subject.SCENERY, new ConfigStore(path).config().subject);

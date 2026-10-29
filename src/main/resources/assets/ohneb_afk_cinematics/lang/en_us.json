@@ -70,10 +70,18 @@
   "ohneb_afk_cinematics.shot.crane.help": "A gentle vertical move with a little sideways drift.",
   "ohneb_afk_cinematics.shot.overhead": "Overhead",
   "ohneb_afk_cinematics.shot.overhead.help": "Look down from above when the ceiling is clear.",
+  "ohneb_afk_cinematics.shot.flyover": "Flyover",
+  "ohneb_afk_cinematics.shot.flyover.help": "A level aerial drive across the view. Scenery keeps a steady heading rather than circling one point.",
+  "ohneb_afk_cinematics.shot.low_pass": "Low pass",
+  "ohneb_afk_cinematics.shot.low_pass.help": "Track close to the ground or canopy, where the full path is clear.",
+  "ohneb_afk_cinematics.shot.reveal": "Rising reveal",
+  "ohneb_afk_cinematics.shot.reveal.help": "Pull back and rise in one continuous move to reveal the surroundings.",
   "ohneb_afk_cinematics.shot.pan": "Panorama",
   "ohneb_afk_cinematics.shot.pan.help": "Hold position while slowly turning across the view.",
   "ohneb_afk_cinematics.shot.still": "Still",
   "ohneb_afk_cinematics.shot.still.help": "Hold a quiet, fixed composition.",
   "ohneb_afk_cinematics.shots.title": "Shot types",
+  "ohneb_afk_cinematics.shots.all": "Enable all",
+  "ohneb_afk_cinematics.shots.moving": "Moving only",
   "ohneb_afk_cinematics.shots.last": "Enable another shot before turning this one off."
 }
