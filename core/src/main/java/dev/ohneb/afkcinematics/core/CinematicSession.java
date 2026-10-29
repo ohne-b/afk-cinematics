@@ -1,6 +1,8 @@
 package dev.ohneb.afkcinematics.core;
 
 import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class CinematicSession {
     private enum Phase { ENTRY, SHOT, FADE_OUT, CUT, FADE_IN }
@@ -14,7 +16,7 @@ public final class CinematicSession {
     private ShotPlanner.Plan pending;
     private Shot shot;
     private Scene scene;
-    private Scene lastScenery;
+    private final List<Pose> recentViews = new ArrayList<>();
     private Pose current;
     private Vec currentFocus;
     private long started, lastFrame;
@@ -91,7 +93,10 @@ public final class CinematicSession {
             if (!valid(next, pending.shot().focus(0), next.position())) return end();
             shot = pending.shot();
             scene = pending.scene();
-            if (scene.scenery()) lastScenery = scene;
+            if (scene.scenery()) {
+                recentViews.add(next);
+                if (recentViews.size() > 6) recentViews.removeFirst();
+            }
             pending = null;
             current = next;
             currentFocus = shot.focus(0);
@@ -138,7 +143,7 @@ public final class CinematicSession {
     public void nextShot() { if (!ended && planner == null) advanceRequested = true; }
 
     private ShotPlanner planner() {
-        return new ShotPlanner(subject, current, entry, bearing, config, scene, lastScenery,
+        return new ShotPlanner(subject, current, entry, bearing, config, scene, recentViews,
             shot == null ? null : shot.type(), random);
     }
 }
