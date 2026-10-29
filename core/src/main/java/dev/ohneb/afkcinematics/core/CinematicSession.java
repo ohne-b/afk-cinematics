@@ -62,7 +62,7 @@ public final class CinematicSession {
             next = entry.blend(shot.sample(0), elapsed / entrySeconds);
             if (elapsed >= entrySeconds) { entering = false; started += Math.round(entrySeconds * 1e9); }
         } else next = shot.sample(elapsed);
-        Vec focus = next.lookAhead(Math.max(1, next.position().distance(shot.focus(sampledSeconds))));
+        Vec focus = shot.focus(sampledSeconds);
         if (!geometry.clear(current.position(), next.position()) || !geometry.visible(next.position(), focus)) {
             ended = true;
             return null;

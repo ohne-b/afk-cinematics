@@ -59,6 +59,22 @@ class CameraTest {
         assertTrue(session.ended());
     }
 
+    @Test void lookingDownDoesNotRejectAWideEntryAboveFlatGround() {
+        Geometry ground = new Geometry() {
+            public boolean clear(Vec from, Vec to) { return from.y() > 0.25 && to.y() > 0.25; }
+            public boolean visible(Vec from, Vec target) { return from.y() > 0 && target.y() > 0; }
+        };
+        var config = new CinematicConfig();
+        config.distance = CinematicConfig.Distance.WIDE;
+        config.shots = EnumSet.of(Shot.Type.STILL);
+        var session = new CinematicSession(SUBJECT, new Pose(ENTRY.position(), 0, 90), 0, config, ground, new Random(2));
+        session.tick(0);
+        for (int tick = 0; tick < 100; tick++) {
+            assertNotNull(session.frame(tick * 50_000_000L), "A downward entry heading must not project the subject below the floor");
+        }
+        assertFalse(session.ended());
+    }
+
     @Test void noSpaceAndLongFrameGapsStopWithoutAnInvalidPose() {
         Geometry closed = new Geometry() {
             public boolean clear(Vec from, Vec to) { return false; }
