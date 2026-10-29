@@ -47,6 +47,7 @@ public final class AfkCinematics {
     private static ClientPacketListener connection;
     private static Vec3 anchor;
     private static Vec3 lastPosition;
+    private static float lastYaw, lastPitch;
     private static Pose vanillaPose;
     private static Camera appliedCamera;
     private static boolean audioReady, cameraUnderwater;
@@ -146,6 +147,8 @@ public final class AfkCinematics {
             player = client.player;
             connection = client.getConnection();
             lastPosition = player == null ? null : player.position();
+            lastYaw = player == null ? 0 : player.getYRot();
+            lastPitch = player == null ? 0 : player.getXRot();
             vanillaPose = null;
         }
         boolean focus = client.isWindowActive();
@@ -155,8 +158,15 @@ public final class AfkCinematics {
             focused = focus;
         }
         boolean moved = player != null && lastPosition != null && movedFrom(lastPosition, false);
-        if (player != null) lastPosition = player.position();
-        boolean eligible = eligible() && !moved;
+        // Controller look can change player rotation without a keyboard or mouse callback.
+        boolean turned = player != null && (Math.abs(Math.IEEEremainder(player.getYRot() - lastYaw, 360)) > 0.001
+            || Math.abs(player.getXRot() - lastPitch) > 0.001);
+        if (player != null) {
+            lastPosition = player.position();
+            lastYaw = player.getYRot();
+            lastPitch = player.getXRot();
+        }
+        boolean eligible = eligible() && !moved && !turned;
         if (session != null) {
             if (!eligible || movedFrom(anchor, true)) stop();
             else {

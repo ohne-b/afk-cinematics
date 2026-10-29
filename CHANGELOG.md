@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Four new scenery drives, less repetitive sequences, adjustable player-shot frequency and new shots enabled on update (#31).
+- Controller-look wake detection and smooth resumption after client hitches (#32).
+
 ## 0.0.1-alpha.1
 
 First public alpha for Fabric and NeoForge, with separate jars for Minecraft 1.21 through 26.3.
