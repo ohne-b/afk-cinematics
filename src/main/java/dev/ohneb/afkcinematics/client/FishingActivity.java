@@ -19,8 +19,14 @@ final class FishingActivity {
             || !player.getMainHandItem().is(Items.FISHING_ROD) && !player.getOffhandItem().is(Items.FISHING_ROD)) return null;
         var block = hook.blockPosition();
         if (!world.getChunkSource().hasChunk(block.getX() >> 4, block.getZ() >> 4)) return null;
-        var fluid = world.getFluidState(block);
-        return fluid.is(FluidTags.WATER) && fluid.getHeight(world, block) > 0 ? hook : null;
+        // Vanilla's bobbing motion can lift the float just above the water's owning cell.
+        for (int below = 0; below <= 1; below++) {
+            var position = block.below(below);
+            var fluid = world.getFluidState(position);
+            double height = fluid.getHeight(world, position);
+            if (fluid.is(FluidTags.WATER) && height > 0 && hook.getY() <= position.getY() + height + .25) return hook;
+        }
+        return null;
     }
 
     static Vec target(FishingHook hook, float delta, Vec player) {
