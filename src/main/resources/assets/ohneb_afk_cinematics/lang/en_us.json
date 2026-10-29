@@ -80,5 +80,9 @@
   "ohneb_afk_cinematics.shots.title": "Shot types",
   "ohneb_afk_cinematics.shots.all": "Enable all",
   "ohneb_afk_cinematics.shots.moving": "Moving only",
+  "ohneb_afk_cinematics.shot.fly_through": "Fly-through",
+  "ohneb_afk_cinematics.shot.fly_through.help": "Travel forward through the scenery with a steady heading, over canopies, near the ground or underwater.",
+  "ohneb_afk_cinematics.shot.traverse": "Traverse",
+  "ohneb_afk_cinematics.shot.traverse.help": "A broad sideways drive that keeps its heading and lets the environment move through the frame.",
   "ohneb_afk_cinematics.shots.last": "Enable another shot before turning this one off."
 }

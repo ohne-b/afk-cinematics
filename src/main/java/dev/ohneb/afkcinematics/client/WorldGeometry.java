@@ -80,18 +80,27 @@ public final class WorldGeometry implements Geometry {
 
     @Override
     public boolean visible(Vec camera, Vec subject, double margin) {
-        if (camera.distance(subject) + 2 * margin > 16) return false;
+        if (camera.distance(subject) + 2 * margin > 32) return false;
         Vec3 start = vector(camera), end = vector(subject);
-        AABB ray = new AABB(start, end).inflate(margin);
-        // A ray can cross a moving shape without crossing the block that owns it.
-        for (BlockPos block : BlockPos.betweenClosed(BlockPos.containing(ray.minX, ray.minY, ray.minZ).offset(-1, -1, -1),
-                BlockPos.containing(ray.maxX, ray.maxY, ray.maxZ).offset(1, 1, 1))) {
-            if (!level.getChunkSource().hasChunk(block.getX() >> 4, block.getZ() >> 4)) return false;
-            var state = level.getBlockState(block);
-            if (intersects(state.getVisualShape(level, block, CollisionContext.empty()), block, start, end, margin)) return false;
-            var fluid = state.getFluidState();
-            if (!fluid.isEmpty() && !(medium != Medium.DRY && fluid.is(FluidTags.WATER))
-                && intersects(fluid.getShape(level, block), block, start, end, margin)) return false;
+        int steps = Math.max(1, (int)Math.ceil(camera.distance(subject)));
+        var visited = new java.util.HashSet<Long>();
+        Vec3 previous = start;
+        // Follow a padded corridor instead of scanning the whole box around a long diagonal.
+        for (int step = 1; step <= steps; step++) {
+            Vec3 next = start.lerp(end, (double)step / steps);
+            AABB ray = new AABB(previous, next).inflate(margin);
+            // The owning-block halo still includes shapes extending from adjacent blocks.
+            for (BlockPos block : BlockPos.betweenClosed(BlockPos.containing(ray.minX, ray.minY, ray.minZ).offset(-1, -1, -1),
+                    BlockPos.containing(ray.maxX, ray.maxY, ray.maxZ).offset(1, 1, 1))) {
+                if (!visited.add(block.asLong())) continue;
+                if (!level.getChunkSource().hasChunk(block.getX() >> 4, block.getZ() >> 4)) return false;
+                var state = level.getBlockState(block);
+                if (intersects(state.getVisualShape(level, block, CollisionContext.empty()), block, start, end, margin)) return false;
+                var fluid = state.getFluidState();
+                if (!fluid.isEmpty() && !(medium != Medium.DRY && fluid.is(FluidTags.WATER))
+                    && intersects(fluid.getShape(level, block), block, start, end, margin)) return false;
+            }
+            previous = next;
         }
         return true;
     }

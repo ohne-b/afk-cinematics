@@ -8,12 +8,13 @@ import java.util.Random;
 /** Each step performs one terrain probe or validates one shot. */
 final class ShotPlanner {
     private static final int SCENERY_CANDIDATES = 4;
-    private static final int SCENERY_ATTEMPTS = 21;
+    private static final int SCENERY_ATTEMPTS = 25;
     record Plan(Shot shot, Scene scene, boolean cut, boolean entering) { }
     private final Vec anchor;
     private final Pose previous;
     private final Pose original;
     private final double bearing;
+    private final double sceneryBearing;
     private final CinematicConfig config;
     private final Scene lastScene;
     private final List<Pose> recentViews;
@@ -33,6 +34,7 @@ final class ShotPlanner {
         this.previous = previous;
         this.original = original;
         this.bearing = bearing;
+        this.sceneryBearing = bearing + random.nextDouble() * 360;
         this.config = config;
         this.lastScene = lastScene;
         this.recentViews = List.copyOf(recentViews);
@@ -64,7 +66,7 @@ final class ShotPlanner {
                 entering = true;
             } else if (!triedScenery) {
                 if (probe < Scene.PROBES) {
-                    Scene scene = geometry.scenery(anchor, original, bearing, probe++);
+                    Scene scene = geometry.scenery(anchor, original, sceneryBearing, probe++);
                     if (scene != null && scene.scenery() && scene.near(anchor) && !ShotSearch.stylesFor(scene, config).isEmpty()
                         && candidates.stream().noneMatch(other -> other.focus().distance(scene.focus()) < 3
                             && other.vantage().distance(scene.vantage()) < 3)) candidates.add(scene);
@@ -92,9 +94,10 @@ final class ShotPlanner {
         for (int i = 0; i < recentViews.size(); i++) {
             Pose recent = recentViews.get(i);
             double turn = Math.hypot(Math.IEEEremainder(view.yaw() - recent.yaw(), 360), view.pitch() - recent.pitch());
-            double likeness = Math.max(0, 1 - view.position().distance(recent.position()) / 8) * Math.max(0, 1 - turn / 60);
-            penalty = Math.max(penalty, 4.5 * likeness * (i + 1) / recentViews.size());
+            double likeness = Math.max(0, 1 - view.position().distance(recent.position()) / 16) * Math.max(0, 1 - turn / 90);
+            penalty = Math.max(penalty, 7 * likeness * (i + 1) / recentViews.size());
         }
-        return scene.interest() - penalty;
+        double sameKind = lastScene != null && lastScene.kind() == scene.kind() ? 1.25 : 0;
+        return scene.interest() - penalty - sameKind;
     }
 }
