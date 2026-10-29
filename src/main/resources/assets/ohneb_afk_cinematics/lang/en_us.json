@@ -32,7 +32,6 @@
   "ohneb_afk_cinematics.unfocused.help": "Allow cinematics while unfocused, using the cinematic FPS cap. Paused or minimized windows keep their normal behaviour.",
   "ohneb_afk_cinematics.preview": "Preview",
   "ohneb_afk_cinematics.preview.help": "Stand still in a world to preview. Move to return to the normal camera.",
-  "ohneb_afk_cinematics.hint": "Move to return",
   "ohneb_afk_cinematics.unavailable": "Stand still with no menu open to start a cinematic.",
   "ohneb_afk_cinematics.no_view": "No clear view nearby. Try another spot or enable more shot types.",
   "ohneb_afk_cinematics.save_error": "Could not save settings. Check the config folder permissions.",
