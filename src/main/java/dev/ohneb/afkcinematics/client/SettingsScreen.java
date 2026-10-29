@@ -125,6 +125,29 @@ public final class SettingsScreen extends Screen {
                 }).tooltip(Tooltip.create(text("shots.help"))).build());
             }
             case DISPLAY -> {
+                widgets.add(new AbstractSliderButton(0, 0, buttonWidth, 20, Component.empty(), (config.cinematicFps - 20) / 220.0) {
+                    { updateMessage(); setTooltip(Tooltip.create(text("fps.help"))); }
+                    @Override protected void updateMessage() { setMessage(text("fps", (int)Math.round(value * 220) + 20)); }
+                    @Override protected void applyValue() { config.cinematicFps = (int)Math.round(value * 220) + 20; }
+                    //? if >=1.21.9 {
+                    @Override public boolean keyPressed(KeyEvent event) {
+                        int key = event.key();
+                    //?} else {
+                    /*@Override public boolean keyPressed(int key, int scan, int modifiers) {
+                    *///?}
+                        if (key == InputConstants.KEY_LEFT || key == InputConstants.KEY_RIGHT) {
+                            config.cinematicFps = Math.clamp(config.cinematicFps + (key == InputConstants.KEY_RIGHT ? 1 : -1), 20, 240);
+                            value = (config.cinematicFps - 20) / 220.0;
+                            updateMessage();
+                            return true;
+                        }
+                        //? if >=1.21.9 {
+                        return super.keyPressed(event);
+                        //?} else {
+                        /*return super.keyPressed(key, scan, modifiers);
+                        *///?}
+                    }
+                });
                 widgets.add(toggle("hideHud", () -> config.hideHud, value -> config.hideHud = value));
                 widgets.add(toggle("letterbox", () -> config.letterbox, value -> config.letterbox = value));
                 widgets.add(toggle("music", () -> config.music, value -> config.music = value));

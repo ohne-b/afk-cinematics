@@ -64,4 +64,21 @@ class ConfigTest {
         assertEquals(EnumSet.allOf(Shot.Type.class), defaults.shots);
         assertEquals(CinematicConfig.Pace.RELAXED, defaults.pace);
     }
+
+    @Test void cinematicFrameCapPersistsAndRejectsInvalidValues() throws Exception {
+        Path path = directory.resolve("fps.json");
+        assertEquals(60, new ConfigStore(path).config().cinematicFps);
+        for (String invalid : new String[]{"null", "\"144\"", "144.5", "1e30"}) {
+            Files.writeString(path, "{\"cinematicFps\":" + invalid + "}");
+            assertEquals(60, new ConfigStore(path).config().cinematicFps);
+        }
+        for (int cap : new int[]{0, 20, 60, 144, 240, 999}) {
+            Files.writeString(path, "{\"cinematicFps\":" + cap + "}");
+            var store = new ConfigStore(path);
+            assertEquals(Math.clamp(cap, 20, 240), store.config().cinematicFps);
+            store.config().cinematicFps = cap;
+            assertTrue(store.save());
+            assertEquals(Math.clamp(cap, 20, 240), new ConfigStore(path).config().cinematicFps);
+        }
+    }
 }

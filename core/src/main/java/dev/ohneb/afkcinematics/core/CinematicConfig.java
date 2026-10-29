@@ -42,6 +42,7 @@ public final class CinematicConfig {
     public EnumSet<Shot.Type> shots = EnumSet.allOf(Shot.Type.class);
     public Distance distance = Distance.NORMAL;
     public Lens lens = Lens.CINEMATIC;
+    public int cinematicFps = 60;
     public boolean hideHud = true;
     public boolean letterbox = false;
     public boolean music = false;
