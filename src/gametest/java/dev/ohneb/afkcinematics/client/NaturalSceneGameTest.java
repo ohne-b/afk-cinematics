@@ -4,6 +4,7 @@ import dev.ohneb.afkcinematics.core.CinematicConfig;
 import dev.ohneb.afkcinematics.core.Pose;
 import dev.ohneb.afkcinematics.core.Scene;
 import dev.ohneb.afkcinematics.core.Vec;
+import dev.ohneb.afkcinematics.core.Shot;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
@@ -108,20 +109,21 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                     AfkCinematics.config().letterbox = true;
                     cameraTimings = new ArrayList<>();
                     cameraStop = null;
+                    revealedShot = null;
                     cameraTimings.add("operation,nanoseconds");
                     sceneryFrames = new ArrayList<>();
-                    sceneryFrames.add("nanoseconds,x,y,z,opacity,scenery");
+                    sceneryFrames.add("nanoseconds,x,y,z,opacity,scenery,shot,type,yaw,pitch");
                 });
                 start(context);
                 context.waitFor(client -> AfkCinematics.scenery() && AfkCinematics.fade() == 0, 200);
                 int duration = Math.clamp(Integer.getInteger("afkcinematics.test.naturalSeconds", 40), 40, 3600);
                 long started = System.nanoTime();
                 long lastReveal = started;
-                boolean fading = false;
-                int completedShots = 0;
+                Shot previousShot = context.computeOnClient(client -> revealedShot);
+                int revealedShots = 0;
                 long nextReport = 60;
                 for (int tick = 0; System.nanoTime() - started < duration * 1_000_000_000L; tick++) {
-                    boolean uncovered = context.computeOnClient(client -> {
+                    Shot latestShot = context.computeOnClient(client -> {
                         require(AfkCinematics.showing(), "Natural scenery stopped unexpectedly: " + cameraStop);
                         var point = WorldGeometry.point(camera(client).position());
                         require(Scene.inRange(point, playerPose.position()) && new WorldGeometry(client.level).clear(point, point),
@@ -129,16 +131,15 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                         require(WorldGeometry.point(client.player.position()).distance(playerPose.position()) < 0.0001
                             && client.player.getYRot() == playerPose.yaw() && client.player.getXRot() == playerPose.pitch(),
                             "Natural scenery changed the player pose");
-                        return AfkCinematics.fade() == 0;
+                        return revealedShot;
                     });
-                    if (!uncovered) fading = true;
-                    else if (fading) {
+                    if (latestShot != null && latestShot != previousShot) {
                         lastReveal = System.nanoTime();
-                        fading = false;
-                        completedShots++;
+                        previousShot = latestShot;
+                        revealedShots++;
                     }
                     require(System.nanoTime() - lastReveal < 35_000_000_000L,
-                        "Natural scenery did not reveal another shot within 35 seconds");
+                        "Natural scenery did not reveal another take within 35 seconds");
                     if (capture != null) {
                         Path frame = context.takeScreenshot(TestScreenshotOptions.of("frame").withDestinationDir(artifacts));
                         captures.add(frame.getFileName() + "," + System.nanoTime());
@@ -149,7 +150,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                     if (capture == null) context.waitTicks(1);
                     long elapsed = (System.nanoTime() - started) / 1_000_000_000L;
                     if (elapsed >= nextReport) {
-                        LOGGER.info("Natural scenery validation: {} of {} seconds, {} completed shots", elapsed, duration, completedShots);
+                        LOGGER.info("Natural scenery validation: {} of {} seconds, {} new takes revealed", elapsed, duration, revealedShots);
                         nextReport = elapsed + 60;
                     }
                 }
@@ -191,6 +192,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                 AfkCinematics.stop();
                 cameraTimings = null;
                 sceneryFrames = null;
+                revealedShot = null;
                 focused = null;
             });
         }

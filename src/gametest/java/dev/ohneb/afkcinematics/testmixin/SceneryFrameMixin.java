@@ -3,6 +3,7 @@ package dev.ohneb.afkcinematics.testmixin;
 import dev.ohneb.afkcinematics.client.TestSupport;
 import dev.ohneb.afkcinematics.core.CinematicSession;
 import dev.ohneb.afkcinematics.core.Pose;
+import dev.ohneb.afkcinematics.core.Shot;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.Shadow;
@@ -14,6 +15,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value = CinematicSession.class, remap = false)
 public abstract class SceneryFrameMixin {
     @Shadow private long lastFrame;
+    @Shadow private Shot shot;
+    @Unique private Shot afkCinematics$lastShot;
+    @Unique private int afkCinematics$shotNumber;
     @Unique private Pose afkCinematics$previous;
     @Unique private double afkCinematics$opacity;
     @Unique private long afkCinematics$frameStarted;
@@ -38,10 +42,16 @@ public abstract class SceneryFrameMixin {
         Pose pose = cir.getReturnValue();
         if (TestSupport.sceneryFrames == null || pose == null) return;
         var session = (CinematicSession)(Object)this;
+        if (session.settled() && shot != afkCinematics$lastShot) {
+            afkCinematics$lastShot = shot;
+            afkCinematics$shotNumber++;
+            TestSupport.revealedShot = shot;
+        }
         if (afkCinematics$previous != null && pose.position().distance(afkCinematics$previous.position()) > 2)
             TestSupport.require(afkCinematics$opacity == 1 && session.fade() == 1, "Scenery changed position during an uncovered frame");
         TestSupport.sceneryFrames.add(now + "," + pose.position().x() + "," + pose.position().y() + ","
-            + pose.position().z() + "," + session.fade() + "," + session.scenery());
+            + pose.position().z() + "," + session.fade() + "," + session.scenery() + "," + afkCinematics$shotNumber
+            + "," + (shot == null ? "" : shot.type()) + "," + pose.yaw() + "," + pose.pitch());
         afkCinematics$previous = pose;
         afkCinematics$opacity = session.fade();
     }

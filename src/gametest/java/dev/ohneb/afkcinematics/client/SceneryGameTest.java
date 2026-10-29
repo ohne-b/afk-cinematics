@@ -69,7 +69,7 @@ public final class SceneryGameTest implements FabricClientGameTest {
                 AfkCinematics.config().hideHud = true;
                 AfkCinematics.config().letterbox = true;
                 sceneryFrames = new ArrayList<>();
-                sceneryFrames.add("nanoseconds,x,y,z,opacity,scenery");
+                sceneryFrames.add("nanoseconds,x,y,z,opacity,scenery,shot,type,yaw,pitch");
             });
             start(context);
             context.waitFor(client -> AfkCinematics.scenery() && AfkCinematics.fade() == 0, 160);
