@@ -12,7 +12,8 @@
       "dev.ohneb.afkcinematics.client.WorldGeometryGameTest",
       "dev.ohneb.afkcinematics.client.SettingsGameTest",
       "dev.ohneb.afkcinematics.client.TransitionsGameTest",
-      "dev.ohneb.afkcinematics.client.ShotTypesGameTest"
+      "dev.ohneb.afkcinematics.client.ShotTypesGameTest",
+      "dev.ohneb.afkcinematics.client.SceneryGameTest"
     ]
   }
 }
