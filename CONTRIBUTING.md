@@ -56,7 +56,7 @@ The Fabric suite also checks natural terrain and records camera timings in `arti
 Use `-PnaturalSeconds=3600` for an hour of continuous scenery validation; the default is 40 seconds.
 Use `-PcinematicCapture=<new-name>` for timestamped frames from a fixed snowy-forest
 view. Capture labels must be new so earlier footage is preserved.
-Add `-PcinematicScene=plains` or `-PcinematicScene=cavern` for the other view fixtures.
+Add `-PcinematicScene=plains`, `cavern` or `fishing` for the other view fixtures.
 Use `-PcinematicShots=FLY_THROUGH,TRAVERSE` to restrict a recording to selected moves.
 Recordings bypass still-capture holds in the test fixture so the camera keeps moving.
 

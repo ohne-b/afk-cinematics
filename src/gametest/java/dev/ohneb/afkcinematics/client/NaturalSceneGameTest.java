@@ -18,6 +18,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.FluidTags;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,12 +36,14 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
         String capture = System.getProperty("afkcinematics.test.capture");
         String scene = System.getProperty("afkcinematics.test.scene", "forest");
         if (capture != null && !capture.matches("[a-z0-9-]+")) throw new IllegalArgumentException("Invalid capture label");
-        if (capture != null && !List.of("forest", "plains", "cavern").contains(scene))
+        if (capture != null && !List.of("forest", "plains", "cavern", "fishing").contains(scene))
             throw new IllegalArgumentException("Unknown capture scene: " + scene);
+        boolean fishing = capture != null && scene.equals("fishing");
         Path root = Path.of(System.getProperty("afkcinematics.test.artifacts"));
         Path artifacts = capture == null ? root : root.resolve("cinematography-" + capture);
         var captures = new ArrayList<String>();
         var capturePosition = new java.util.concurrent.atomic.AtomicReference<Vec>();
+        var fishingView = new java.util.concurrent.atomic.AtomicReference<Pose>();
         if (capture != null) captures.add("file,nanoseconds");
         if (capture != null) {
             try {
@@ -59,11 +63,17 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                     var player = server.getPlayerList().getPlayers().getFirst();
                     player.setGameMode(GameType.SURVIVAL);
                     player.getInventory().clearContent();
-                    player.getInventory().setItem(0, new ItemStack(Items.EMERALD, 32));
+                    player.getInventory().setItem(0, new ItemStack(fishing ? Items.FISHING_ROD : Items.EMERALD, fishing ? 1 : 32));
                     player.inventoryMenu.broadcastFullState();
                     if (capture != null) {
                         player.teleportTo(-8.5, 65, -5.5);
-                        if (scene.equals("plains")) {
+                        if (fishing) {
+                            Pose bank = fishingBank(server.overworld());
+                            fishingView.set(bank);
+                            player.teleportTo(bank.position().x(), bank.position().y(), bank.position().z());
+                            player.setYRot((float)bank.yaw());
+                            player.setXRot((float)bank.pitch());
+                        } else if (scene.equals("plains")) {
                             var biome = server.overworld().findClosestBiome3d(holder -> holder.is(Biomes.PLAINS),
                                 BlockPos.ZERO, 4096, 32, 64);
                             require(biome != null, "Capture seed has no nearby plains");
@@ -80,7 +90,8 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                 });
                 context.waitFor(client -> client.player.isAlive() && client.player.onGround() && !client.player.isInWater()
                     && (capture == null || WorldGeometry.point(client.player.position()).distance(capturePosition.get()) < 2)
-                    && client.player.getInventory().countItem(Items.EMERALD) == 32, 200);
+                    && (fishing ? client.player.getMainHandItem().is(Items.FISHING_ROD)
+                        : client.player.getInventory().countItem(Items.EMERALD) == 32), 200);
                 if (capture != null) context.waitFor(client -> {
                     int x = client.player.blockPosition().getX() >> 4, z = client.player.blockPosition().getZ() >> 4;
                     for (int dx : new int[]{-3, 3}) for (int dz : new int[]{-3, 3})
@@ -88,6 +99,10 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                     return true;
                 }, 400);
                 context.waitTicks(30);
+                if (fishing) context.runOnClient(client -> {
+                    client.player.setYRot((float)fishingView.get().yaw());
+                    client.player.setXRot((float)fishingView.get().pitch());
+                });
                 world.getServer().runOnServer(server -> {
                     var player = server.getPlayerList().getPlayers().getFirst();
                     // Generated passive mobs can push a stationary player and correctly cancel the camera.
@@ -104,6 +119,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                         } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
                     }
                     AfkCinematics.config().subject = CinematicConfig.Subject.SCENERY;
+                    AfkCinematics.config().fishing = true;
                     String selectedShots = System.getProperty("afkcinematics.test.shots");
                     if (selectedShots != null) {
                         var choices = java.util.EnumSet.noneOf(Shot.Type.class);
@@ -121,8 +137,18 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                     sceneryFrames = new ArrayList<>();
                     sceneryFrames.add("nanoseconds,x,y,z,opacity,scenery,shot,type,yaw,pitch");
                 });
-                start(context);
-                context.waitFor(client -> AfkCinematics.scenery() && AfkCinematics.fade() == 0, 200);
+                if (fishing) {
+                    context.runOnClient(client -> AfkCinematics.config().automatic = true);
+                    mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS);
+                    context.waitTicks(1);
+                    mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.RELEASE);
+                    context.waitTicks(20);
+                    context.runOnClient(client -> LOGGER.info("Fishing capture hook: {}, usable: {}",
+                        client.player.fishing == null ? "none" : client.player.fishing.position(),
+                        FishingActivity.hook(client.player, client.level) != null));
+                    context.waitFor(client -> FishingActivity.hook(client.player, client.level) != null, 60);
+                } else start(context);
+                context.waitFor(client -> AfkCinematics.showing() && (fishing || AfkCinematics.scenery()) && AfkCinematics.fade() == 0, 200);
                 int duration = Math.clamp(Integer.getInteger("afkcinematics.test.naturalSeconds", 40), 40, 3600);
                 long started = System.nanoTime();
                 long lastReveal = started;
@@ -164,12 +190,44 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                 world.getServer().runOnServer(server -> {
                     var player = server.getPlayerList().getPlayers().getFirst();
                     require(player.position().distanceToSqr(WorldGeometry.vector(playerPose.position())) < 0.0001
-                        && player.getInventory().countItem(Items.EMERALD) == 32, "Natural scenery changed server state");
+                        && (fishing ? player.fishing != null && player.getMainHandItem().is(Items.FISHING_ROD)
+                            : player.getInventory().countItem(Items.EMERALD) == 32), "Natural scenery changed server state");
                 });
             }
             context.waitTicks(3);
             context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Disconnecting during a shot retained camera ownership"));
         } catch (Exception exception) { throw new AssertionError(exception); }
+    }
+
+    private static Pose fishingBank(ServerLevel level) {
+        var beach = level.findClosestBiome3d(holder -> holder.is(Biomes.BEACH), BlockPos.ZERO, 4096, 32, 64);
+        require(beach != null, "Capture seed has no nearby beach");
+        BlockPos center = beach.getFirst();
+        for (int radius = 0; radius <= 64; radius += 2) {
+            for (int dx = -radius; dx <= radius; dx += 2) for (int dz = -radius; dz <= radius; dz += 2) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) != radius) continue;
+                int x = center.getX() + dx, z = center.getZ() + dz;
+                level.getChunkAt(new BlockPos(x, 64, z));
+                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                BlockPos floor = new BlockPos(x, y - 1, z);
+                if (!level.getBlockState(floor).getFluidState().isEmpty() || !level.getBlockState(floor.above()).isAir()
+                    || !level.getBlockState(floor.above(2)).isAir()) continue;
+                for (int direction = 0; direction < 8; direction++) {
+                    double angle = direction * Math.PI / 4;
+                    boolean open = true;
+                    for (int distance = 3; distance <= 18; distance += 3) {
+                        int waterX = (int)Math.floor(x + .5 + Math.sin(angle) * distance);
+                        int waterZ = (int)Math.floor(z + .5 + Math.cos(angle) * distance);
+                        level.getChunkAt(new BlockPos(waterX, 64, waterZ));
+                        int waterY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, waterX, waterZ);
+                        if (y < waterY || y > waterY + 2
+                            || !level.getFluidState(new BlockPos(waterX, waterY - 1, waterZ)).is(FluidTags.WATER)) { open = false; break; }
+                    }
+                    if (open) return new Pose(new Vec(x + .5, y, z + .5), -Math.toDegrees(angle), 20);
+                }
+            }
+        }
+        throw new AssertionError("Capture beach has no clear fishing bank");
     }
 
     private static BlockPos dryGround(ServerLevel level, BlockPos center) {
@@ -197,6 +255,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
+                AfkCinematics.config().automatic = false;
                 cameraTimings = null;
                 recordingFrames = false;
                 sceneryFrames = null;
