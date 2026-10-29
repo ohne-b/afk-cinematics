@@ -25,9 +25,15 @@ final class ShotPlanner {
     private Scene selected;
     private ShotSearch search;
     private boolean cut, entering;
+    private final TravelSearch travel;
 
     ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
                 ShotHistory history, Random random) {
+        this(anchor, previous, original, bearing, config, history, random, Scene.Kind.PLAYER);
+    }
+
+    ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
+                ShotHistory history, Random random, Scene.Kind activity) {
         this.anchor = anchor;
         this.previous = previous;
         this.original = original;
@@ -36,13 +42,15 @@ final class ShotPlanner {
         this.config = config;
         this.history = history;
         this.random = random;
+        travel = activity == Scene.Kind.BOAT || activity == Scene.Kind.FLIGHT
+            ? new TravelSearch(anchor, activity, bearing, config, history, random) : null;
         triedPlayer = config.subject == CinematicConfig.Subject.SCENERY;
         triedScenery = config.subject == CinematicConfig.Subject.PLAYER;
         if (triedPlayer || triedScenery) sceneryFirst = triedPlayer;
         else sceneryFirst = history.sceneryFirst(config.playerShare, random);
     }
 
-    boolean exhausted() { return search == null && triedPlayer && triedScenery; }
+    boolean exhausted() { return travel != null ? travel.exhausted() : search == null && triedPlayer && triedScenery; }
 
     static double preparationSeconds(CinematicConfig config) {
         int player = config.subject == CinematicConfig.Subject.SCENERY ? 0 : ShotSearch.playerAttempts(config);
@@ -53,6 +61,7 @@ final class ShotPlanner {
     }
 
     Plan next(Geometry geometry) {
+        if (travel != null) return travel.next(geometry);
         if (search == null) {
             if (!triedPlayer && (!sceneryFirst || triedScenery)) {
                 triedPlayer = true;
