@@ -48,6 +48,7 @@ final class SceneProbe {
         AfkCinematics.config().enabled = true;
         AfkCinematics.config().automatic = false;
         AfkCinematics.config().unfocused = true;
+        AfkCinematics.config().hideHud = true;
         AfkCinematics.config().subject = CinematicConfig.Subject.PLAYER;
         AfkCinematics.config().shots = EnumSet.of(Shot.Type.DRIFT);
         String fixture = System.getProperty("afkcinematics.smoke.world");
@@ -109,7 +110,14 @@ final class SceneProbe {
             ticks = 0;
         } else if (stage == 2 && AfkCinematics.showing()) {
             stage = 3;
-        } else if (stage == 3 && ++ticks >= 120) {
+        } else if (stage == 3) {
+            //? if <1.21.2 {
+            /*LegacyToastProbe.tick();
+            *///?}
+            if (++ticks < 120) return;
+            //? if <1.21.2 {
+            /*LegacyToastProbe.verify();
+            *///?}
             checkView(false);
             AfkCinematics.stop();
             prepared = false;
