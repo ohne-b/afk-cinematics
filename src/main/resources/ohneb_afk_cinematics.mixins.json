@@ -5,7 +5,6 @@
   "client": [
     "CameraMixin",
     "DynamicFpsMixin",
-    "FabrishotMixin",
     "FrameLimitMixin",
     "GuiMixin",
     "HandMixin",
