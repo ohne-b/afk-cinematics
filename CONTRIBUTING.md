@@ -50,6 +50,7 @@ Shader packs are a separate local check; CI runs that profile without a shader p
 scenery fallback, the rendered camera and unchanged server state. CI runs this on
 every target. `-PsceneWorld=<name>` may reuse a copied test fixture, never a player save.
 The Fabric suite also checks natural terrain and records camera timings in `artifacts/`.
+Use `-PnaturalSeconds=3600` for an hour of continuous scenery validation; the default is 40 seconds.
 
 Every PR requires independent critical review by a human or a separate read-only
 reviewer who did not write it. Provide these instructions, acceptance criteria, the

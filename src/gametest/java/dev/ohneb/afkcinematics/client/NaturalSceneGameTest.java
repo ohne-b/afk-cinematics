@@ -20,6 +20,7 @@ import static dev.ohneb.afkcinematics.client.TestSupport.*;
 
 @SuppressWarnings("UnstableApiUsage")
 public final class NaturalSceneGameTest implements FabricClientGameTest {
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(NaturalSceneGameTest.class);
     @Override public void runTest(ClientGameTestContext context) {
         configure(context);
         var artifacts = Path.of(System.getProperty("afkcinematics.test.artifacts"));
@@ -51,7 +52,8 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                 });
                 start(context);
                 context.waitFor(client -> AfkCinematics.scenery() && AfkCinematics.fade() == 0, 200);
-                for (int tick = 0; tick < 800; tick++) {
+                int duration = Math.clamp(Integer.getInteger("afkcinematics.test.naturalSeconds", 40), 40, 3600);
+                for (int tick = 0; tick < duration * 20; tick++) {
                     context.runOnClient(client -> {
                         require(AfkCinematics.showing(), "Natural scenery stopped unexpectedly");
                         var point = WorldGeometry.point(camera(client).position());
@@ -66,6 +68,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                         context.takeScreenshot(TestScreenshotOptions.of("natural-scenery-" + tick).withDestinationDir(artifacts));
                     }
                     context.waitTicks(1);
+                    if ((tick + 1) % 1200 == 0) LOGGER.info("Natural scenery validation: {} of {} seconds", (tick + 1) / 20, duration);
                 }
                 world.getServer().runOnServer(server -> {
                     var player = server.getPlayerList().getPlayers().getFirst();
