@@ -59,13 +59,13 @@ final class ShotPlanner {
         if (search == null) {
             if (!triedPlayer && (!sceneryFirst || triedScenery)) {
                 triedPlayer = true;
-                selected = new Scene(anchor, original.position(), false, 0);
+                selected = new Scene(anchor, original.position(), Scene.Kind.PLAYER, 0);
                 cut = lastScene != null;
                 entering = true;
             } else if (!triedScenery) {
                 if (probe < Scene.PROBES) {
                     Scene scene = geometry.scenery(anchor, original, bearing, probe++);
-                    if (scene != null && scene.scenery() && scene.near(anchor)
+                    if (scene != null && scene.scenery() && scene.near(anchor) && !ShotSearch.stylesFor(scene, config).isEmpty()
                         && candidates.stream().noneMatch(other -> other.focus().distance(scene.focus()) < 3
                             && other.vantage().distance(scene.vantage()) < 3)) candidates.add(scene);
                     if (probe == Scene.PROBES) candidates.sort(Comparator.comparingDouble(this::score).reversed());
@@ -79,7 +79,7 @@ final class ShotPlanner {
             search = new ShotSearch(selected, previous, bearing, config, lastType, entering, cut, random);
             attempts = 0;
         }
-        Shot shot = search.next(geometry);
+        Shot shot = search.next(geometry.forScene(selected));
         if (shot != null && Scene.inRange(shot.start(), anchor) && Scene.inRange(shot.control(), anchor)
             && Scene.inRange(shot.end(), anchor)) return new Plan(shot, selected, cut, entering);
         if (search.exhausted() || selected.scenery() && ++attempts >= SCENERY_ATTEMPTS) search = null;

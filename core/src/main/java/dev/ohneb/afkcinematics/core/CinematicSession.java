@@ -75,12 +75,12 @@ public final class CinematicSession {
         if (!initial && phase == Phase.SHOT && !heldForNext) {
             Pose end = shot.sample(shot.duration());
             Vec focus = shot.focus(shot.duration());
-            if (!valid(end, focus, current.position())) { end(); return; }
+            if (!valid(end, focus, current.position(), scene)) { end(); return; }
             current = end;
             currentFocus = focus;
         }
         var plan = pending;
-        if (!geometry.valid(plan.shot(), plan.cut() ? plan.shot().start() : current.position())) { end(); return; }
+        if (!geometry.forScene(plan.scene()).valid(plan.shot(), plan.cut() ? plan.shot().start() : current.position())) { end(); return; }
         if (plan.cut()) {
             phase = Phase.FADE_OUT;
             covered = false;
@@ -107,19 +107,19 @@ public final class CinematicSession {
         if (now < lastFrame || now - lastFrame > 1_000_000_000L) return end();
         lastFrame = now;
         if (heldForNext && phase == Phase.SHOT)
-            return valid(current, currentFocus, current.position()) ? current : end();
+            return valid(current, currentFocus, current.position(), scene) ? current : end();
         double elapsed = (now - started) / 1e9;
         if (phase == Phase.FADE_OUT) {
-            if (!geometry.clear(current.position(), current.position())) return end();
+            if (!geometry.forScene(scene).clear(current.position(), current.position())) return end();
             fade = Pose.ease(elapsed / 0.35);
             // Render the old viewpoint fully covered before changing its position.
             if (fade == 1) phase = Phase.CUT;
             return current;
         }
         if (phase == Phase.CUT) {
-            if (!covered) return geometry.clear(current.position(), current.position()) ? current : end();
+            if (!covered) return geometry.forScene(scene).clear(current.position(), current.position()) ? current : end();
             Pose next = pending.shot().sample(0);
-            if (!valid(next, pending.shot().focus(0), next.position())) return end();
+            if (!valid(next, pending.shot().focus(0), next.position(), pending.scene())) return end();
             shot = pending.shot();
             setScene(pending.scene());
             if (scene.scenery()) {
@@ -152,15 +152,16 @@ public final class CinematicSession {
             if (fade == 0) { phase = Phase.SHOT; started = now; }
         } else next = shot.sample(elapsed);
         Vec focus = shot.focus(sampledSeconds);
-        if (!valid(next, focus, current.position())) return end();
+        if (!valid(next, focus, current.position(), scene)) return end();
         current = next;
         currentFocus = focus;
         return current;
     }
 
-    private boolean valid(Pose pose, Vec focus, Vec previous) {
-        return Scene.inRange(pose.position(), subject) && geometry.clear(previous, pose.position())
-            && geometry.visible(pose.position(), focus);
+    private boolean valid(Pose pose, Vec focus, Vec previous, Scene view) {
+        Geometry environment = geometry.forScene(view);
+        return Scene.inRange(pose.position(), subject) && environment.clear(previous, pose.position())
+            && environment.visible(pose.position(), focus);
     }
 
     private Pose end() { ended = true; fade = 0; return null; }
@@ -171,6 +172,7 @@ public final class CinematicSession {
     public double lensStrength() { return ended ? 0 : lensStrength; }
     public void coveredFrame() { if (fade == 1) covered = true; }
     public boolean scenery() { return scene != null && scene.scenery(); }
+    public boolean underwater() { return scene != null && scene.kind() == Scene.Kind.WATER; }
     public boolean settled() { return showing() && phase == Phase.SHOT; }
     public void nextShot() { if (!ended && !heldForNext) advanceRequested = true; }
 

@@ -40,13 +40,21 @@ public final class ShotSearch {
             Collections.shuffle(angles, random);
         }
         for (double angle : ANGLES) if (!angles.contains(angle)) angles.add(angle);
-        types = new ArrayList<>(config.shots);
-        if (motion == CinematicConfig.Motion.STILL || types.isEmpty()) {
-            types.clear();
-            types.add(Shot.Type.STILL);
-        }
+        types = stylesFor(scene, config);
         Collections.shuffle(types, random);
         if (types.size() > 1 && types.remove(last)) types.add(last);
+    }
+
+    static List<Shot.Type> stylesFor(Scene scene, CinematicConfig config) {
+        var styles = new ArrayList<>(config.shots);
+        if (config.motion == CinematicConfig.Motion.STILL || styles.isEmpty()) {
+            styles.clear();
+            styles.add(Shot.Type.STILL);
+        }
+        if (scene.kind() == Scene.Kind.GROUND)
+            styles.removeIf(type -> type == Shot.Type.FLYOVER || type == Shot.Type.OVERHEAD
+                || type == Shot.Type.REVEAL || type == Shot.Type.CRANE);
+        return styles;
     }
 
     public boolean exhausted() { return attempt >= angles.size() * types.size() * (scene.scenery() ? 1 : 2); }
@@ -72,7 +80,7 @@ public final class ShotSearch {
             start = subject.add(new Vec(Math.sin(angle) * 1.7, 4.2, -Math.cos(angle) * 1.7));
         if (entering && type == Shot.Type.LOW_PASS)
             start = new Vec(start.x(), subject.y() + (scene.scenery() ? 0.25 : -0.6), start.z());
-        if (entering && type == Shot.Type.FLYOVER)
+        if (entering && type == Shot.Type.FLYOVER && scene.kind() != Scene.Kind.WATER)
             start = new Vec(start.x(), Math.max(start.y(), subject.y() + (scene.scenery() ? 6 : 4)), start.z());
         if (entering && type == Shot.Type.REVEAL) {
             Vec offset = start.subtract(subject);
@@ -112,13 +120,13 @@ public final class ShotSearch {
                 if (scene.scenery()) focusEnd = subject.add(end.subtract(start).scale(0.35));
             }
             case CRANE -> {
-                double travel = (scene.scenery() ? 3.5 : 2) * amount;
+                double travel = (scene.kind() == Scene.Kind.WATER ? 1.2 : scene.scenery() ? 3.5 : 2) * amount;
                 double lift = (offset.y() > travel + 0.5 ? -1 : 1) * travel;
                 end = start.add(tangent.scale(0.8 * amount * sign)).add(new Vec(0, lift, 0));
                 control = start.lerp(end, 0.5).add(new Vec(0, lift * 0.2, 0));
             }
             case OVERHEAD -> {
-                double high = scene.scenery() ? 8 : 4.8;
+                double high = scene.kind() == Scene.Kind.WATER ? 2.2 : scene.scenery() ? 8 : 4.8;
                 double wide = scene.scenery() ? 3 : 1.7;
                 Vec above = new Vec(offset.x() * wide / horizontal, high, offset.z() * wide / horizontal);
                 end = start.lerp(subject.add(rotate(above, Math.toRadians(15 * sign))), amount);
@@ -137,7 +145,8 @@ public final class ShotSearch {
             }
             case REVEAL -> {
                 Vec retreat = new Vec(offset.x(), 0, offset.z()).scale((scene.scenery() ? 4 : 2.5) * amount / horizontal);
-                end = limitDistance(start.add(retreat).add(new Vec(0, (scene.scenery() ? 3.5 : 2.5) * amount, 0)));
+                double lift = scene.kind() == Scene.Kind.WATER ? 1 : scene.scenery() ? 3.5 : 2.5;
+                end = limitDistance(start.add(retreat).add(new Vec(0, lift * amount, 0)));
                 control = start.lerp(end, 0.5);
             }
             case PAN -> {

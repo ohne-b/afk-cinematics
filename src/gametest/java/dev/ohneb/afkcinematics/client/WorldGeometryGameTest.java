@@ -42,6 +42,22 @@ public final class WorldGeometryGameTest implements FabricClientGameTest {
                         "Swept sightline margin missed adjacent water");
                     var wet = new Vec(origin.getX() + 0.5, origin.getY() + 0.5, origin.getZ() + 0.5);
                     require(!geometry.clear(wet, wet), "Camera volume was allowed inside water");
+                    var underwater = new WorldGeometry(client.level, true);
+                    require(underwater.clear(wet, wet), "Underwater volume rejected clear water");
+                    require(underwater.visible(wet, wet.add(new Vec(0.1, 0, 0)), 0.05), "Water blocked an underwater sightline");
+                    require(!underwater.clear(wet, wet.add(new Vec(0, 0.5, 0))), "Underwater drive breached the surface");
+                    require(!underwater.clear(wet, wet, 0.3), "Curve margin escaped its water volume");
+                    require(!underwater.clear(point, point), "Underwater volume accepted air");
+                    require(WorldScenery.depth(client.level, wet, new Vec(1, 0, 0), true) > 1,
+                        "Underwater ranking hit its own water cell");
+                    client.level.setBlock(origin, Blocks.LAVA.defaultBlockState(), 3);
+                    require(!underwater.clear(wet, wet) && !underwater.visible(wet, wet.add(new Vec(0.1, 0, 0)), 0.05),
+                        "Underwater geometry accepted lava");
+                    require(WorldScenery.depth(client.level, wet, new Vec(1, 0, 0), true) < 1,
+                        "Underwater ranking ignored lava");
+                    client.level.setBlock(origin, Blocks.OAK_SLAB.defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.SlabBlock.WATERLOGGED, true), 3);
+                    require(!underwater.clear(wet, wet), "Underwater volume clipped a waterlogged solid");
                     client.level.setBlock(origin, Blocks.STONE.defaultBlockState(), 3);
                     var inside = new Vec(origin.getX() + 0.5, origin.getY() + 0.5, origin.getZ() + 0.5);
                     require(!geometry.visible(inside, inside, 0.1), "Zero-length sightline inside a block was accepted");

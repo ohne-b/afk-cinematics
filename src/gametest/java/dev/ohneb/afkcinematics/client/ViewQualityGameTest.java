@@ -20,18 +20,18 @@ public final class ViewQualityGameTest implements FabricClientGameTest {
                 Vec vantage = new Vec(block.getX() - 1, block.getY() + 0.5, block.getZ() + 0.5);
                 Vec direction = new Vec(1, 0, 0);
                 Vec focus = vantage.add(direction.scale(12));
-                require(WorldScenery.depth(client.level, vantage, direction) == ViewQuality.RANGE,
+                require(WorldScenery.depth(client.level, vantage, direction, false) == ViewQuality.RANGE,
                     "Open view did not reach the bounded sampling distance");
-                double open = WorldScenery.quality(client.level, vantage, focus, true);
+                double open = WorldScenery.quality(client.level, vantage, focus, true, false);
                 require(open > 0, "Loaded open view was rejected");
                 try {
                     client.level.setBlock(block, Blocks.STONE.defaultBlockState(), 3);
-                    require(Math.abs(WorldScenery.depth(client.level, vantage, direction) - 1) < 0.001,
+                    require(Math.abs(WorldScenery.depth(client.level, vantage, direction, false) - 1) < 0.001,
                         "Depth sample missed the close wall");
-                    require(WorldScenery.quality(client.level, vantage, focus, true) < open,
+                    require(WorldScenery.quality(client.level, vantage, focus, true, false) < open,
                         "Close foreground wall outranked the open view");
                     client.level.setBlock(block, Blocks.WATER.defaultBlockState(), 3);
-                    require(WorldScenery.depth(client.level, vantage, direction) < 2,
+                    require(WorldScenery.depth(client.level, vantage, direction, false) < 2,
                         "Depth sample treated water as empty scenery");
                 } finally {
                     client.level.setBlock(block, old, 3);
@@ -41,7 +41,7 @@ public final class ViewQualityGameTest implements FabricClientGameTest {
                 require(!geometry.clear(unloaded, unloaded), "Camera clearance accepted an unloaded chunk");
                 require(!geometry.visible(unloaded, unloaded.add(direction.scale(8)), 0.1),
                     "Swept visibility accepted unloaded terrain");
-                require(WorldScenery.depth(client.level, unloaded, direction) == -1,
+                require(WorldScenery.depth(client.level, unloaded, direction, false) == -1,
                     "Unloaded terrain was counted as distant scenery");
                 int chunkX = client.player.blockPosition().getX() >> 4;
                 int chunkZ = client.player.blockPosition().getZ() >> 4;

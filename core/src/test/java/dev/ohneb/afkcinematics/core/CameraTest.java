@@ -99,7 +99,7 @@ class CameraTest {
     @Test void stillMotionDoesNotMoveAfterEntry() {
         var config = playerConfig();
         config.motion = CinematicConfig.Motion.STILL;
-        var search = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), false, 0), ENTRY, 0, config, null, true, false, new Random(4));
+        var search = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, null, true, false, new Random(4));
         Shot shot = search.next(OPEN);
         assertNotNull(shot);
         assertEquals(shot.sample(0), shot.sample(shot.duration()));

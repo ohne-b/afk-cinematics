@@ -7,6 +7,7 @@ public interface Geometry {
 
     default boolean clear(Vec from, Vec to) { return clear(from, to, 0); }
     default boolean visible(Vec camera, Vec subject) { return visible(camera, subject, 0); }
+    default Geometry forScene(Scene scene) { return this; }
 
     default Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return null; }
 

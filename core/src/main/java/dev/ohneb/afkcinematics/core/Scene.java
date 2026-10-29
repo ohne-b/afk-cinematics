@@ -1,12 +1,15 @@
 package dev.ohneb.afkcinematics.core;
 
 /** A subject and a starting viewpoint, both selected from loaded terrain. */
-public record Scene(Vec focus, Vec vantage, boolean scenery, double interest) {
+public record Scene(Vec focus, Vec vantage, Kind kind, double interest) {
+    public enum Kind { PLAYER, LANDSCAPE, GROUND, WATER }
     public static final int PROBES = 40;
     public Scene {
-        if (focus == null || vantage == null || !Double.isFinite(interest))
+        if (focus == null || vantage == null || kind == null || !Double.isFinite(interest))
             throw new IllegalArgumentException("Invalid scene");
     }
+
+    public boolean scenery() { return kind != Kind.PLAYER; }
 
     public boolean near(Vec anchor) {
         Vec target = focus.subtract(anchor), view = vantage.subtract(anchor);

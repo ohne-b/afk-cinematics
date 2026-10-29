@@ -166,7 +166,7 @@ final class SceneProbe {
             || client.player.position().distanceToSqr(position) > 0.0001
             || client.player.getYRot() != yaw || client.player.getXRot() != pitch)
             throw new AssertionError("Cinematic did not preserve the player pose");
-        if (!Scene.inRange(point, WorldGeometry.point(position)) || !new WorldGeometry(client.level).clear(point, point)
+        if (!Scene.inRange(point, WorldGeometry.point(position)) || !new WorldGeometry(client.level, AfkCinematics.underwater()).clear(point, point)
             || point.distance(WorldGeometry.point(client.player.getEyePosition())) < 1
             || scenery && point.y() < position.y() + 7)
             throw new AssertionError("Rendered camera did not reach a valid " + (scenery ? "scenery" : "player") + " view");
