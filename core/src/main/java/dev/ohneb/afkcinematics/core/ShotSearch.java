@@ -1,5 +1,8 @@
 package dev.ohneb.afkcinematics.core;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 /** One candidate per call so world queries can be spread across client ticks. */
@@ -10,42 +13,56 @@ public final class ShotSearch {
     private final double bearing;
     private final double distance;
     private final CinematicConfig.Motion motion;
-    private final Shot.Type last;
+    private final CinematicConfig.Pace pace;
+    private final List<Shot.Type> types;
     private final boolean entering;
     private final Random random;
     private int attempt;
 
-    public ShotSearch(Vec subject, Pose previous, double bearing, double distance,
-                      CinematicConfig.Motion motion, Shot.Type last, boolean entering, Random random) {
+    public ShotSearch(Vec subject, Pose previous, double bearing, CinematicConfig config,
+                      Shot.Type last, boolean entering, Random random) {
         this.subject = subject;
         this.previous = previous;
         this.bearing = bearing;
-        this.distance = distance;
-        this.motion = motion;
-        this.last = last;
+        this.distance = config.distance.blocks;
+        this.motion = config.motion;
+        this.pace = config.pace;
         this.entering = entering;
         this.random = random;
+        types = new ArrayList<>(config.shots);
+        if (motion == CinematicConfig.Motion.STILL || types.isEmpty()) {
+            types.clear();
+            types.add(Shot.Type.STILL);
+        }
+        Collections.shuffle(types, random);
+        if (types.size() > 1 && types.remove(last)) types.add(last);
     }
 
-    public boolean exhausted() { return attempt >= ANGLES.length + 1; }
+    public boolean exhausted() { return attempt >= ANGLES.length * types.size(); }
 
     public Shot next(Geometry geometry) {
         if (exhausted()) return null;
         int index = attempt++;
-        boolean fallback = index == ANGLES.length;
-        double angle = Math.toRadians(bearing + ANGLES[Math.min(index, ANGLES.length - 1)]);
-        double radius = index < 5 ? distance : Math.min(distance, 2.0);
-        Vec start = entering && !fallback
+        Shot.Type type = types.get(index % types.size());
+        int view = index / types.size();
+        double angle = Math.toRadians(bearing + ANGLES[view]);
+        double radius = view < 5 ? distance : Math.min(distance, 2.0);
+        Vec start = entering
             ? subject.add(new Vec(Math.sin(angle) * radius, 0.55, -Math.cos(angle) * radius))
             : previous.position();
+        if (entering && type == Shot.Type.OVERHEAD)
+            start = subject.add(new Vec(Math.sin(angle) * 1.7, 4.2, -Math.cos(angle) * 1.7));
         Vec offset = start.subtract(subject);
-        Shot.Type type = Shot.Type.values()[random.nextInt(3)];
-        if (type == last) type = Shot.Type.values()[(type.ordinal() + 1) % 3];
-        if (fallback || motion == CinematicConfig.Motion.STILL) type = Shot.Type.STILL;
+        double horizontal = Math.hypot(offset.x(), offset.z());
+        // Looking back from inside the player's body is never a useful fallback.
+        if (horizontal < 1.25) return null;
         double amount = motion == CinematicConfig.Motion.REDUCED ? 0.3 : 1.0;
         double sign = random.nextBoolean() ? 1 : -1;
+        Vec tangent = new Vec(-offset.z(), 0, offset.x()).scale(1 / horizontal);
         Vec end = start;
         Vec control = start;
+        Vec focusStart = entering ? subject : previous.lookAhead(start.distance(subject));
+        Vec focusEnd = subject;
         switch (type) {
             case ARC -> {
                 double sweep = Math.toRadians((20 + random.nextDouble() * 15) * amount * sign);
@@ -55,23 +72,36 @@ public final class ShotSearch {
                 control = subject.add(new Vec(midpoint.x() * scale, midpoint.y(), midpoint.z() * scale));
             }
             case DOLLY -> {
-                double horizontal = Math.hypot(offset.x(), offset.z());
                 double change = Math.clamp(horizontal + 0.7 * amount * sign, 1.5, 6.0);
-                if (horizontal > 0.01)
-                    end = subject.add(new Vec(offset.x() * change / horizontal, offset.y(), offset.z() * change / horizontal));
+                end = subject.add(new Vec(offset.x() * change / horizontal, offset.y(), offset.z() * change / horizontal));
                 control = start.lerp(end, 0.5);
             }
             case DRIFT -> {
-                double horizontal = Math.hypot(offset.x(), offset.z());
-                if (horizontal > 0.01)
-                    end = start.add(new Vec(-offset.z(), 0, offset.x()).scale(amount * sign / horizontal));
+                end = start.add(tangent.scale(amount * sign));
                 control = start.lerp(end, 0.5);
             }
-            case STILL -> { }
+            case CRANE -> {
+                double lift = (offset.y() > 2.5 ? -1.2 : 1.2) * amount;
+                end = start.add(tangent.scale(0.4 * amount * sign)).add(new Vec(0, lift, 0));
+                control = start.lerp(end, 0.5).add(new Vec(0, lift * 0.2, 0));
+            }
+            case OVERHEAD -> {
+                Vec above = new Vec(offset.x() * 1.7 / horizontal, 4.8, offset.z() * 1.7 / horizontal);
+                end = start.lerp(subject.add(rotate(above, Math.toRadians(15 * sign))), amount);
+                control = start.lerp(end, 0.5);
+            }
+            case PAN -> {
+                if (entering) focusStart = subject.add(tangent.scale(-0.9 * amount * sign));
+                else {
+                    Vec initial = focusStart.subtract(subject);
+                    if ((initial.x() * tangent.x() + initial.z() * tangent.z()) * sign > 0) sign = -sign;
+                }
+                focusEnd = subject.add(tangent.scale(0.9 * amount * sign));
+            }
+            case STILL -> focusEnd = focusStart;
         }
-        Shot candidate = new Shot(type, subject, start, limitDistance(control), limitDistance(end), 15 + random.nextDouble() * 10);
-        // A first-person fallback would rotate the view into the player's own body.
-        if (Math.hypot(offset.x(), offset.z()) < 1.25) return null;
+        double duration = pace.minimumSeconds + random.nextDouble() * (pace.maximumSeconds - pace.minimumSeconds);
+        Shot candidate = new Shot(type, start, limitDistance(control), limitDistance(end), focusStart, focusEnd, duration);
         return geometry.valid(candidate, previous.position()) ? candidate : null;
     }
 
@@ -83,7 +113,7 @@ public final class ShotSearch {
     private Vec limitDistance(Vec point) {
         Vec offset = point.subtract(subject);
         double radius = Math.hypot(offset.x(), offset.z());
-        if (radius <= 6) return point;
-        return subject.add(new Vec(offset.x() * 6 / radius, offset.y(), offset.z() * 6 / radius));
+        double scale = radius > 6 ? 6 / radius : 1;
+        return subject.add(new Vec(offset.x() * scale, Math.clamp(offset.y(), -0.3, 5.5), offset.z() * scale));
     }
 }

@@ -19,6 +19,12 @@ public record Pose(Vec position, double yaw, double pitch) {
         return new Pose(position.lerp(other.position, t), yaw + turn * t, pitch + (other.pitch - pitch) * t);
     }
 
+    public Vec lookAhead(double distance) {
+        double horizontal = Math.cos(Math.toRadians(pitch));
+        return position.add(new Vec(-Math.sin(Math.toRadians(yaw)) * horizontal,
+            -Math.sin(Math.toRadians(pitch)), Math.cos(Math.toRadians(yaw)) * horizontal).scale(distance));
+    }
+
     public static double ease(double t) {
         t = Math.clamp(t, 0, 1);
         return t * t * t * (t * (t * 6 - 15) + 10);

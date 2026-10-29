@@ -1,6 +1,7 @@
 package dev.ohneb.afkcinematics.client;
 
 import dev.ohneb.afkcinematics.core.Pose;
+import dev.ohneb.afkcinematics.core.CinematicConfig;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
@@ -22,6 +23,7 @@ public final class TransitionsGameTest implements FabricClientGameTest {
         context.runOnClient(client -> {
             limit.set(client.options.framerateLimit().get());
             client.options.framerateLimit().set(20);
+            AfkCinematics.config().pace = CinematicConfig.Pace.SHORT;
         });
         try (var world = context.worldBuilder().create()) {
             world.getServer().runOnServer(server -> {
