@@ -44,6 +44,8 @@ class ShotOptionsTest {
             assertEquals(previous.position(), start.position());
             assertEquals(0, Math.IEEEremainder(start.yaw() - previous.yaw(), 360), 1e-9);
             assertEquals(previous.pitch(), start.pitch(), 1e-9);
+            if (type == Shot.Type.PAN) assertTrue(Math.abs(Math.IEEEremainder(
+                next.sample(next.duration()).yaw() - start.yaw(), 360)) > 1, "A consecutive panorama must keep turning");
         }
     }
 
