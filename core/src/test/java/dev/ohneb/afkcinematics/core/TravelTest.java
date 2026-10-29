@@ -22,7 +22,7 @@ class TravelTest {
                 if (!type.travelOnly()) continue;
                 var config = new CinematicConfig();
                 config.shots = EnumSet.of(type);
-                var search = new TravelSearch(ZERO, kind, 0, config, new ShotHistory(), new Random(3));
+                var search = new TravelSearch(ZERO, kind, config, new ShotHistory(), new Random(3));
                 ShotPlanner.Plan found = null;
                 while (!search.exhausted() && found == null) found = search.next(narrow);
                 assertNotNull(found, kind + " " + type);
@@ -57,5 +57,44 @@ class TravelTest {
         Pose resumed = moving.apply(local, ZERO, 0, 1, false);
         assertTrue(resumed.position().distance(before.position()) < 0.5);
         assertTrue(resumed.position().distance(before.position()) > 0);
+    }
+
+    @Test void courseChangesEaseAcrossNorthAndReversalsWaitForCover() {
+        var moving = new MovingGeometry(OPEN, ZERO, 0);
+        moving.course(170);
+        Pose local = new Pose(new Vec(0, 2, -10), 0, 0);
+        Pose previous = moving.apply(local, ZERO, 0, 1, false);
+        moving.course(-170);
+        assertFalse(moving.needsReframe(), "Crossing north must take the short turn");
+        for (long now = 20_000_000; now <= 3_000_000_000L; now += 20_000_000) {
+            assertTrue(moving.follow(ZERO, now, false));
+            Pose next = moving.apply(local, ZERO, 0, 1, false);
+            assertTrue(next.position().distance(previous.position()) < .08, "The following view must turn gradually");
+            previous = next;
+        }
+        assertEquals(-170, Math.IEEEremainder(previous.yaw(), 360), .1);
+        moving.course(10);
+        assertTrue(moving.needsReframe());
+        assertFalse(moving.needsReframe(), "A reversal requests one cut, not a queue of cuts");
+        assertTrue(moving.follow(ZERO, 3_020_000_000L, true));
+        assertEquals(previous, moving.apply(local, ZERO, 0, 1, true));
+        Pose covered = moving.apply(local, ZERO, 1, 1, false);
+        assertEquals(previous.position(), covered.position());
+        Pose destination = moving.apply(local, ZERO, 1, 2, false);
+        assertTrue(destination.position().distance(covered.position()) > 19);
+        assertEquals(10, destination.yaw(), .001);
+        assertFalse(moving.needsReframe());
+    }
+
+    @Test void captureStillRequiresVisibilityOfTheMovingSubject() {
+        Geometry hidden = new Geometry() {
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return b.x() < .5; }
+        };
+        var moving = new MovingGeometry(hidden, ZERO, 0);
+        Pose local = new Pose(new Vec(0, 2, -10), 0, 0);
+        assertNotNull(moving.apply(local, ZERO, 0, 1, false));
+        assertTrue(moving.follow(new Vec(1, 0, 0), 100_000_000L, true));
+        assertNull(moving.apply(local, ZERO, 0, 1, true));
     }
 }

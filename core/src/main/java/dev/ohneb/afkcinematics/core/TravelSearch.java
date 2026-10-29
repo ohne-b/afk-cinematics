@@ -10,16 +10,14 @@ import java.util.Random;
 final class TravelSearch {
     private final Vec subject;
     private final Scene.Kind kind;
-    private final double bearing;
     private final CinematicConfig config;
     private final Random random;
     private final List<Shot.Type> types;
     private int attempt;
 
-    TravelSearch(Vec subject, Scene.Kind kind, double bearing, CinematicConfig config, ShotHistory history, Random random) {
+    TravelSearch(Vec subject, Scene.Kind kind, CinematicConfig config, ShotHistory history, Random random) {
         this.subject = subject;
         this.kind = kind;
-        this.bearing = bearing;
         this.config = config;
         this.random = random;
         types = new ArrayList<>(config.shots);
@@ -47,7 +45,7 @@ final class TravelSearch {
             case LEAD -> 155 * side;
             default -> 55 * side;
         };
-        double radians = Math.toRadians(bearing + angle);
+        double radians = Math.toRadians(angle);
         Vec start = subject.add(new Vec(Math.sin(radians) * distance, height, -Math.cos(radians) * distance));
         double duration = config.pace.minimumSeconds + random.nextDouble() * (config.pace.maximumSeconds - config.pace.minimumSeconds);
         Shot shot = new Shot(type, start, start, start, subject, subject, duration);

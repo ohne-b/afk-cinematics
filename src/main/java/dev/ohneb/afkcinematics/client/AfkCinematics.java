@@ -198,7 +198,7 @@ public final class AfkCinematics {
         if (session != null) {
             if (!eligible || movingGeometry == null && movedFrom(anchor, true)) stop();
             else {
-                if (movingGeometry != null) session.bearing(travelBearing());
+                if (movingGeometry != null) movingGeometry.course(travelBearing());
                 session.tick(now);
                 if (session.ended()) {
                     if (manualFeedback) message("no_view");
@@ -255,6 +255,7 @@ public final class AfkCinematics {
             session = new CinematicSession(subject, vanillaPose, player.getYRot(), config(), new WorldGeometry(world), RANDOM);
         } else {
             movingGeometry = new MovingGeometry(new WorldGeometry(world).forScene(null), subject, System.nanoTime());
+            movingGeometry.course(travelBearing());
             session = new CinematicSession(new Vec(0, 0, 0), movingGeometry.local(vanillaPose), travelBearing(), config(), movingGeometry, RANDOM, activity);
         }
         session.tick(System.nanoTime());
@@ -318,6 +319,7 @@ public final class AfkCinematics {
                 player.yOld + (player.getY() - player.yOld) * partial + player.getBbHeight() * 0.65,
                 player.zOld + (player.getZ() - player.zOld) * partial);
             if (!movingGeometry.follow(subject, now, session.capturing())) { stop(); return null; }
+            if (!session.capturing() && session.settled() && movingGeometry.needsReframe()) session.nextShot();
         }
         Pose pose = session.frame(now);
         if (pose != null && movingGeometry != null) {
