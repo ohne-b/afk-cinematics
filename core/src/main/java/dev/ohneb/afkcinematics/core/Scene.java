@@ -3,7 +3,7 @@ package dev.ohneb.afkcinematics.core;
 /** A subject and a starting viewpoint, both selected from loaded terrain. */
 public record Scene(Vec focus, Vec vantage, Kind kind, double interest) {
     public enum Kind { PLAYER, LANDSCAPE, AERIAL, GROUND, WATER }
-    public static final int PROBES = 48;
+    public static final int PROBES = 64;
     public Scene {
         if (focus == null || vantage == null || kind == null || !Double.isFinite(interest))
             throw new IllegalArgumentException("Invalid scene");

@@ -51,15 +51,25 @@ class ConfigTest {
         var store = new ConfigStore(path);
         assertTrue(store.readable());
         assertTrue(store.config().music);
-        assertEquals(EnumSet.of(Shot.Type.PAN, Shot.Type.CRANE), store.config().shots);
+        assertEquals(EnumSet.of(Shot.Type.PAN, Shot.Type.CRANE, Shot.Type.DIAGONAL_GLIDE,
+            Shot.Type.RISING_PASS, Shot.Type.DESCENDING_PASS, Shot.Type.PULL_AWAY), store.config().shots);
         assertEquals(CinematicConfig.Pace.LONG, store.config().pace);
         assertEquals(CinematicConfig.Subject.MIXED, store.config().subject);
         assertEquals(CinematicConfig.Lens.CINEMATIC, store.config().lens);
         store.config().subject = CinematicConfig.Subject.SCENERY;
+        store.config().playerShare = 75;
         store.config().lens = CinematicConfig.Lens.GAME;
         store.config().shots = EnumSet.of(Shot.Type.FLYOVER, Shot.Type.LOW_PASS, Shot.Type.REVEAL);
         assertTrue(store.save());
         assertEquals(store.config().shots, new ConfigStore(path).config().shots);
+        assertEquals(75, new ConfigStore(path).config().playerShare);
+        var saved = com.google.gson.JsonParser.parseString(Files.readString(path)).getAsJsonObject();
+        var catalog = saved.getAsJsonArray("knownShots");
+        catalog.remove(catalog.size() - 1);
+        Files.writeString(path, saved.toString());
+        var upgraded = EnumSet.copyOf(store.config().shots);
+        upgraded.add(Shot.Type.PULL_AWAY);
+        assertEquals(upgraded, new ConfigStore(path).config().shots);
         assertEquals(CinematicConfig.Subject.SCENERY, new ConfigStore(path).config().subject);
         assertEquals(CinematicConfig.Lens.GAME, new ConfigStore(path).config().lens);
         Files.writeString(path, "{\"shots\":[],\"pace\":\"invalid\"}");

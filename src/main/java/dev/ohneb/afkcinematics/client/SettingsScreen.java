@@ -102,6 +102,10 @@ public final class SettingsScreen extends Screen {
                     config.subject = CinematicConfig.Subject.values()[(config.subject.ordinal() + 1) % CinematicConfig.Subject.values().length];
                     button.setMessage(value("subject", config.subject));
                 }).tooltip(Tooltip.create(text("subject.help"))).build());
+                widgets.add(Button.builder(text("playerShare", config.playerShare), button -> {
+                    config.playerShare = (config.playerShare / 25 + 1) % 5 * 25;
+                    button.setMessage(text("playerShare", config.playerShare));
+                }).tooltip(Tooltip.create(text("playerShare.help"))).build());
                 widgets.add(Button.builder(value("motion", config.motion), button -> {
                     config.motion = CinematicConfig.Motion.values()[(config.motion.ordinal() + 1) % CinematicConfig.Motion.values().length];
                     button.setMessage(value("motion", config.motion));

@@ -16,9 +16,7 @@ final class ShotPlanner {
     private final double bearing;
     private final double sceneryBearing;
     private final CinematicConfig config;
-    private final Scene lastScene;
-    private final List<Pose> recentViews;
-    private final Shot.Type lastType;
+    private final ShotHistory history;
     private final Random random;
     private final boolean sceneryFirst;
     private final List<Scene> candidates = new ArrayList<>();
@@ -29,22 +27,19 @@ final class ShotPlanner {
     private boolean cut, entering;
 
     ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
-                Scene lastScene, List<Pose> recentViews, int subjectTakes, Shot.Type lastType, Random random) {
+                ShotHistory history, Random random) {
         this.anchor = anchor;
         this.previous = previous;
         this.original = original;
         this.bearing = bearing;
         this.sceneryBearing = bearing + random.nextDouble() * 360;
         this.config = config;
-        this.lastScene = lastScene;
-        this.recentViews = List.copyOf(recentViews);
-        this.lastType = lastType;
+        this.history = history;
         this.random = random;
         triedPlayer = config.subject == CinematicConfig.Subject.SCENERY;
         triedScenery = config.subject == CinematicConfig.Subject.PLAYER;
         if (triedPlayer || triedScenery) sceneryFirst = triedPlayer;
-        else if (lastScene != null && subjectTakes >= (lastScene.scenery() ? 4 : 2)) sceneryFirst = !lastScene.scenery();
-        else sceneryFirst = random.nextDouble() < 0.75;
+        else sceneryFirst = history.sceneryFirst(config.playerShare, random);
     }
 
     boolean exhausted() { return search == null && triedPlayer && triedScenery; }
@@ -62,7 +57,7 @@ final class ShotPlanner {
             if (!triedPlayer && (!sceneryFirst || triedScenery)) {
                 triedPlayer = true;
                 selected = new Scene(anchor, original.position(), Scene.Kind.PLAYER, 0);
-                cut = lastScene != null;
+                cut = !history.empty();
                 entering = true;
             } else if (!triedScenery) {
                 if (probe < Scene.PROBES) {
@@ -70,7 +65,7 @@ final class ShotPlanner {
                     if (scene != null && scene.scenery() && scene.near(anchor) && !ShotSearch.stylesFor(scene, config).isEmpty()
                         && candidates.stream().noneMatch(other -> other.focus().distance(scene.focus()) < 3
                             && other.vantage().distance(scene.vantage()) < 3)) candidates.add(scene);
-                    if (probe == Scene.PROBES) candidates.sort(Comparator.comparingDouble(this::score).reversed());
+                    if (probe == Scene.PROBES) candidates.sort(Comparator.comparingDouble(history::sceneScore).reversed());
                     return null;
                 }
                 if (candidate >= Math.min(SCENERY_CANDIDATES, candidates.size())) { triedScenery = true; return null; }
@@ -78,7 +73,8 @@ final class ShotPlanner {
                 cut = true;
                 entering = true;
             } else return null;
-            search = new ShotSearch(selected, previous, bearing, config, lastType, entering, cut, random);
+            search = new ShotSearch(selected, previous, bearing, config, history.lastType(), entering, cut, random);
+            search.prioritize(history);
             attempts = 0;
         }
         Shot shot = search.next(geometry.forScene(selected));
@@ -88,16 +84,4 @@ final class ShotPlanner {
         return null;
     }
 
-    private double score(Scene scene) {
-        Pose view = Pose.lookingAt(scene.vantage(), scene.focus());
-        double penalty = 0;
-        for (int i = 0; i < recentViews.size(); i++) {
-            Pose recent = recentViews.get(i);
-            double turn = Math.hypot(Math.IEEEremainder(view.yaw() - recent.yaw(), 360), view.pitch() - recent.pitch());
-            double likeness = Math.max(0, 1 - view.position().distance(recent.position()) / 16) * Math.max(0, 1 - turn / 90);
-            penalty = Math.max(penalty, 7 * likeness * (i + 1) / recentViews.size());
-        }
-        double sameKind = lastScene != null && lastScene.kind() == scene.kind() ? 1.25 : 0;
-        return scene.interest() - penalty - sameKind;
-    }
 }

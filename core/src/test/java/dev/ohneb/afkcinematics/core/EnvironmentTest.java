@@ -81,7 +81,7 @@ class EnvironmentTest {
         var config = new CinematicConfig();
         config.subject = CinematicConfig.Subject.SCENERY;
         config.shots = EnumSet.of(Shot.Type.FLYOVER);
-        var planner = new ShotPlanner(ANCHOR, ENTRY, ENTRY, 0, config, null, java.util.List.of(), 0, null, new Random(1));
+        var planner = new ShotPlanner(ANCHOR, ENTRY, ENTRY, 0, config, new ShotHistory(), new Random(1));
         Geometry geometry = new Geometry() {
             public boolean clear(Vec a, Vec b, double margin) { return true; }
             public boolean visible(Vec a, Vec b, double margin) { return true; }

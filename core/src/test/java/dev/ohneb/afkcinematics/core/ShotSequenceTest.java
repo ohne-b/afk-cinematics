@@ -14,6 +14,24 @@ class ShotSequenceTest {
     private static final Scene SECOND = new Scene(new Vec(8, 10, 0), new Vec(8, 12, -8), Scene.Kind.LANDSCAPE, 7.9);
     private static final Scene THIRD = new Scene(new Vec(0, 10, 8), new Vec(0, 12, 0), Scene.Kind.LANDSCAPE, 7.8);
 
+    @Test void successfulTakesUseEveryAvailableMoveBeforeRepeating() {
+        var config = new CinematicConfig();
+        config.subject = CinematicConfig.Subject.SCENERY;
+        config.shots = EnumSet.of(Shot.Type.DOLLY, Shot.Type.DRIFT, Shot.Type.CRANE, Shot.Type.PAN);
+        var history = new ShotHistory();
+        var used = EnumSet.noneOf(Shot.Type.class);
+        var world = geometry(new ArrayList<>(), new boolean[1]);
+        for (int take = 0; take < config.shots.size(); take++) {
+            var planner = new ShotPlanner(ANCHOR, ENTRY, ENTRY, 0, config, history, new Random(take));
+            ShotPlanner.Plan plan = null;
+            for (int step = 0; step < 200 && plan == null && !planner.exhausted(); step++) plan = planner.next(world);
+            assertNotNull(plan);
+            assertTrue(used.add(plan.shot().type()), "Repeated a move before using the remaining available ones");
+            history.add(plan.scene(), plan.shot());
+        }
+        assertEquals(config.shots, used);
+    }
+
     @Test void aPreparedTakeDoesNotFreezeOrReplaceTheCurrentMotionEarly() {
         var accepted = new ArrayList<Shot>();
         var session = session(geometry(accepted, new boolean[1]), Shot.Type.ARC);

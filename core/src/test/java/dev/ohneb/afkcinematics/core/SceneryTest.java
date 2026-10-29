@@ -95,7 +95,7 @@ class SceneryTest {
             public boolean clear(Vec a, Vec b, double margin) { return true; }
             public boolean visible(Vec a, Vec b, double margin) { return true; }
         });
-        for (int tick = 0; tick < 30; tick++) scenery.tick(tick * 50_000_000L);
+        for (int tick = 0; tick < Scene.PROBES / 2 + 4; tick++) scenery.tick(tick * 50_000_000L);
         assertTrue(scenery.ended());
         assertFalse(scenery.showing());
     }
@@ -159,7 +159,7 @@ class SceneryTest {
                 return new Scene(new Vec(200, 200, 0), new Vec(200, 202, -8), Scene.Kind.LANDSCAPE, 100);
             }
         });
-        for (int tick = 0; tick < 30; tick++) session.tick(tick * 50_000_000L);
+        for (int tick = 0; tick < Scene.PROBES / 2 + 4; tick++) session.tick(tick * 50_000_000L);
         assertTrue(session.ended());
         assertEquals(Scene.PROBES, probes[0]);
     }
@@ -188,7 +188,7 @@ class SceneryTest {
         assertTrue(views.get(0) > 0 && views.get(1) < 0, "Player shots erased scenery variety");
     }
 
-    @Test void mixedModeCanRepeatASubjectButLimitsLongStreaks() {
+    @Test void mixedModeBalancesActualTakesAndKeepsUnavailableSubjectFallbacks() {
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.STILL);
         Geometry open = new Geometry() {
@@ -196,19 +196,24 @@ class SceneryTest {
             public boolean visible(Vec a, Vec b, double margin) { return true; }
             public Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return probe == 0 ? SURFACE : null; }
         };
-        Scene player = new Scene(PLAYER, ENTRY.position(), Scene.Kind.PLAYER, 0);
-        for (Scene last : new Scene[]{player, SURFACE}) {
-            Random repeat = new Random(4) {
-                @Override public double nextDouble() { return last.scenery() ? 0 : 0.99; }
-            };
-            var planner = new ShotPlanner(PLAYER, ENTRY, ENTRY, 0, config, last, java.util.List.of(), 1, null, repeat);
-            assertEquals(last.scenery(), find(planner, open).scene().scenery(), "Mixed forced alternation");
-            planner = new ShotPlanner(PLAYER, ENTRY, ENTRY, 0, config, last, java.util.List.of(),
-                last.scenery() ? 4 : 2, null, repeat);
-            var next = find(planner, open);
-            assertNotEquals(last.scenery(), next.scene().scenery(), "Mixed never varied its subject");
-            assertTrue(next.cut(), "A different take changed direction without a covered cut");
+        var history = new ShotHistory();
+        var random = new Random(4);
+        int players = 0;
+        for (int i = 0; i < 12; i++) {
+            var next = find(new ShotPlanner(PLAYER, ENTRY, ENTRY, 0, config, history, random), open);
+            if (!next.scene().scenery()) players++;
+            if (i > 0) assertTrue(next.cut());
+            history.add(next.scene(), next.shot());
         }
+        assertTrue(players >= 2 && players <= 4, "Mixed ignored its 25% player preference");
+        config.playerShare = 100;
+        Geometry sceneryOnly = new Geometry() {
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
+            public boolean valid(Shot shot, Vec entry) { return shot.focusStart().equals(SURFACE.focus()); }
+            public Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return probe == 0 ? SURFACE : null; }
+        };
+        assertTrue(find(new ShotPlanner(PLAYER, ENTRY, ENTRY, 0, config, new ShotHistory(), random), sceneryOnly).scene().scenery());
     }
 
     private ShotPlanner.Plan find(ShotPlanner planner, Geometry geometry) {
