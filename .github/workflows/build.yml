@@ -112,7 +112,7 @@ jobs:
       matrix:
         include:
           - target: 1.21.8-fabric
-            profile: legacy-input
+            profile: legacy-compatibility
           - target: 1.21.11-fabric
             profile: vanilla
           - target: 1.21.11-fabric
@@ -145,7 +145,7 @@ jobs:
           JDK25: ${{ env.JAVA_HOME_25_X64 }}
         run: |
           args=()
-          if [ "$TEST_PROFILE" = compatibility ]; then args+=(-PcompatTest); fi
+          if [[ "$TEST_PROFILE" = *compatibility ]]; then args+=(-PcompatTest); fi
           xvfb-run -a ./gradlew ":${BUILD_TARGET}:runClientGameTest" "${args[@]}" --console=plain
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()

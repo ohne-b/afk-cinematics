@@ -61,6 +61,7 @@ public final class LegacyInputGameTest implements FabricClientGameTest {
                 require(player.level().getEntitiesOfClass(ItemEntity.class, player.getBoundingBox().inflate(12)).isEmpty(),
                     "Mouse wake dropped items");
             });
+            LegacyScreenshotProbe.run(context);
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
