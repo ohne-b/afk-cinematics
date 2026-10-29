@@ -40,6 +40,10 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     var settings = new SettingsScreen(parent);
                     AfkCinematics.showScreen(settings);
                     press(settings, "Camera");
+                });
+                context.takeScreenshot(TestScreenshotOptions.of("camera-settings").withDestinationDir(artifacts));
+                context.runOnClient(client -> {
+                    var settings = (SettingsScreen)AfkCinematics.screen();
                     press(settings, "Shot types: 7 enabled");
                     for (Shot.Type type : Shot.Type.values()) {
                         if (type == Shot.Type.PAN) continue;
