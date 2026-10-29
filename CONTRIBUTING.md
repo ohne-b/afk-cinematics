@@ -51,6 +51,8 @@ scenery fallback, the rendered camera and unchanged server state. CI runs this o
 every target. `-PsceneWorld=<name>` may reuse a copied test fixture, never a player save.
 The Fabric suite also checks natural terrain and records camera timings in `artifacts/`.
 Use `-PnaturalSeconds=3600` for an hour of continuous scenery validation; the default is 40 seconds.
+Use `-PcinematicCapture=<new-name>` for timestamped frames from a fixed snowy-forest
+view. Capture labels must be new so earlier footage is preserved.
 
 Every PR requires independent critical review by a human or a separate read-only
 reviewer who did not write it. Provide these instructions, acceptance criteria, the
