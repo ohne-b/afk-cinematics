@@ -1,6 +1,7 @@
 package dev.ohneb.afkcinematics.client;
 
 import dev.ohneb.afkcinematics.core.Vec;
+import net.minecraft.core.BlockPos;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.tags.FluidTags;
@@ -30,9 +31,21 @@ final class FishingActivity {
     }
 
     static Vec target(FishingHook hook, float delta, Vec player) {
-        return new Vec(hook.xOld + (hook.getX() - hook.xOld) * delta,
-            hook.yOld + (hook.getY() - hook.yOld) * delta + .1,
-            hook.zOld + (hook.getZ() - hook.zOld) * delta).subtract(player);
+        double x = hook.xOld + (hook.getX() - hook.xOld) * delta;
+        double y = hook.yOld + (hook.getY() - hook.yOld) * delta;
+        double z = hook.zOld + (hook.getZ() - hook.zOld) * delta;
+        BlockPos base = BlockPos.containing(x, y - .25, z);
+        // Frame the cast at the waterline, so a bite can dip without nodding the camera.
+        double surface = y + .1;
+        if (!hook.level().getChunkSource().hasChunk(base.getX() >> 4, base.getZ() >> 4))
+            return new Vec(x, surface, z).subtract(player);
+        for (int up = 0; up < 3; up++) {
+            BlockPos block = base.above(up);
+            var fluid = hook.level().getFluidState(block);
+            if (!fluid.is(FluidTags.WATER)) break;
+            surface = block.getY() + fluid.getHeight(hook.level(), block) + .12;
+        }
+        return new Vec(x, surface, z).subtract(player);
     }
 
     static boolean canUse(LocalPlayer player, HitResult hit) {
