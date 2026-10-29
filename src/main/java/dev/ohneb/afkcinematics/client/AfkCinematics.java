@@ -202,7 +202,7 @@ public final class AfkCinematics {
         if (session != null) {
             if (!eligible || !travelling() && movedFrom(anchor, true)) stop();
             else {
-                if (movingGeometry != null) session.bearing(travelBearing());
+                if (activity == Scene.Kind.BOAT || activity == Scene.Kind.FLIGHT) movingGeometry.course(travelBearing());
                 session.tick(now);
                 if (session.ended()) {
                     if (manualFeedback) message("no_view");
@@ -267,6 +267,7 @@ public final class AfkCinematics {
             session = new CinematicSession(subject, vanillaPose, player.getYRot(), config(), new WorldGeometry(world), RANDOM);
         } else {
             movingGeometry = new MovingGeometry(new WorldGeometry(world).forScene(null), subject, System.nanoTime());
+            if (activity == Scene.Kind.BOAT || activity == Scene.Kind.FLIGHT) movingGeometry.course(travelBearing());
             Vec bobber = fishingHook == null ? null : FishingActivity.target(fishingHook, 1, subject);
             session = new CinematicSession(new Vec(0, 0, 0), movingGeometry.local(vanillaPose), travelBearing(), config(), movingGeometry, RANDOM, activity, bobber);
         }
@@ -338,6 +339,7 @@ public final class AfkCinematics {
                 player.yOld + (player.getY() - player.yOld) * partial + player.getBbHeight() * 0.65,
                 player.zOld + (player.getZ() - player.zOld) * partial);
             if (!movingGeometry.follow(subject, now, session.capturing())) { stop(); return null; }
+            if (!session.capturing() && session.settled() && movingGeometry.needsReframe()) session.nextShot();
             if (fishingHook != null) {
                 bobber = FishingActivity.target(fishingHook, partial, subject);
                 session.fishing(bobber);

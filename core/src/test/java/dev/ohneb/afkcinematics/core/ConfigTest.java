@@ -59,9 +59,9 @@ class ConfigTest {
         var store = new ConfigStore(path);
         assertTrue(store.readable());
         assertTrue(store.config().music);
-        assertEquals(EnumSet.of(Shot.Type.PAN, Shot.Type.CRANE, Shot.Type.DIAGONAL_GLIDE,
-            Shot.Type.RISING_PASS, Shot.Type.DESCENDING_PASS, Shot.Type.PULL_AWAY,
-            Shot.Type.TRAIL, Shot.Type.ESCORT, Shot.Type.LEAD, Shot.Type.WIDE_TRACK, Shot.Type.ANGLER, Shot.Type.CAST_LINE, Shot.Type.FLOAT), store.config().shots);
+        assertEquals(EnumSet.complementOf(EnumSet.of(Shot.Type.ARC, Shot.Type.DOLLY, Shot.Type.DRIFT,
+            Shot.Type.OVERHEAD, Shot.Type.FLYOVER, Shot.Type.LOW_PASS, Shot.Type.REVEAL,
+            Shot.Type.FLY_THROUGH, Shot.Type.TRAVERSE, Shot.Type.STILL)), store.config().shots);
         assertEquals(CinematicConfig.Pace.LONG, store.config().pace);
         assertEquals(CinematicConfig.Subject.MIXED, store.config().subject);
         assertEquals(CinematicConfig.Lens.CINEMATIC, store.config().lens);

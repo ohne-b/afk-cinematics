@@ -36,6 +36,10 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
         String capture = System.getProperty("afkcinematics.test.capture");
         String scene = System.getProperty("afkcinematics.test.scene", "forest");
         if (capture != null && !capture.matches("[a-z0-9-]+")) throw new IllegalArgumentException("Invalid capture label");
+        if (capture != null && (scene.equals("boat") || scene.equals("flight"))) {
+            JourneyCapture.run(context, capture, scene.equals("boat"));
+            return;
+        }
         if (capture != null && !List.of("forest", "plains", "cavern", "fishing").contains(scene))
             throw new IllegalArgumentException("Unknown capture scene: " + scene);
         boolean fishing = capture != null && scene.equals("fishing");

@@ -6,6 +6,7 @@
 - Controller-look wake detection and smooth resumption after client hitches (#32).
 - Boat, raft and flight tracking views with optional steering during manually started cinematics (#33).
 - Fishing views follow the angler, line and bobber, with prompt entry and normal reeling controls (#34).
+- Low, high and broadside travel views follow gradual turns and cover sharp course changes (#35).
 
 ## 0.0.1-alpha.1
 
