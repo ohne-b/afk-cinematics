@@ -45,12 +45,15 @@ final class FishingSearch {
             case CAST_LINE -> subject.add(lateral.scale(3.5 * scale)).subtract(forward.scale(3 * scale)).add(new Vec(0, 1.8 * scale, 0));
             default -> focus.add(lateral.scale(8 * scale)).subtract(forward.scale(3 * scale)).add(new Vec(0, 3 * scale, 0));
         };
-        if (!Scene.inRange(start, subject)) return null;
+        double amount = config.motion == CinematicConfig.Motion.STILL ? 0 : config.motion == CinematicConfig.Motion.REDUCED ? .3 : 1;
+        Vec end = start.add((type == Shot.Type.CAST_LINE ? forward : lateral).scale((type == Shot.Type.FLOAT ? .6 : 1.4) * amount));
+        if (!Scene.inRange(start, subject) || !Scene.inRange(end, subject)) return null;
         double duration = config.pace.minimumSeconds + random.nextDouble() * (config.pace.maximumSeconds - config.pace.minimumSeconds);
-        Shot shot = new Shot(type, start, start, start, focus, focus, duration);
+        Shot shot = new Shot(type, start, start.lerp(end, .5), end, focus, focus, duration);
         Scene scene = new Scene(bobber, start, Scene.Kind.FISHING, 0);
         Geometry environment = geometry.forScene(scene);
-        return environment.valid(shot, start) && environment.visible(start, bobber)
+        Shot sightline = new Shot(type, start, shot.control(), end, bobber, bobber, duration);
+        return environment.valid(shot, start) && environment.valid(sightline, start)
             ? new ShotPlanner.Plan(shot, scene, true, true) : null;
     }
 

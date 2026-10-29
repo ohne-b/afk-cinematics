@@ -32,10 +32,13 @@ class ConfigTest {
         store.config().hidePlayerNames = false;
         store.config().boats = false;
         store.config().travelControls = false;
+        assertTrue(store.config().fishing);
+        store.config().fishing = false;
         assertTrue(store.save());
         assertFalse(new ConfigStore(path).config().hidePlayerNames);
         assertFalse(new ConfigStore(path).config().boats);
         assertFalse(new ConfigStore(path).config().travelControls);
+        assertFalse(new ConfigStore(path).config().fishing);
         assertTrue(new ConfigStore(path).config().flight);
         assertTrue(Files.readString(path).contains("\"future\""));
         assertEquals(600, new ConfigStore(path).config().idleSeconds);
