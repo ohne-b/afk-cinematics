@@ -38,6 +38,7 @@ public final class CinematicConfig {
     public Lens lens = Lens.CINEMATIC;
     public int cinematicFps = 60;
     public boolean hideHud = true;
+    public boolean hidePlayerNames = true;
     public boolean letterbox = false;
     public boolean music = false;
     public boolean unfocused = false;

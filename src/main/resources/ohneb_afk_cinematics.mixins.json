@@ -7,6 +7,7 @@
     "DynamicFpsMixin",
     "FrameLimitMixin",
     "GuiMixin",
+    "HandMixin",
     "HudMixin",
     "KeyboardMixin",
     "KeyMappingAccess",
@@ -17,6 +18,7 @@
     "MusicManagerAccess",
     "MusicManagerMixin",
     "OptionsMixin",
+    "PlayerNameMixin",
     "ToastMixin"
   ],
   "injectors": {"defaultRequire": 1}

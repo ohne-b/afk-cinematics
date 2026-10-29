@@ -2,6 +2,6 @@
   "required": true,
   "package": "dev.ohneb.afkcinematics.testmixin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["KeyboardInvoker", "MouseInvoker", "PhysicalInputMixin", "FocusMixin", "ControlClickMixin", "SceneryFrameMixin", "CameraStopMixin"],
+  "client": ["KeyboardInvoker", "MouseInvoker", "PhysicalInputMixin", "FocusMixin", "ControlClickMixin", "SceneryFrameMixin", "CameraStopMixin", "PlayerNameProbe"],
   "injectors": {"defaultRequire": 1}
 }

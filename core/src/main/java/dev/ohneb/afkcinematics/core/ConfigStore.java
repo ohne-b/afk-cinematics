@@ -35,6 +35,7 @@ public final class ConfigStore {
             config.lens = enumeration("lens", CinematicConfig.Lens.CINEMATIC);
             config.cinematicFps = Math.clamp(integer("cinematicFps", 60), 20, 240);
             config.hideHud = bool("hideHud", true);
+            config.hidePlayerNames = bool("hidePlayerNames", true);
             config.letterbox = bool("letterbox", false);
             config.music = bool("music", false);
             config.unfocused = bool("unfocused", false);
@@ -94,6 +95,7 @@ public final class ConfigStore {
         updated.addProperty("lens", config.lens.name().toLowerCase(Locale.ROOT));
         updated.addProperty("cinematicFps", Math.clamp(config.cinematicFps, 20, 240));
         updated.addProperty("hideHud", config.hideHud);
+        updated.addProperty("hidePlayerNames", config.hidePlayerNames);
         updated.addProperty("letterbox", config.letterbox);
         updated.addProperty("music", config.music);
         updated.addProperty("unfocused", config.unfocused);

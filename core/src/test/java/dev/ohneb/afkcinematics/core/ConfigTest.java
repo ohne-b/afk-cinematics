@@ -28,7 +28,10 @@ class ConfigTest {
         assertEquals(600, store.config().idleSeconds);
         assertEquals(CinematicConfig.Motion.GENTLE, store.config().motion);
         assertTrue(store.config().hideHud);
+        assertTrue(store.config().hidePlayerNames);
+        store.config().hidePlayerNames = false;
         assertTrue(store.save());
+        assertFalse(new ConfigStore(path).config().hidePlayerNames);
         assertTrue(Files.readString(path).contains("\"future\""));
         assertEquals(600, new ConfigStore(path).config().idleSeconds);
     }

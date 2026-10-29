@@ -26,6 +26,7 @@ public final class TestSupport {
     public static Shot revealedShot;
     public static boolean checkTransitions;
     public static int coveredCuts;
+    public static int playerNameFrames;
 
     private TestSupport() { }
 

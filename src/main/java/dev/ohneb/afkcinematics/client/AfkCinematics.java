@@ -67,6 +67,7 @@ public final class AfkCinematics {
     public static boolean ownsCamera() { return session != null; }
     public static boolean showing() { return session != null && session.showing(); }
     public static boolean hideHud() { return showing() && config().hideHud; }
+    public static boolean hidePlayerNames() { return showing() && config().hidePlayerNames; }
     public static double fade() { return session == null ? 0 : session.fade(); }
     public static boolean scenery() { return session != null && session.scenery(); }
     public static boolean underwater() { return session != null && session.underwater(); }

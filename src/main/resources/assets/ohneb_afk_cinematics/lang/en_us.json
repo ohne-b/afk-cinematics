@@ -24,6 +24,8 @@
   "ohneb_afk_cinematics.fps": "Cinematic FPS: %s",
   "ohneb_afk_cinematics.fps.help": "A separate frame cap during cinematics. Normal FPS settings resume on exit. Arrow keys adjust by 1 FPS. VSync and hardware can still limit the actual frame rate.",
   "ohneb_afk_cinematics.hideHud.help": "Hide the hotbar and other HUD elements during cinematics.",
+  "ohneb_afk_cinematics.hidePlayerNames": "Hide player names",
+  "ohneb_afk_cinematics.hidePlayerNames.help": "Hide player name tags and scoreboard labels during cinematics.",
   "ohneb_afk_cinematics.letterbox": "Letterboxing",
   "ohneb_afk_cinematics.letterbox.help": "Add black bars above and below the view.",
   "ohneb_afk_cinematics.music": "Cinematic music",

@@ -147,6 +147,7 @@ public final class SettingsScreen extends Screen {
                     }
                 });
                 widgets.add(toggle("hideHud", () -> config.hideHud, value -> config.hideHud = value));
+                widgets.add(toggle("hidePlayerNames", () -> config.hidePlayerNames, value -> config.hidePlayerNames = value));
                 widgets.add(toggle("letterbox", () -> config.letterbox, value -> config.letterbox = value));
                 widgets.add(toggle("music", () -> config.music, value -> config.music = value));
             }
