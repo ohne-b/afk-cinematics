@@ -1,0 +1,25 @@
+name: Pull request title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check conventional title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        shell: python
+        run: |
+          import os
+          import re
+          import sys
+          title = os.environ["PR_TITLE"]
+          if not re.fullmatch(r"(?:feat|fix|docs|test|build|ci|chore|refactor|perf|style|revert)(?:\([a-z0-9_-]+\))?!?: .+", title):
+              print("Use a conventional title, for example: feat(camera): add idle cinematics")
+              sys.exit(1)

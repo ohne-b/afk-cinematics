@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "dev.ohneb.afkcinematics.testmixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["LegacyMouseInvoker", "LegacyFocusMixin"],
+  "injectors": {"defaultRequire": 1}
+}

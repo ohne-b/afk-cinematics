@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "ohneb_afk_cinematics_tests",
+  "version": "1.0.0",
+  "name": "AFK Cinematics tests",
+  "environment": "client",
+  "mixins": ["ohneb_afk_cinematics_tests.mixins.json"],
+  "entrypoints": {
+    "fabric-client-gametest": [
+      "dev.ohneb.afkcinematics.client.ControlBindingsGameTest",
+      "dev.ohneb.afkcinematics.client.CameraGameTest",
+      "dev.ohneb.afkcinematics.client.InputSafetyGameTest",
+      "dev.ohneb.afkcinematics.client.WorldGeometryGameTest",
+      "dev.ohneb.afkcinematics.client.SettingsGameTest",
+      "dev.ohneb.afkcinematics.client.TransitionsGameTest"
+    ]
+  }
+}

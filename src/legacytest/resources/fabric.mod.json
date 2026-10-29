@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "ohneb_afk_cinematics_tests",
+  "version": "1.0.0",
+  "name": "AFK Cinematics legacy input tests",
+  "environment": "client",
+  "mixins": ["ohneb_afk_cinematics_tests.mixins.json"],
+  "entrypoints": {"fabric-client-gametest": ["dev.ohneb.afkcinematics.client.LegacyInputGameTest"]}
+}

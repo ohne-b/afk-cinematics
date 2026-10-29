@@ -39,6 +39,15 @@ commands, tested revisions, results and limitations. Compilation is not gameplay
 evidence. Do not count pending checks as passes or repeat valid checks unnecessarily.
 Run `git diff --check` and check metadata, commands and documentation links.
 
+Client game tests run with `:1.21.11-fabric:runClientGameTest`,
+`:26.2-fabric:runClientGameTest` or `:26.3-fabric:runClientGameTest`.
+They create isolated worlds under `build/run/`.
+`:1.21.8-fabric:runClientGameTest` covers the legacy touchscreen input path.
+On 1.21.11, `-PcompatTest` adds pinned Sodium, Iris, Dynamic FPS and Mod Menu versions.
+Shader packs are a separate local check; CI runs that profile without a shader pack.
+`-PsmokeTest` makes `runClient` check startup and settings, then exit. Its optional
+`-PsceneWorld=<name>` fixture must be a copy of a generated test world, never a player save.
+
 Every PR requires independent critical review by a human or a separate read-only
 reviewer who did not write it. Provide these instructions, acceptance criteria, the
 revision and actual validation evidence. Fix blocking findings and have substantive

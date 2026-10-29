@@ -1,0 +1,19 @@
+{
+  "required": true,
+  "package": "dev.ohneb.afkcinematics.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "CameraMixin",
+    "GuiMixin",
+    "HudMixin",
+    "KeyboardMixin",
+    "KeyMappingAccess",
+    "KeyMappingMixin",
+    "MinecraftMixin",
+    "MouseMixin",
+    "MusicManagerAccess",
+    "MusicManagerMixin",
+    "OptionsMixin"
+  ],
+  "injectors": {"defaultRequire": 1}
+}

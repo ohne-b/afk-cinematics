@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "dev.ohneb.afkcinematics.testmixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["KeyboardInvoker", "MouseInvoker", "PhysicalInputMixin", "FocusMixin", "ControlClickMixin"],
+  "injectors": {"defaultRequire": 1}
+}

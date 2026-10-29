@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "ohneb_afk_cinematics_smoke",
+  "version": "1.0.0",
+  "name": "AFK Cinematics startup tests",
+  "environment": "client",
+  "entrypoints": {"client": ["dev.ohneb.afkcinematics.smoke.FabricSmoke"]},
+  "depends": {"ohneb_afk_cinematics": "*"}
+}
