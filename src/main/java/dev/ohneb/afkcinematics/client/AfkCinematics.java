@@ -84,7 +84,11 @@ public final class AfkCinematics {
     public static void cameraApplied(Camera camera) {
         if (session != null && camera == appliedCamera) {
             cameraUnderwater = camera.getFluidInCamera() == net.minecraft.world.level.material.FogType.WATER;
+            //? if >=1.21.11 {
             audioPosition = camera.position();
+            //?} else {
+            /*audioPosition = camera.getPosition();
+            *///?}
             var block = BlockPos.containing(audioPosition);
             audioFluid = world.getFluidState(block);
             //? if >=26.3 {
