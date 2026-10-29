@@ -6,7 +6,7 @@
   "icon": "assets/ohneb_afk_cinematics/icon.png",
   "description": "Calm camera shots while you take a break.",
   "authors": ["ohne-b"],
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "environment": "client",
   "contact": {
     "sources": "https://github.com/ohne-b/afk-cinematics",
