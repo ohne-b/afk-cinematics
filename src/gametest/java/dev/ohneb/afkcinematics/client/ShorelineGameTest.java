@@ -75,6 +75,7 @@ public final class ShorelineGameTest implements FabricClientGameTest {
                 require(AfkCinematics.underwater(), "Submerged views never entered the shoreline sequence");
                 require(camera(client).getFluidInCamera() == FogType.WATER, "Rendered camera did not use water fog");
                 require(!client.player.isInWater(), "Underwater camera changed the player environment");
+                AmbientWaterChecks.verify(client);
             });
             context.takeScreenshot(TestScreenshotOptions.of("shoreline-underwater").withDestinationDir(artifacts));
             for (int tick = 0; tick < 60; tick++) {
@@ -92,6 +93,7 @@ public final class ShorelineGameTest implements FabricClientGameTest {
             context.runOnClient(client -> {
                 require(!AfkCinematics.underwater(), "Shoreline sequence never returned to a dry view");
                 require(camera(client).getFluidInCamera() != FogType.WATER, "Dry destination retained the water environment");
+                AmbientWaterChecks.verify(client);
                 require(waterLoops > 0 && waterTransitions >= 2, "Camera cuts did not drive underwater loop and transition sounds");
             });
             context.waitTicks(25);

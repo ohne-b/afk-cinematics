@@ -1,8 +1,10 @@
 {
   "required": true,
   "package": "dev.ohneb.afkcinematics.mixin",
+  "plugin": "dev.ohneb.afkcinematics.compat.AmbientSoundsPlugin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "AmbientSoundsMixin",
     "CameraMixin",
     "DynamicFpsMixin",
     "FrameLimitMixin",

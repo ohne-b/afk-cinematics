@@ -77,12 +77,14 @@ public final class AirWaterGameTest implements FabricClientGameTest {
                 require(view.clear(wet, dry) && view.visible(dry, wet), "Player view cannot cross the water surface");
                 require(!geometry.clear(wet, dry), "Dry scenery unexpectedly permits water");
                 require(!new WorldGeometry(client.level, true).clear(wet, dry), "Submerged scenery can leave water");
+                AmbientWaterChecks.verify(client);
             });
             start(context);
             context.waitTicks(140);
             context.runOnClient(client -> {
                 require(AfkCinematics.showing(), "Submerged player could not keep a cinematic");
                 require(camera(client).getFluidInCamera() == FogType.WATER, "Submerged player view has no water environment");
+                AmbientWaterChecks.verify(client);
             });
             context.takeScreenshot(TestScreenshotOptions.of("submerged-player-view").withDestinationDir(Path.of(System.getProperty("afkcinematics.test.artifacts"))));
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst()
@@ -108,9 +110,11 @@ public final class AirWaterGameTest implements FabricClientGameTest {
                     var sounds = (dev.ohneb.afkcinematics.testmixin.PlayerWaterInvoker)client.player;
                     require(sounds.updateWater() && client.player.isUnderWater(), "Audio override changed real player fluid state");
                     require(!AfkCinematics.audioUnderwater(client.player, true), "Dry camera retained underwater audio");
+                    AmbientWaterChecks.drySnapshot(client);
                     require(waterTransitions == 1, "Dry camera did not play its exit transition");
                     AfkCinematics.stop();
                     require(sounds.updateWater() && client.player.isUnderWater(), "Restoring audio changed player fluid state");
+                    AmbientWaterChecks.verify(client);
                     require(waterLoops == 1 && waterTransitions == 2, "Cancelling did not recreate the player's underwater ambience");
                     sounds.updateWater();
                     require(waterLoops == 1 && waterTransitions == 2, "Audio restoration repeated on the next update");

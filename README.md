@@ -45,6 +45,10 @@ Other known camera replacements are identified in settings when they prevent
 activation. Shader and performance-mod
 compatibility needs testing with the exact versions used.
 
+AmbientSounds keeps playing. Its water depth follows the cinematic camera with
+6.3.5 on Fabric 1.21.11 and 6.3.11 on 26.3; other versions and its biome/weather
+selection keep their own behaviour.
+
 Settings are stored in `config/ohneb-afk-cinematics.json`. An unreadable file is
 preserved and cinematics are disabled until it is corrected.
 
