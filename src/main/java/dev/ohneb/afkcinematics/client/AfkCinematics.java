@@ -44,6 +44,7 @@ public final class AfkCinematics {
     private static Vec3 lastPosition;
     private static Pose vanillaPose;
     private static Camera appliedCamera;
+    private static boolean audioReady, cameraUnderwater;
     private static boolean focused;
     private static int manualWait;
     private static String conflict = "";
@@ -72,6 +73,20 @@ public final class AfkCinematics {
     public static double fade() { return session == null ? 0 : session.fade(); }
     public static boolean scenery() { return session != null && session.scenery(); }
     public static boolean underwater() { return session != null && session.underwater(); }
+    public static void cameraApplied(Camera camera) {
+        if (session != null && camera == appliedCamera) {
+            cameraUnderwater = camera.getFluidInCamera() == net.minecraft.world.level.material.FogType.WATER;
+            audioReady = true;
+        }
+    }
+    public static boolean cameraAudioActive(LocalPlayer source) {
+        var client = Minecraft.getInstance();
+        return session != null && audioReady && source == player && client.player == player
+            && client.level == world && client.getConnection() == connection;
+    }
+    public static boolean audioUnderwater(LocalPlayer source, boolean normal) {
+        return cameraAudioActive(source) ? cameraUnderwater : normal;
+    }
     public static int frameLimit() {
         if (!showing() || !eligible()) return 0;
         var client = Minecraft.getInstance();
@@ -177,6 +192,7 @@ public final class AfkCinematics {
     public static void stop() {
         session = null;
         appliedCamera = null;
+        audioReady = false;
         anchor = null;
         manualWait = 0;
         manualFeedback = false;
