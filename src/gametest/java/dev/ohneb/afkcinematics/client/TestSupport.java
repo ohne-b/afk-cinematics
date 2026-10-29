@@ -32,6 +32,7 @@ public final class TestSupport {
     public static boolean checkWaterAudio;
     public static int waterLoops, waterTransitions;
     public static net.minecraft.client.resources.sounds.TickableSoundInstance waterLoop;
+    public static java.util.List<net.minecraft.client.resources.sounds.SoundInstance> waterAudioHistory;
 
     private TestSupport() { }
 

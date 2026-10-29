@@ -14,8 +14,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 abstract class UnderwaterAudioProbe {
     @Inject(method = "play", at = @At("HEAD"))
     private void played(SoundInstance sound, CallbackInfoReturnable<SoundEngine.PlayResult> callback) {
-        if (!TestSupport.checkWaterAudio) return;
         String id = sound.getIdentifier().getPath();
+        if (id.equals("ambient.underwater.loop") && TestSupport.waterAudioHistory != null)
+            TestSupport.waterAudioHistory.add(sound);
+        if (!TestSupport.checkWaterAudio) return;
         if (id.equals("ambient.underwater.loop") && sound instanceof TickableSoundInstance loop) {
             TestSupport.waterLoop = loop;
             TestSupport.waterLoops++;

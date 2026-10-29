@@ -24,7 +24,10 @@ import static dev.ohneb.afkcinematics.client.TestSupport.*;
 public final class AirWaterGameTest implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
         configure(context);
-        context.runOnClient(client -> AfkCinematics.config().shots = EnumSet.of(Shot.Type.STILL));
+        context.runOnClient(client -> {
+            AfkCinematics.config().shots = EnumSet.of(Shot.Type.STILL);
+            waterAudioHistory = new java.util.ArrayList<>();
+        });
         try (var world = context.worldBuilder().create()) {
             var position = new AtomicReference<Vec3>();
             var floor = new AtomicReference<BlockPos>();
@@ -114,12 +117,15 @@ public final class AirWaterGameTest implements FabricClientGameTest {
                 } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
                 finally { checkWaterAudio = false; }
             });
+            context.waitTicks(3);
+            context.runOnClient(client -> require(waterAudioHistory.stream().filter(client.getSoundManager()::isActive).count() == 1,
+                "Quick restoration left duplicate underwater loops playing"));
             start(context);
             key(context, InputConstants.KEY_W, InputConstants.PRESS);
             context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Swimming input did not wake the cinematic"));
             key(context, InputConstants.KEY_W, InputConstants.RELEASE);
         } finally {
-            context.runOnClient(client -> { AfkCinematics.stop(); focused = null; checkWaterAudio = false; waterLoop = null; });
+            context.runOnClient(client -> { AfkCinematics.stop(); focused = null; checkWaterAudio = false; waterLoop = null; waterAudioHistory = null; });
         }
     }
 }
