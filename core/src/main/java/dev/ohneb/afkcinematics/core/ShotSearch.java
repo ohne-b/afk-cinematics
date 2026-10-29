@@ -100,6 +100,10 @@ public final class ShotSearch {
             }
             case PAN -> {
                 if (entering) focusStart = subject.add(tangent.scale(-0.9 * amount * sign));
+                else {
+                    Vec initial = focusStart.subtract(subject);
+                    if ((initial.x() * tangent.x() + initial.z() * tangent.z()) * sign > 0) sign = -sign;
+                }
                 focusEnd = subject.add(tangent.scale(0.9 * amount * sign));
             }
             case STILL -> focusEnd = focusStart;

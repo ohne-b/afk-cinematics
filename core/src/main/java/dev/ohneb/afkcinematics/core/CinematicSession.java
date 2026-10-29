@@ -97,7 +97,7 @@ public final class CinematicSession {
             fade = 1 - Pose.ease(elapsed / 0.9);
             if (fade == 0) { phase = Phase.SHOT; started = now; }
         } else next = shot.sample(elapsed);
-        Vec focus = next.lookAhead(Math.max(1, next.position().distance(shot.focus(sampledSeconds))));
+        Vec focus = shot.focus(sampledSeconds);
         if (!valid(next, focus, current.position())) return end();
         current = next;
         return current;
