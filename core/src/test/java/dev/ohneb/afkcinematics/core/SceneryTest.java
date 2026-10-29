@@ -57,6 +57,28 @@ class SceneryTest {
         assertEquals(ENTRY, session.current());
     }
 
+    @Test void elevatedStillAndPanoramaViewsKeepTheirPosition() {
+        var elevated = new Scene(PLAYER, new Vec(8, 14.15, 0), true, 1);
+        Geometry open = new Geometry() {
+            public boolean clear(Vec a, Vec b) { return true; }
+            public boolean visible(Vec a, Vec b) { return true; }
+        };
+        Geometry ledge = new Geometry() {
+            public boolean clear(Vec a, Vec b) { return a.y() >= 14 && b.y() >= 14; }
+            public boolean visible(Vec a, Vec b) { return true; }
+        };
+        for (Shot.Type type : new Shot.Type[]{Shot.Type.STILL, Shot.Type.PAN}) {
+            var config = new CinematicConfig();
+            config.shots = EnumSet.of(type);
+            Shot shot = new ShotSearch(elevated, ENTRY, 0, config, null, true, true, new Random(3)).next(open);
+            assertNotNull(shot);
+            assertEquals(shot.start(), shot.control(), type + " changed position at an elevated viewpoint");
+            assertEquals(shot.start(), shot.end(), type + " drifted downward");
+            assertNull(new ShotSearch(elevated, ENTRY, 0, config, null, true, true, new Random(3)).next(ledge),
+                "Clamping must not place the camera inside a ledge");
+        }
+    }
+
     @Test void subjectModesDoNotSilentlyChooseTheOtherSubject() {
         Geometry playerOnly = new Geometry() {
             public boolean clear(Vec a, Vec b) { return true; }

@@ -55,7 +55,7 @@ public final class ShotSearch {
             ? subject.add(new Vec(Math.sin(angle) * radius, 0.55, -Math.cos(angle) * radius))
             : previous.position();
         if (entering && scene.scenery())
-            start = subject.add(rotate(scene.vantage().subtract(subject), Math.toRadians(ANGLES[view])));
+            start = limitDistance(subject.add(rotate(scene.vantage().subtract(subject), Math.toRadians(ANGLES[view]))));
         if (entering && type == Shot.Type.OVERHEAD && !scene.scenery())
             start = subject.add(new Vec(Math.sin(angle) * 1.7, 4.2, -Math.cos(angle) * 1.7));
         Vec offset = start.subtract(subject);
