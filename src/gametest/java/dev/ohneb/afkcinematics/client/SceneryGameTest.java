@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LeavesBlock;
 
 import javax.imageio.ImageIO;
@@ -148,10 +149,10 @@ public final class SceneryGameTest implements FabricClientGameTest {
     }
 
     private static void cavern(ServerPlayer player, BlockPos origin) {
-        // Suppress neighbor updates while replacing the garden so flowers do not break into items.
+        // Skip plant survival checks while replacing the fixture's garden.
         for (BlockPos block : BlockPos.betweenClosed(origin.offset(-18, 1, -18), origin.offset(18, 20, 18))) {
             if (playerCell(block, origin)) continue;
-            player.level().setBlock(block, Blocks.STONE.defaultBlockState(), 2);
+            player.level().setBlock(block, Blocks.STONE.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
         }
         player.level().setBlockAndUpdate(origin.above(), Blocks.AIR.defaultBlockState());
         player.level().setBlockAndUpdate(origin.above(2), Blocks.AIR.defaultBlockState());
