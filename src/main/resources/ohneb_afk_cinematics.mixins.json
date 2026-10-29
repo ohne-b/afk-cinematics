@@ -9,6 +9,7 @@
     "KeyboardMixin",
     "KeyMappingAccess",
     "KeyMappingMixin",
+    "LensMixin",
     "MinecraftMixin",
     "MouseMixin",
     "MusicManagerAccess",

@@ -23,6 +23,8 @@ Planning must bound the camera curve and moving sightline between samples.
 Apply the pose before culling and render extraction. Keep world access on the client
 thread; rendering consumes an immutable pose. Stop safely on invalid state or an
 obstructed path. Every stop path uses the same cleanup.
+Apply the transient lens only to the world projection paired with that pose, before
+culling. Preserve the hand projection, panorama mode and the user's FOV option.
 Separate scenery viewpoints use covered cuts: render a fully opaque old frame,
 then a fully opaque destination frame, and revalidate before revealing it. Keep all
 viewpoints within the player-centered range; never interpolate through terrain.

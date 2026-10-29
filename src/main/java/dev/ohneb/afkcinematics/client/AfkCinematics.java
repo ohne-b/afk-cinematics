@@ -42,6 +42,7 @@ public final class AfkCinematics {
     private static Vec3 anchor;
     private static Vec3 lastPosition;
     private static Pose vanillaPose;
+    private static Camera appliedCamera;
     private static boolean focused;
     private static int manualWait;
     private static String conflict = "";
@@ -77,6 +78,11 @@ public final class AfkCinematics {
     }
     public static double fade() { return session == null ? 0 : session.fade(); }
     public static boolean scenery() { return session != null && session.scenery(); }
+    public static double fieldOfView(Camera camera, double normal) {
+        if (session == null || camera != appliedCamera) return normal;
+        var window = Minecraft.getInstance().getWindow();
+        return config().lens.blend(normal, (double)window.getWidth() / Math.max(1, window.getHeight()), session.lensStrength());
+    }
     public static void coveredFrame() { if (session != null) session.coveredFrame(); }
 
     public static void tick() {
@@ -158,6 +164,7 @@ public final class AfkCinematics {
 
     public static void stop() {
         session = null;
+        appliedCamera = null;
         anchor = null;
         manualWait = 0;
         manualFeedback = false;
@@ -168,6 +175,7 @@ public final class AfkCinematics {
     public static void nextShot() { if (session != null) session.nextShot(); }
 
     public static Pose cameraFrame(Camera camera) {
+        appliedCamera = null;
         if (session == null) {
             //? if >1.21.10 {
             vanillaPose = new Pose(WorldGeometry.point(camera.position()), camera.yRot(), camera.xRot());
@@ -181,6 +189,7 @@ public final class AfkCinematics {
         Pose pose = session.frame(now);
         if (session.ended()) stop();
         else if (session.settled() && hintUntil == 0) hintUntil = now + 4_000_000_000L;
+        if (pose != null && session != null) appliedCamera = camera;
         return pose;
     }
 

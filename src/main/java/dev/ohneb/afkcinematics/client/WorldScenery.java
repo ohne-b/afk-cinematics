@@ -88,8 +88,9 @@ final class WorldScenery {
         var client = Minecraft.getInstance();
         var window = client.getWindow();
         Pose pose = Pose.lookingAt(vantage, focus);
-        Vec[] rays = ViewQuality.directions(pose, client.options.fov().get(),
-            (double)window.getWidth() / Math.max(1, window.getHeight()), AfkCinematics.config().letterbox);
+        double aspect = (double)window.getWidth() / Math.max(1, window.getHeight());
+        Vec[] rays = ViewQuality.directions(pose, AfkCinematics.config().lens.fieldOfView(client.options.fov().get(), aspect),
+            aspect, AfkCinematics.config().letterbox);
         double[] depths = new double[rays.length];
         for (int i = 0; i < rays.length; i++) depths[i] = depth(level, vantage, rays[i]);
         return ViewQuality.score(depths, pose.pitch(), outdoors);

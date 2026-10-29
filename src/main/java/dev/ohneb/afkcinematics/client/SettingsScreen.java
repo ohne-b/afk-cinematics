@@ -114,6 +114,10 @@ public final class SettingsScreen extends Screen {
                     button.setMessage(value("pace", config.pace));
                     button.setTooltip(paceHelp(config));
                 }).tooltip(paceHelp(config)).build());
+                widgets.add(Button.builder(value("lens", config.lens), button -> {
+                    config.lens = CinematicConfig.Lens.values()[(config.lens.ordinal() + 1) % CinematicConfig.Lens.values().length];
+                    button.setMessage(value("lens", config.lens));
+                }).tooltip(Tooltip.create(text("lens.help"))).build());
                 widgets.add(Button.builder(text("shots", config.shots.size()), button -> {
                     page = Page.SHOTS;
                     offset = 0;
