@@ -4,6 +4,7 @@
   "plugin": "dev.ohneb.afkcinematics.compat.AmbientSoundsPlugin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "ActivityUseMixin",
     "AmbientSoundsMixin",
     "BoatMixin",
     "CameraMixin",

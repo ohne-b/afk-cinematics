@@ -63,7 +63,12 @@ public abstract class MouseMixin {
         Set<InputConstants.Key> owned = afkCinematics$physicalButtons.get(physicalCode);
         if (action == InputConstants.RELEASE) {
             if (owned != null) {
-                if (!Minecraft.getInstance().isWindowActive()) { ci.cancel(); return; }
+                if (!Minecraft.getInstance().isWindowActive()) {
+                    // Cancel permitted rod use, but retain physical ownership until a trusted release.
+                    for (InputConstants.Key released : owned) AfkCinematics.input(released, action, false);
+                    ci.cancel();
+                    return;
+                }
                 afkCinematics$physicalButtons.remove(physicalCode);
                 for (InputConstants.Key released : owned) {
                     if (!afkCinematics$heldByAnotherButton(released)) AfkCinematics.input(released, action, false);
@@ -85,7 +90,7 @@ public abstract class MouseMixin {
         boolean screenshot = false;
         //?}
         boolean blocked = AfkCinematics.input(key, action, screenshot);
-        if (action == InputConstants.PRESS && AfkCinematics.suppressed(key))
+        if (action == InputConstants.PRESS && AfkCinematics.retainsInput(key))
             afkCinematics$physicalButtons.computeIfAbsent(physicalCode, ignored -> new HashSet<>()).add(key);
         if (blocked) ci.cancel();
     }

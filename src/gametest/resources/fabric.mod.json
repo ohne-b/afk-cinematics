@@ -12,6 +12,7 @@
       "dev.ohneb.afkcinematics.client.CameraGameTest",
       "dev.ohneb.afkcinematics.client.AirWaterGameTest",
       "dev.ohneb.afkcinematics.client.TravelGameTest",
+      "dev.ohneb.afkcinematics.client.FishingGameTest",
       "dev.ohneb.afkcinematics.client.ExternalCameraGameTest",
       "dev.ohneb.afkcinematics.client.LensGameTest",
       "dev.ohneb.afkcinematics.client.FrameLimitGameTest",

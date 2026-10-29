@@ -5,6 +5,7 @@ public final class MovingGeometry implements Geometry {
     private final Geometry world;
     private Vec origin, target;
     private Pose previous;
+    private Vec previousFocus;
     private double previousFade;
     private int previousTake;
     private long updated;
@@ -57,6 +58,8 @@ public final class MovingGeometry implements Geometry {
         return new Pose(rotate(pose.position().subtract(origin), -heading), pose.yaw() - heading, pose.pitch());
     }
 
+    public boolean sees(Pose pose, Vec focus) { return world.visible(pose.position(), rotate(focus, heading).add(target)); }
+
     public Pose apply(Pose pose, Vec focus, double fade, int take, boolean capture) {
         if (pose == null) return null;
         boolean cut = take != previousTake && fade == 1 && previousFade == 1;
@@ -68,12 +71,13 @@ public final class MovingGeometry implements Geometry {
         Vec point = rotate(pose.position(), heading).add(origin);
         Vec worldFocus = focus == null ? null : rotate(focus, heading).add(target);
         Pose result = worldFocus == null ? new Pose(point, pose.yaw() + heading, pose.pitch()) : Pose.lookingAt(point, worldFocus);
-        if (capture && previous != null) result = previous;
+        if (capture && previous != null) { result = previous; worldFocus = previousFocus; }
         Vec from = previous == null || cut ? result.position() : previous.position();
         if (!Scene.inRange(result.position(), target) || !world.clear(from, result.position())
             || !world.visible(result.position(), target)
             || worldFocus != null && !worldFocus.equals(target) && !world.visible(result.position(), worldFocus)) return null;
         previous = result;
+        previousFocus = worldFocus;
         previousFade = fade;
         previousTake = take;
         return result;
@@ -84,6 +88,10 @@ public final class MovingGeometry implements Geometry {
     }
     @Override public boolean visible(Vec from, Vec to, double margin) {
         return world.visible(rotate(from, heading).add(origin), rotate(to, heading).add(target), margin);
+    }
+
+    @Override public double viewQuality(Pose view) {
+        return world.viewQuality(new Pose(rotate(view.position(), heading).add(origin), view.yaw() + heading, view.pitch()));
     }
 
     private static Vec rotate(Vec point, double degrees) {

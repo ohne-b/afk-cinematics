@@ -10,6 +10,7 @@ public interface Geometry {
     default Geometry forScene(Scene scene) { return this; }
 
     default Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return null; }
+    default double viewQuality(Pose view) { return 0; }
 
     default boolean valid(Shot shot, Vec entry) {
         if (entry.distance(shot.start()) > 16) return false;
