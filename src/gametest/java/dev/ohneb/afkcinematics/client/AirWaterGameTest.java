@@ -24,7 +24,10 @@ import static dev.ohneb.afkcinematics.client.TestSupport.*;
 public final class AirWaterGameTest implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
         configure(context);
-        context.runOnClient(client -> AfkCinematics.config().shots = EnumSet.of(Shot.Type.STILL));
+        context.runOnClient(client -> {
+            AfkCinematics.config().shots = EnumSet.of(Shot.Type.STILL);
+            waterAudioHistory = new java.util.ArrayList<>();
+        });
         try (var world = context.worldBuilder().create()) {
             var position = new AtomicReference<Vec3>();
             var floor = new AtomicReference<BlockPos>();
@@ -46,7 +49,7 @@ public final class AirWaterGameTest implements FabricClientGameTest {
             start(context);
             context.waitTicks(140);
             context.runOnClient(client -> require(AfkCinematics.showing(), "Stationary flying player could not keep a cinematic"));
-            context.takeScreenshot(TestScreenshotOptions.of("airborne-player-view").withDestinationDir(Path.of("../../../../artifacts/gametest-air-water")));
+            context.takeScreenshot(TestScreenshotOptions.of("airborne-player-view").withDestinationDir(Path.of(System.getProperty("afkcinematics.test.artifacts"))));
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst()
                 .position().distanceToSqr(position.get()) < 0.0001, "Cinematic moved the flying player"));
             context.runOnClient(client -> AfkCinematics.stop());
@@ -81,7 +84,7 @@ public final class AirWaterGameTest implements FabricClientGameTest {
                 require(AfkCinematics.showing(), "Submerged player could not keep a cinematic");
                 require(camera(client).getFluidInCamera() == FogType.WATER, "Submerged player view has no water environment");
             });
-            context.takeScreenshot(TestScreenshotOptions.of("submerged-player-view").withDestinationDir(Path.of("../../../../artifacts/gametest-air-water")));
+            context.takeScreenshot(TestScreenshotOptions.of("submerged-player-view").withDestinationDir(Path.of(System.getProperty("afkcinematics.test.artifacts"))));
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst()
                 .position().distanceToSqr(position.get()) < 0.01, "Cinematic moved the submerged player"));
 
@@ -92,11 +95,37 @@ public final class AirWaterGameTest implements FabricClientGameTest {
             });
             context.waitTicks(10);
             context.runOnClient(client -> require(AfkCinematics.showing(), "Passive water bobbing interrupted the take"));
+            context.runOnClient(client -> {
+                // Reproduce a wet player viewing a dry camera snapshot, then cancelling.
+                // Keeping this in one client callback avoids a render replacing the snapshot.
+                checkWaterAudio = true;
+                waterLoops = 0;
+                waterTransitions = 0;
+                try {
+                    var snapshot = AfkCinematics.class.getDeclaredField("cameraUnderwater");
+                    snapshot.setAccessible(true);
+                    snapshot.setBoolean(null, false);
+                    var sounds = (dev.ohneb.afkcinematics.testmixin.PlayerWaterInvoker)client.player;
+                    require(sounds.updateWater() && client.player.isUnderWater(), "Audio override changed real player fluid state");
+                    require(!AfkCinematics.audioUnderwater(client.player, true), "Dry camera retained underwater audio");
+                    require(waterTransitions == 1, "Dry camera did not play its exit transition");
+                    AfkCinematics.stop();
+                    require(sounds.updateWater() && client.player.isUnderWater(), "Restoring audio changed player fluid state");
+                    require(waterLoops == 1 && waterTransitions == 2, "Cancelling did not recreate the player's underwater ambience");
+                    sounds.updateWater();
+                    require(waterLoops == 1 && waterTransitions == 2, "Audio restoration repeated on the next update");
+                } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
+                finally { checkWaterAudio = false; }
+            });
+            context.waitTicks(3);
+            context.runOnClient(client -> require(waterAudioHistory.stream().filter(client.getSoundManager()::isActive).count() == 1,
+                "Quick restoration left duplicate underwater loops playing"));
+            start(context);
             key(context, InputConstants.KEY_W, InputConstants.PRESS);
             context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Swimming input did not wake the cinematic"));
             key(context, InputConstants.KEY_W, InputConstants.RELEASE);
         } finally {
-            context.runOnClient(client -> { AfkCinematics.stop(); focused = null; });
+            context.runOnClient(client -> { AfkCinematics.stop(); focused = null; checkWaterAudio = false; waterLoop = null; waterAudioHistory = null; });
         }
     }
 }

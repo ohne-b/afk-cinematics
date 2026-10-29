@@ -71,6 +71,7 @@ public abstract class CameraMixin {
         //?}
         detached = Minecraft.getInstance().player.getEyePosition().distanceToSqr(
             pose.position().x(), pose.position().y(), pose.position().z()) >= 0.64;
+        AfkCinematics.cameraApplied((Camera)(Object)this);
         return true;
     }
 

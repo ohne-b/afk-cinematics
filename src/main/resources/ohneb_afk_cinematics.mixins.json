@@ -19,8 +19,11 @@
     "MusicManagerMixin",
     "OptionsMixin",
     "PlayerNameMixin",
+    "PlayerAudioMixin",
     "ScreenshotMixin",
-    "ToastMixin"
+    "ToastMixin",
+    "UnderwaterAdditionsMixin",
+    "UnderwaterLoopMixin"
   ],
   "injectors": {"defaultRequire": 1}
 }

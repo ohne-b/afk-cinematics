@@ -36,6 +36,8 @@ Prepare the next take without freezing the current shot. Revalidate at handoff a
 cover changes of viewpoint or direction. Manual Next discards the prepared plan.
 Screenshot holds pause the take's timing, not terrain validation. Release each hold
 only for its owning session; a finished capture must not resume a newer session.
+Underwater audio follows the last applied camera, not a pending scene. Keep the
+player's real fluid state unchanged and reconcile its normal ambience after stopping.
 
 Use isolated worlds for tests. Never access player saves or public servers in automated
 tests. A build does not establish visual quality or compatibility. Use a separate
