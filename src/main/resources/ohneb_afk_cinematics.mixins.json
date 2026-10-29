@@ -5,6 +5,7 @@
   "client": [
     "CameraMixin",
     "DynamicFpsMixin",
+    "FabrishotMixin",
     "FrameLimitMixin",
     "GuiMixin",
     "HandMixin",
@@ -19,6 +20,7 @@
     "MusicManagerMixin",
     "OptionsMixin",
     "PlayerNameMixin",
+    "ScreenshotMixin",
     "ToastMixin"
   ],
   "injectors": {"defaultRequire": 1}

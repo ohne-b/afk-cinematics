@@ -43,7 +43,7 @@ Client game tests run with `:1.21.11-fabric:runClientGameTest`,
 `:26.2-fabric:runClientGameTest` or `:26.3-fabric:runClientGameTest`.
 They create isolated worlds under `build/run/`.
 `:1.21.8-fabric:runClientGameTest` covers the legacy touchscreen input path.
-On 1.21.11, `-PcompatTest` adds pinned Sodium, Iris, Dynamic FPS and Mod Menu versions.
+On 1.21.11, `-PcompatTest` adds pinned Sodium, Iris, Dynamic FPS, Fabrishot and Mod Menu versions.
 Shader packs are a separate local check; CI runs that profile without a shader pack.
 `-PsmokeTest` makes `runClient` check startup and settings, then exit. Add
 `-PsceneWorld=create` to create a flat test world and check player shots, a cramped

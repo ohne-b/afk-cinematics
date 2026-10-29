@@ -30,6 +30,7 @@ dependencies {
         modLocalRuntime("maven.modrinth:sodium:rkdTcxoT")
         modLocalRuntime("maven.modrinth:iris:ka9PDlsN")
         modLocalRuntime("maven.modrinth:dynamic-fps:Fab7e5Th")
+        modLocalRuntime("maven.modrinth:fabrishot:GLPR7u6l")
         // Loom development runs do not load these mods' nested libraries.
         runtimeOnly("net.lostluma:battery:2.0.0")
         runtimeOnly("org.antlr:antlr4-runtime:4.13.1")
