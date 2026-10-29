@@ -51,6 +51,11 @@ public final class ShotSearch {
 
     public boolean exhausted() { return attempt >= angles.size() * types.size() * (scene.scenery() ? 1 : 2); }
 
+    static int playerAttempts(CinematicConfig config) {
+        int styles = config.motion == CinematicConfig.Motion.STILL || config.shots.isEmpty() ? 1 : config.shots.size();
+        return ANGLES.length * 2 * styles;
+    }
+
     public Shot next(Geometry geometry) {
         if (exhausted()) return null;
         int index = attempt++;

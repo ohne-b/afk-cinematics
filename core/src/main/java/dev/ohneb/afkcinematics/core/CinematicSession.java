@@ -50,7 +50,8 @@ public final class CinematicSession {
                 heldForNext = true;
                 handoff = now;
                 advanceRequested = false;
-            } else if (planner == null && pending == null && (now - started) / 1e9 >= shot.duration() - 4) {
+            } else if (planner == null && pending == null
+                && (now - started) / 1e9 >= shot.duration() - ShotPlanner.preparationSeconds(config)) {
                 planner = planner(shot.sample(shot.duration()));
                 handoff = started + Math.round(shot.duration() * 1e9);
             }
