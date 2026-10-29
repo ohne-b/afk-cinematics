@@ -10,8 +10,13 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +50,9 @@ public final class AfkCinematics {
     private static Pose vanillaPose;
     private static Camera appliedCamera;
     private static boolean audioReady, cameraUnderwater;
+    private static Vec3 audioPosition;
+    private static FluidState audioFluid;
+    private static boolean audioSubmerged;
     private static boolean focused;
     private static int manualWait;
     private static String conflict = "";
@@ -76,6 +84,14 @@ public final class AfkCinematics {
     public static void cameraApplied(Camera camera) {
         if (session != null && camera == appliedCamera) {
             cameraUnderwater = camera.getFluidInCamera() == net.minecraft.world.level.material.FogType.WATER;
+            audioPosition = camera.position();
+            var block = BlockPos.containing(audioPosition);
+            audioFluid = world.getFluidState(block);
+            //? if >=26.3 {
+            /*audioSubmerged = audioPosition.y < block.getY() + audioFluid.getHeightForCamera(world, block);
+            *///?} else {
+            audioSubmerged = audioPosition.y < block.getY() + audioFluid.getHeight(world, block);
+            //?}
             audioReady = true;
         }
     }
@@ -86,6 +102,12 @@ public final class AfkCinematics {
     }
     public static boolean audioUnderwater(LocalPlayer source, boolean normal) {
         return cameraAudioActive(source) ? cameraUnderwater : normal;
+    }
+    public static Vec3 ambientPosition(Player source) {
+        return source == player && cameraAudioActive(player) ? audioPosition : source.getEyePosition();
+    }
+    public static boolean ambientFluid(Player source, TagKey<Fluid> tag) {
+        return source == player && cameraAudioActive(player) ? audioSubmerged && audioFluid.is(tag) : source.isEyeInFluid(tag);
     }
     public static int frameLimit() {
         if (!showing() || !eligible()) return 0;
