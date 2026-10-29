@@ -1,6 +1,7 @@
 package dev.ohneb.afkcinematics.client;
 
 import dev.ohneb.afkcinematics.core.Shot;
+import dev.ohneb.afkcinematics.core.Pose;
 import dev.ohneb.afkcinematics.core.Vec;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -58,10 +59,10 @@ public final class WorldGeometryGameTest implements FabricClientGameTest {
                         new Vec(0.13971590170901482, 74.05, -8.845650976382466).add(shift),
                         focus, focus, 14.8045577545392);
                     for (int sample = 0; sample <= 16; sample++) {
-                        require(geometry.visible(shot.sample(shot.duration() * sample / 16).position(), focus),
+                        require(geometry.visible(recordedPoint(shot, sample / 16.0), focus),
                             "Fixture no longer falls between the original visibility samples");
                     }
-                    require(!geometry.visible(shot.sample(shot.duration() * 0.525).position(), focus),
+                    require(!geometry.visible(recordedPoint(shot, 0.525), focus),
                         "Fixture did not reproduce the brief corner occlusion");
                     require(!geometry.valid(shot, shot.start()), "Planner accepted an occlusion between samples");
                     client.level.setBlock(origin, Blocks.AIR.defaultBlockState(), 3);
@@ -73,5 +74,11 @@ public final class WorldGeometryGameTest implements FabricClientGameTest {
             });
         }
         context.runOnClient(client -> focused = null);
+    }
+
+    private static Vec recordedPoint(Shot shot, double time) {
+        // Preserve the original failure's timing independently of the current motion profile.
+        double t = Pose.ease(time);
+        return shot.start().scale((1 - t) * (1 - t)).add(shot.control().scale(2 * t * (1 - t))).add(shot.end().scale(t * t));
     }
 }
