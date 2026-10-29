@@ -87,7 +87,15 @@ public final class SceneryGameTest implements FabricClientGameTest {
             });
             context.waitFor(client -> client.level.getBlockState(origin.get().above(70)).is(Blocks.STONE));
             context.waitTicks(30);
-            context.runOnClient(client -> AfkCinematics.config().subject = CinematicConfig.Subject.SCENERY);
+            context.runOnClient(client -> {
+                AfkCinematics.config().subject = CinematicConfig.Subject.SCENERY;
+                // This one-sided cavern is not visible from every randomized probe bearing.
+                try {
+                    var field = AfkCinematics.class.getDeclaredField("RANDOM");
+                    field.setAccessible(true);
+                    ((java.util.Random)field.get(null)).setSeed(0);
+                } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
+            });
             start(context);
             context.waitFor(client -> AfkCinematics.scenery() && AfkCinematics.fade() == 0, 160);
             checkScene(context, initial, origin.get(), false);
