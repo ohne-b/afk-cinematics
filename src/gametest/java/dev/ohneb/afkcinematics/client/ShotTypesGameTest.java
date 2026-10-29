@@ -31,7 +31,7 @@ public final class ShotTypesGameTest implements FabricClientGameTest {
                 var player = server.getPlayerList().getPlayers().getFirst();
                 floor(player);
                 BlockPos floor = player.blockPosition().below();
-                for (BlockPos pos : BlockPos.betweenClosed(floor.offset(-12, 0, -12), floor.offset(12, 14, 12)))
+                for (BlockPos pos : BlockPos.betweenClosed(floor.offset(-18, 0, -18), floor.offset(18, 14, 18)))
                     player.level().setBlockAndUpdate(pos, (pos.getY() == floor.getY() ? Blocks.GRASS_BLOCK : Blocks.AIR).defaultBlockState());
                 for (BlockPos pos : BlockPos.betweenClosed(floor.offset(7, 4, 6), floor.offset(11, 6, 10)))
                     player.level().setBlockAndUpdate(pos, Blocks.OAK_LEAVES.defaultBlockState());
@@ -44,6 +44,7 @@ public final class ShotTypesGameTest implements FabricClientGameTest {
                 client.player.getYRot(), client.player.getXRot()));
             for (Shot.Type type : Shot.Type.values()) {
                 context.runOnClient(client -> {
+                    AfkCinematics.config().subject = type == Shot.Type.OVERHEAD ? CinematicConfig.Subject.SCENERY : CinematicConfig.Subject.PLAYER;
                     AfkCinematics.config().shots = EnumSet.of(type);
                     AfkCinematics.config().pace = CinematicConfig.Pace.SHORT;
                     AfkCinematics.config().letterbox = true;
@@ -78,7 +79,6 @@ public final class ShotTypesGameTest implements FabricClientGameTest {
                 context.runOnClient(client -> AfkCinematics.stop());
             }
             context.runOnClient(client -> {
-                AfkCinematics.config().distance = CinematicConfig.Distance.WIDE;
                 AfkCinematics.config().shots = EnumSet.of(Shot.Type.STILL);
                 client.player.setXRot(90);
             });
@@ -90,11 +90,11 @@ public final class ShotTypesGameTest implements FabricClientGameTest {
                 });
                 context.waitTicks(1);
             }
+            context.waitFor(client -> settled(), 200);
             context.takeScreenshot(TestScreenshotOptions.of("wide-downward-entry").withDestinationDir(artifacts));
             context.runOnClient(client -> {
                 AfkCinematics.stop();
                 client.player.setXRot((float)playerPose.pitch());
-                AfkCinematics.config().distance = CinematicConfig.Distance.NORMAL;
                 AfkCinematics.config().shots = EnumSet.of(Shot.Type.PAN);
             });
             start(context);

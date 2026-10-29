@@ -28,7 +28,7 @@ class LensTest {
             session.frame(tick * 50_000_000L);
             double fov = config.lens.blend(100, 16.0 / 9, session.lensStrength());
             assertTrue(fov <= previous && fov >= 62);
-            if (tick >= 100) assertEquals(62, fov, 0.00001);
+            if (tick >= 120) assertEquals(62, fov, 0.00001);
             previous = fov;
         }
         assertEquals(100, CinematicConfig.Lens.GAME.blend(100, 0.5, 1));

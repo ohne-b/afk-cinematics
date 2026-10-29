@@ -42,7 +42,6 @@ public final class TestSupport {
             config.subject = CinematicConfig.Subject.PLAYER;
             config.pace = CinematicConfig.Pace.RELAXED;
             config.shots = java.util.EnumSet.allOf(Shot.Type.class);
-            config.distance = CinematicConfig.Distance.NORMAL;
         });
     }
 

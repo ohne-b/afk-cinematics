@@ -37,7 +37,7 @@ class ShotControlTest {
         int[] rejected = {0};
         Geometry open = geometry(accepted, rejected);
         var session = session(open);
-        for (int tick = 0; tick <= 100; tick++) {
+        for (int tick = 0; tick <= 140; tick++) {
             long now = tick * 50_000_000L;
             session.tick(now);
             session.frame(now);
@@ -45,7 +45,7 @@ class ShotControlTest {
         Pose before = session.current();
         rejected[0] = 4;
         session.nextShot();
-        for (int tick = 101; tick <= 103; tick++) {
+        for (int tick = 141; tick <= 143; tick++) {
             long now = tick * 50_000_000L;
             session.tick(now);
             Pose pose = session.frame(now);
@@ -61,26 +61,26 @@ class ShotControlTest {
             public boolean clear(Vec a, Vec b, double margin) { return !occupied[0]; }
             public boolean visible(Vec a, Vec b, double margin) { return true; }
         }, new Random(2));
-        for (int tick = 0; tick <= 100; tick++) {
+        for (int tick = 0; tick <= 140; tick++) {
             blocked.tick(tick * 50_000_000L);
             blocked.frame(tick * 50_000_000L);
         }
         blocked.nextShot();
         occupied[0] = true;
-        blocked.tick(5_050_000_000L);
-        assertNull(blocked.frame(5_050_000_000L), "A held view must still react to new obstacles");
+        blocked.tick(7_050_000_000L);
+        assertNull(blocked.frame(7_050_000_000L), "A held view must still react to new obstacles");
         assertTrue(blocked.ended());
     }
 
     @Test void aLargePitchChangeGetsTheSameGentleEntryAsALargeYawChange() {
         var config = config();
-        config.shots = EnumSet.of(Shot.Type.OVERHEAD);
+        config.shots = EnumSet.of(Shot.Type.FLYOVER);
         var session = new CinematicSession(SUBJECT, new Pose(ENTRY.position(), 0, -90), 0, config,
             geometry(new ArrayList<>(), new int[]{0}), new Random(2));
         session.tick(0);
         for (int tick = 0; tick <= 60; tick++) assertNotNull(session.frame(tick * 50_000_000L));
         assertFalse(session.settled(), "A near-vertical turn completed too quickly");
-        for (int tick = 61; tick <= 80; tick++) assertNotNull(session.frame(tick * 50_000_000L));
+        for (int tick = 61; tick <= 120; tick++) assertNotNull(session.frame(tick * 50_000_000L));
         assertTrue(session.settled());
     }
 

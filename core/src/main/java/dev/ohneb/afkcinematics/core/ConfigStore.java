@@ -32,7 +32,6 @@ public final class ConfigStore {
             config.subject = enumeration("subject", CinematicConfig.Subject.MIXED);
             config.pace = enumeration("pace", CinematicConfig.Pace.RELAXED);
             config.shots = shots();
-            config.distance = enumeration("distance", CinematicConfig.Distance.NORMAL);
             config.lens = enumeration("lens", CinematicConfig.Lens.CINEMATIC);
             config.cinematicFps = Math.clamp(integer("cinematicFps", 60), 20, 240);
             config.hideHud = bool("hideHud", true);
@@ -92,7 +91,6 @@ public final class ConfigStore {
         var shots = new JsonArray();
         config.shots.forEach(type -> shots.add(type.name().toLowerCase(Locale.ROOT)));
         updated.add("shots", shots);
-        updated.addProperty("distance", config.distance.name().toLowerCase(Locale.ROOT));
         updated.addProperty("lens", config.lens.name().toLowerCase(Locale.ROOT));
         updated.addProperty("cinematicFps", Math.clamp(config.cinematicFps, 20, 240));
         updated.addProperty("hideHud", config.hideHud);

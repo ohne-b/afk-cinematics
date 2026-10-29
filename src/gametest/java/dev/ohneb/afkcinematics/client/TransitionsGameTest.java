@@ -48,7 +48,7 @@ public final class TransitionsGameTest implements FabricClientGameTest {
                 if (!requested && System.nanoTime() - started > 8_000_000_000L) {
                     requested = true;
                     context.runOnClient(client -> {
-                        AfkCinematics.config().shots = EnumSet.of(Shot.Type.OVERHEAD);
+                        AfkCinematics.config().shots = EnumSet.of(Shot.Type.FLYOVER);
                         AfkCinematics.nextShot();
                     });
                 }
