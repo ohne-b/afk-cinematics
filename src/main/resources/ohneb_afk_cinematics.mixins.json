@@ -16,7 +16,8 @@
     "MouseMixin",
     "MusicManagerAccess",
     "MusicManagerMixin",
-    "OptionsMixin"
+    "OptionsMixin",
+    "ToastMixin"
   ],
   "injectors": {"defaultRequire": 1}
 }
