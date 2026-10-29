@@ -5,7 +5,7 @@
 <h1 align="center">AFK Cinematics</h1>
 
 <p align="center">
-  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT license"></a>
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-GPL-3.0-only-green?style=flat-square" alt="GPL-3.0-only license"></a>
 </p>
 
 Calm camera shots while you take a break from Minecraft. Move to return to your
@@ -53,4 +53,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, validation and review requirem
 
 ## License
 
-[MIT](LICENSE.md)
+[GPL-3.0-only](LICENSE.md)
