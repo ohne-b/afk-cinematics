@@ -24,7 +24,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 public final class SettingsScreen extends Screen {
-    private enum Page { GENERAL, CAMERA, DISPLAY, SHOTS }
+    private enum Page { GENERAL, CAMERA, DISPLAY, SHOTS, ACTIVITIES }
     private final Screen parent;
     private final EnumMap<Shot.Type, Button> shotButtons = new EnumMap<>(Shot.Type.class);
     private Page page = Page.GENERAL;
@@ -124,6 +124,16 @@ public final class SettingsScreen extends Screen {
                     offset = 0;
                     rebuildWidgets();
                 }).tooltip(Tooltip.create(text("shots.help"))).build());
+                widgets.add(Button.builder(text("activities"), button -> {
+                    page = Page.ACTIVITIES;
+                    offset = 0;
+                    rebuildWidgets();
+                }).build());
+            }
+            case ACTIVITIES -> {
+                widgets.add(toggle("boats", () -> config.boats, value -> config.boats = value));
+                widgets.add(toggle("flight", () -> config.flight, value -> config.flight = value));
+                widgets.add(toggle("travelControls", () -> config.travelControls, value -> config.travelControls = value));
             }
             case DISPLAY -> {
                 widgets.add(new AbstractSliderButton(0, 0, buttonWidth, 20, Component.empty(), (config.cinematicFps - 20) / 220.0) {
