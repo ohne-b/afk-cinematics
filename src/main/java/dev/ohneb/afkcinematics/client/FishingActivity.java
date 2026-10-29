@@ -1,7 +1,6 @@
 package dev.ohneb.afkcinematics.client;
 
 import dev.ohneb.afkcinematics.core.Vec;
-import dev.ohneb.afkcinematics.mixin.FishingHookAccess;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.tags.FluidTags;
@@ -29,8 +28,6 @@ final class FishingActivity {
             hook.yOld + (hook.getY() - hook.yOld) * delta + .1,
             hook.zOld + (hook.getZ() - hook.zOld) * delta).subtract(player);
     }
-
-    static boolean biting(FishingHook hook) { return ((FishingHookAccess)hook).afkCinematics$biting(); }
 
     static boolean canUse(LocalPlayer player, HitResult hit) {
         // Block/entity interactions precede rod use; an offhand rod cannot authorize another held item.

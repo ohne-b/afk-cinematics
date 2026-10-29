@@ -30,11 +30,11 @@ final class ShotPlanner {
 
     ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
                 ShotHistory history, Random random) {
-        this(anchor, previous, original, bearing, config, history, random, Scene.Kind.PLAYER, null, false);
+        this(anchor, previous, original, bearing, config, history, random, Scene.Kind.PLAYER, null);
     }
 
     ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
-                ShotHistory history, Random random, Scene.Kind activity, Vec bobber, boolean biting) {
+                ShotHistory history, Random random, Scene.Kind activity, Vec bobber) {
         this.anchor = anchor;
         this.previous = previous;
         this.original = original;
@@ -45,7 +45,7 @@ final class ShotPlanner {
         this.random = random;
         travel = activity == Scene.Kind.BOAT || activity == Scene.Kind.FLIGHT
             ? new TravelSearch(anchor, activity, bearing, config, history, random) : null;
-        fishing = activity == Scene.Kind.FISHING ? new FishingSearch(anchor, bobber, biting, config, history, random) : null;
+        fishing = activity == Scene.Kind.FISHING ? new FishingSearch(anchor, bobber, config, history, random) : null;
         triedPlayer = config.subject == CinematicConfig.Subject.SCENERY;
         triedScenery = config.subject == CinematicConfig.Subject.PLAYER;
         if (triedPlayer || triedScenery) sceneryFirst = triedPlayer;

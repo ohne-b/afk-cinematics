@@ -13,7 +13,7 @@ final class FishingSearch {
     private final List<Shot.Type> types;
     private int attempt;
 
-    FishingSearch(Vec subject, Vec bobber, boolean biting, CinematicConfig config, ShotHistory history, Random random) {
+    FishingSearch(Vec subject, Vec bobber, CinematicConfig config, ShotHistory history, Random random) {
         this.subject = subject;
         this.bobber = bobber;
         this.config = config;
@@ -22,7 +22,7 @@ final class FishingSearch {
         types.removeIf(type -> !type.fishingOnly());
         if (types.isEmpty() && config.shots.contains(Shot.Type.STILL)) types.add(Shot.Type.STILL);
         Collections.shuffle(types, random);
-        types.sort(Comparator.comparingInt(type -> biting && type == Shot.Type.FLOAT ? Integer.MIN_VALUE : history.lastUse(type)));
+        types.sort(Comparator.comparingInt(history::lastUse));
     }
 
     boolean exhausted() { return bobber == null || attempt >= types.size() * 6; }

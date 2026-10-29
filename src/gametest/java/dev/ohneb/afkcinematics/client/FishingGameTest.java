@@ -55,7 +55,7 @@ public final class FishingGameTest implements FabricClientGameTest {
             context.waitTicks(15);
             click(context);
             context.waitFor(client -> FishingActivity.hook(client.player, client.level) != null, 100);
-            context.waitFor(client -> revealedShot != null && revealedShot.type() == Shot.Type.ANGLER, 400);
+            context.waitFor(client -> revealedShot != null && revealedShot.type() == Shot.Type.ANGLER, 80);
             context.runOnClient(client -> {
                 require(AfkCinematics.showing(), "Idle fishing did not start a view");
                 AfkCinematics.mouseMoved(2, 1);
@@ -63,6 +63,7 @@ public final class FishingGameTest implements FabricClientGameTest {
                 AfkCinematics.config().shots.add(Shot.Type.FLOAT);
             });
             screenshot(context, "fishing-angler");
+            Shot waitingTake = context.computeOnClient(client -> revealedShot);
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
                 require(player.fishing != null, "The cinematic retrieved the bobber");
@@ -72,8 +73,9 @@ public final class FishingGameTest implements FabricClientGameTest {
                     player.fishing.getEntityData().set((EntityDataAccessor<Boolean>)data.get(null), true);
                 } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
             });
-            context.waitFor(client -> revealedShot != null && revealedShot.type() == Shot.Type.FLOAT, 100);
             context.waitTicks(10);
+            context.runOnClient(client -> require(revealedShot == waitingTake && AfkCinematics.fade() == 0,
+                "A bite interrupted the current fishing take"));
             screenshot(context, "fishing-bite");
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst().fishing != null,
                 "A bite triggered automatic reeling"));
@@ -102,6 +104,8 @@ public final class FishingGameTest implements FabricClientGameTest {
             }
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst().fishing != null,
                 "The shared wake key reeled the bobber"));
+            context.waitTicks(10);
+            context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Waking restarted the same cast automatically"));
             start(context);
             context.waitTicks(20);
             context.runOnClient(client -> {

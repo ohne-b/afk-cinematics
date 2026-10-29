@@ -24,7 +24,6 @@ public final class CinematicSession {
     private int captures;
     private int take;
     private Vec fishingTarget;
-    private boolean biting;
     private Phase phase = Phase.ENTRY;
     private boolean ended;
     private boolean covered;
@@ -199,11 +198,9 @@ public final class CinematicSession {
         return activity == Scene.Kind.FISHING && scene != null && currentFocus != null
             ? currentFocus.add(fishingTarget.subtract(scene.focus()).scale(FishingSearch.weight(shot.type()))) : currentFocus;
     }
-    public void fishing(Vec target, boolean bite) {
+    public void fishing(Vec target) {
         if (activity != Scene.Kind.FISHING) return;
         fishingTarget = target;
-        if (bite && !biting && shot != null && shot.type() != Shot.Type.FLOAT && config.shots.contains(Shot.Type.FLOAT)) nextShot();
-        biting = bite;
     }
     public int take() { return take; }
     public boolean capturing() { return captures > 0; }
@@ -235,6 +232,6 @@ public final class CinematicSession {
     }
 
     private ShotPlanner planner(Pose from) {
-        return new ShotPlanner(subject, from, entry, bearing, config, history, random, activity, fishingTarget, biting);
+        return new ShotPlanner(subject, from, entry, bearing, config, history, random, activity, fishingTarget);
     }
 }

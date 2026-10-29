@@ -61,6 +61,7 @@ public final class AfkCinematics {
     private static double course;
     private static boolean manualTravel;
     private static FishingHook fishingHook;
+    private static FishingHook lastFishingStart;
     private static InputConstants.Key activityUse;
     private static ClientLevel world;
     private static LocalPlayer player;
@@ -172,6 +173,7 @@ public final class AfkCinematics {
             carriedYaw = 0;
             lastVehicle = null;
             lastVehiclePosition = null;
+            lastFishingStart = null;
             vanillaPose = null;
         }
         boolean focus = client.isWindowActive();
@@ -213,8 +215,11 @@ public final class AfkCinematics {
             IDLE.reset(now);
             if (eligible && vanillaPose != null) { start(true); manualWait = 0; }
             else if (manualWait == 0) message("unavailable");
-        } else if (IDLE.ready(now, activityKind() == Scene.Kind.FISHING ? Math.min(10, config().idleSeconds) : config().idleSeconds,
-            eligible && config().automatic)) start(false);
+        } else if (activityKind() == Scene.Kind.FISHING) {
+            // A cast starts once its bobber reaches water; waking never restarts the same cast.
+            if (eligible && config().automatic && FishingActivity.hook(player, world) != lastFishingStart) start(false);
+            IDLE.reset(now);
+        } else if (IDLE.ready(now, config().idleSeconds, eligible && config().automatic)) start(false);
         CinematicMusic.tick();
     }
 
@@ -255,6 +260,7 @@ public final class AfkCinematics {
         activity = activityKind();
         manualTravel = manual && (activity == Scene.Kind.BOAT || activity == Scene.Kind.FLIGHT);
         fishingHook = activity == Scene.Kind.FISHING ? FishingActivity.hook(player, world) : null;
+        if (fishingHook != null) lastFishingStart = fishingHook;
         vehicle = player.getVehicle();
         course = vehicle == null ? player.getYRot() : vehicle.getYRot();
         if (activity == Scene.Kind.PLAYER) {
@@ -334,7 +340,7 @@ public final class AfkCinematics {
             if (!movingGeometry.follow(subject, now, session.capturing())) { stop(); return null; }
             if (fishingHook != null) {
                 bobber = FishingActivity.target(fishingHook, partial, subject);
-                session.fishing(bobber, FishingActivity.biting(fishingHook));
+                session.fishing(bobber);
             }
         }
         Pose pose = session.frame(now);

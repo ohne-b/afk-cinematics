@@ -12,20 +12,18 @@ class FishingTest {
         public boolean visible(Vec a, Vec b, double margin) { return true; }
     };
 
-    @Test void fishingStylesMoveGentlyAndABitePrefersTheFloat() {
+    @Test void fishingStylesMoveGentlyAndStillRemainsFixed() {
         var config = new CinematicConfig();
         for (Shot.Type type : new Shot.Type[]{Shot.Type.ANGLER, Shot.Type.CAST_LINE, Shot.Type.FLOAT}) {
             config.shots = EnumSet.of(type);
-            var plan = new FishingSearch(PLAYER, BOBBER, false, config, new ShotHistory(), new Random(1)).next(OPEN);
+            var plan = new FishingSearch(PLAYER, BOBBER, config, new ShotHistory(), new Random(1)).next(OPEN);
             assertNotNull(plan, type.name());
             assertTrue(plan.cut());
             assertEquals(type, plan.shot().type());
             assertTrue(plan.shot().start().distance(plan.shot().end()) > .5);
         }
-        config.shots = EnumSet.of(Shot.Type.ANGLER, Shot.Type.CAST_LINE, Shot.Type.FLOAT);
-        assertEquals(Shot.Type.FLOAT, new FishingSearch(PLAYER, BOBBER, true, config, new ShotHistory(), new Random(1)).next(OPEN).shot().type());
         config.shots = EnumSet.of(Shot.Type.STILL);
-        var still = new FishingSearch(PLAYER, BOBBER, false, config, new ShotHistory(), new Random(1)).next(OPEN).shot();
+        var still = new FishingSearch(PLAYER, BOBBER, config, new ShotHistory(), new Random(1)).next(OPEN).shot();
         assertEquals(still.start(), still.end());
     }
 
@@ -36,7 +34,7 @@ class FishingTest {
             public boolean clear(Vec a, Vec b, double margin) { return true; }
             public boolean visible(Vec a, Vec b, double margin) { return b.distance(BOBBER) > 1; }
         };
-        var search = new FishingSearch(PLAYER, BOBBER, false, config, new ShotHistory(), new Random(1));
+        var search = new FishingSearch(PLAYER, BOBBER, config, new ShotHistory(), new Random(1));
         while (!search.exhausted()) assertNull(search.next(obscured));
     }
 }
