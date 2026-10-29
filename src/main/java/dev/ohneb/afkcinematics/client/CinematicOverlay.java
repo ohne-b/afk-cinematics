@@ -17,5 +17,10 @@ public final class CinematicOverlay {
         }
         if (AfkCinematics.showHint()) graphics.drawCenteredString(Minecraft.getInstance().font,
             Component.translatable("ohneb_afk_cinematics.hint"), width / 2, height - Math.max(18, (int)(height * 0.09) + 12), 0xFFDDDDDD);
+        int opacity = (int)Math.round(AfkCinematics.fade() * 255);
+        if (opacity > 0) {
+            graphics.fill(0, 0, width, height, opacity << 24);
+            if (opacity == 255) AfkCinematics.coveredFrame();
+        }
     }
 }

@@ -14,10 +14,12 @@ public final class CinematicSession {
     private ShotPlanner.Plan pending;
     private Shot shot;
     private Scene scene;
+    private Scene lastScenery;
     private Pose current;
     private long started, lastFrame;
     private Phase phase = Phase.ENTRY;
     private boolean ended;
+    private boolean covered;
     private double entrySeconds = 1.5;
     private double fade;
 
@@ -43,6 +45,7 @@ public final class CinematicSession {
             if (plan.cut()) {
                 pending = plan;
                 phase = Phase.FADE_OUT;
+                covered = false;
             } else {
                 shot = plan.shot();
                 scene = plan.scene();
@@ -74,15 +77,18 @@ public final class CinematicSession {
             return current;
         }
         if (phase == Phase.CUT) {
+            if (!covered) return geometry.clear(current.position(), current.position()) ? current : end();
             Pose next = pending.shot().sample(0);
             if (!valid(next, pending.shot().focus(0), next.position())) return end();
             shot = pending.shot();
             scene = pending.scene();
+            if (scene.scenery()) lastScenery = scene;
             pending = null;
             current = next;
             phase = Phase.FADE_IN;
             started = now;
             fade = 1;
+            covered = false;
             return current;
         }
         Pose next;
@@ -94,6 +100,8 @@ public final class CinematicSession {
         } else if (phase == Phase.FADE_IN) {
             sampledSeconds = 0;
             next = shot.sample(0);
+            if (!covered) started = now;
+            elapsed = (now - started) / 1e9;
             fade = 1 - Pose.ease(elapsed / 0.9);
             if (fade == 0) { phase = Phase.SHOT; started = now; }
         } else next = shot.sample(elapsed);
@@ -113,9 +121,11 @@ public final class CinematicSession {
     public boolean showing() { return (shot != null || pending != null) && !ended; }
     public Pose current() { return current; }
     public double fade() { return fade; }
+    public void coveredFrame() { if (fade == 1) covered = true; }
     public boolean scenery() { return scene != null && scene.scenery(); }
 
     private ShotPlanner planner() {
-        return new ShotPlanner(subject, current, entry, bearing, config, scene, shot == null ? null : shot.type(), random);
+        return new ShotPlanner(subject, current, entry, bearing, config, scene, lastScenery,
+            shot == null ? null : shot.type(), random);
     }
 }

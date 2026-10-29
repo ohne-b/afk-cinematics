@@ -14,6 +14,7 @@ final class ShotPlanner {
     private final double bearing;
     private final CinematicConfig config;
     private final Scene lastScene;
+    private final Scene lastScenery;
     private final Shot.Type lastType;
     private final Random random;
     private final boolean sceneryFirst;
@@ -25,13 +26,14 @@ final class ShotPlanner {
     private boolean cut, entering;
 
     ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
-                Scene lastScene, Shot.Type lastType, Random random) {
+                Scene lastScene, Scene lastScenery, Shot.Type lastType, Random random) {
         this.anchor = anchor;
         this.previous = previous;
         this.original = original;
         this.bearing = bearing;
         this.config = config;
         this.lastScene = lastScene;
+        this.lastScenery = lastScenery;
         this.lastType = lastType;
         this.random = random;
         triedPlayer = config.subject == CinematicConfig.Subject.SCENERY;
@@ -49,11 +51,11 @@ final class ShotPlanner {
                 cut = lastScene != null && lastScene.scenery();
                 entering = lastScene == null || cut;
             } else if (!triedScenery) {
-                if (probe < 24) {
+                if (probe < Scene.PROBES) {
                     Scene scene = geometry.scenery(anchor, original, bearing, probe++);
                     if (scene != null && scene.scenery() && scene.near(anchor)
                         && candidates.stream().noneMatch(other -> other.focus().distance(scene.focus()) < 3)) candidates.add(scene);
-                    if (probe == 24) candidates.sort(Comparator.comparingDouble(this::score).reversed());
+                    if (probe == Scene.PROBES) candidates.sort(Comparator.comparingDouble(this::score).reversed());
                     return null;
                 }
                 if (candidate >= Math.min(4, candidates.size())) { triedScenery = true; return null; }
@@ -72,7 +74,6 @@ final class ShotPlanner {
     }
 
     private double score(Scene scene) {
-        return scene.interest() - (lastScene != null && lastScene.scenery()
-            && lastScene.focus().distance(scene.focus()) < 5 ? 100 : 0);
+        return scene.interest() - (lastScenery != null && lastScenery.focus().distance(scene.focus()) < 5 ? 100 : 0);
     }
 }

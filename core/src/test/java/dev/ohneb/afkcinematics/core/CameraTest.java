@@ -81,7 +81,7 @@ class CameraTest {
             public boolean visible(Vec from, Vec target) { return false; }
         };
         var session = new CinematicSession(SUBJECT, ENTRY, 0, new CinematicConfig(), closed, new Random(1));
-        for (int i = 0; i < 50; i++) session.tick(i * 50_000_000L);
+        for (int i = 0; i < 70; i++) session.tick(i * 50_000_000L);
         assertTrue(session.ended());
         assertFalse(session.showing());
         var open = new CinematicSession(SUBJECT, ENTRY, 0, new CinematicConfig(), OPEN, new Random(1));

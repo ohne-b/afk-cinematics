@@ -2,6 +2,7 @@ package dev.ohneb.afkcinematics.core;
 
 import org.junit.jupiter.api.Test;
 import java.util.EnumSet;
+import java.util.ArrayList;
 import java.util.Random;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,6 +32,7 @@ class SceneryTest {
             assertTrue(Scene.inRange(pose.position(), PLAYER));
             previous = pose;
             opacity = session.fade();
+            session.coveredFrame();
         }
         assertEquals(1, cuts);
         assertTrue(session.scenery());
@@ -49,6 +51,7 @@ class SceneryTest {
         assertEquals(1, session.fade());
         assertEquals(ENTRY, session.current());
         obstructed[0] = true;
+        session.coveredFrame();
         assertNull(session.frame(now));
         assertTrue(session.ended());
         assertEquals(ENTRY, session.current());
@@ -87,6 +90,7 @@ class SceneryTest {
             long now = tick * 50_000_000L;
             session.tick(now);
             Pose pose = session.frame(now);
+            session.coveredFrame();
             assertNotNull(pose);
             assertTrue(Scene.inRange(pose.position(), PLAYER));
             if (session.scenery()) sawScenery = true;
@@ -94,6 +98,33 @@ class SceneryTest {
         }
         assertTrue(sawScenery);
         assertTrue(returned);
+    }
+
+    @Test void extraCameraUpdatesCannotAdvanceACutWithoutCoveredGuiFrames() {
+        var session = session(CinematicConfig.Subject.SCENERY, cavern(new boolean[]{false}));
+        long now = 0;
+        while (session.fade() != 1 && now < 10_000_000_000L) {
+            session.tick(now);
+            session.frame(now);
+            now += 50_000_000L;
+        }
+        assertEquals(1, session.fade());
+        for (int frame = 0; frame < 30; frame++) {
+            assertEquals(ENTRY, session.frame(now));
+            now += 50_000_000L;
+        }
+        session.coveredFrame();
+        Pose destination = session.frame(now);
+        assertNotEquals(ENTRY, destination);
+        for (int frame = 0; frame < 30; frame++) {
+            now += 50_000_000L;
+            assertEquals(destination, session.frame(now));
+            assertEquals(1, session.fade());
+        }
+        session.coveredFrame();
+        for (int frame = 0; frame < 20; frame++) session.frame(now += 50_000_000L);
+        assertEquals(0, session.fade());
+        assertFalse(session.ended());
     }
 
     @Test void invalidDistantCandidatesHaveAFiniteSearchBudget() {
@@ -108,7 +139,32 @@ class SceneryTest {
         });
         for (int tick = 0; tick < 30; tick++) session.tick(tick * 50_000_000L);
         assertTrue(session.ended());
-        assertEquals(24, probes[0]);
+        assertEquals(Scene.PROBES, probes[0]);
+    }
+
+    @Test void mixedModeRemembersTheLastSceneryAcrossPlayerShots() {
+        Scene second = new Scene(new Vec(-8, 20, 0), new Vec(-8, 22, -8), true, 2);
+        Geometry open = new Geometry() {
+            public boolean clear(Vec a, Vec b) { return true; }
+            public boolean visible(Vec a, Vec b) { return true; }
+            public Scene scenery(Vec anchor, Pose original, double bearing, int probe) {
+                return probe == 0 ? SURFACE : probe == 1 ? second : null;
+            }
+        };
+        var session = session(CinematicConfig.Subject.MIXED, open);
+        var views = new ArrayList<Double>();
+        boolean wasScenery = false;
+        for (int tick = 0; tick < 1600; tick++) {
+            long now = tick * 50_000_000L;
+            session.tick(now);
+            Pose pose = session.frame(now);
+            assertNotNull(pose);
+            if (session.scenery() && !wasScenery) views.add(pose.position().x());
+            wasScenery = session.scenery();
+            session.coveredFrame();
+        }
+        assertTrue(views.size() >= 2);
+        assertTrue(views.get(0) > 0 && views.get(1) < 0, "Player shots erased scenery variety");
     }
 
     private CinematicSession session(CinematicConfig.Subject subject, Geometry geometry) {

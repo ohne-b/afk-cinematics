@@ -52,7 +52,8 @@ public abstract class CameraMixin {
         if (pose == null) return false;
         setPosition(pose.position().x(), pose.position().y(), pose.position().z());
         setRotation((float)pose.yaw(), (float)pose.pitch());
-        detached = true;
+        detached = Minecraft.getInstance().player.getEyePosition().distanceToSqr(
+            pose.position().x(), pose.position().y(), pose.position().z()) >= 0.64;
         return true;
     }
 }
