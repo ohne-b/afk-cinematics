@@ -117,5 +117,11 @@
   "ohneb_afk_cinematics.shot.cast_line": "Over the shoulder",
   "ohneb_afk_cinematics.shot.cast_line.help": "Glide past the angler with the fishing line leading out into the water.",
   "ohneb_afk_cinematics.shot.float": "Waterline return",
-  "ohneb_afk_cinematics.shot.float.help": "Look back across the float toward the angler and shoreline, just above the water."
+  "ohneb_afk_cinematics.shot.float.help": "Look back across the float toward the angler and shoreline, just above the water.",
+  "ohneb_afk_cinematics.shot.low_escort": "Low escort",
+  "ohneb_afk_cinematics.shot.low_escort.help": "Follow near the waterline or just below a flyer, with the landscape passing behind them.",
+  "ohneb_afk_cinematics.shot.high_trail": "High trailing view",
+  "ohneb_afk_cinematics.shot.high_trail.help": "Follow from high behind the journey, leaving room for the landscape ahead.",
+  "ohneb_afk_cinematics.shot.broadside": "Broadside",
+  "ohneb_afk_cinematics.shot.broadside.help": "Track the journey in profile with space in front of the player."
 }

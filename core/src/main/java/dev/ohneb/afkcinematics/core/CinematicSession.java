@@ -6,7 +6,7 @@ public final class CinematicSession {
     private enum Phase { ENTRY, SHOT, FADE_OUT, CUT, FADE_IN }
     private final Geometry geometry;
     private final Vec subject;
-    private double bearing;
+    private final double bearing;
     private final Scene.Kind activity;
     private final CinematicConfig config;
     private final Random random;
@@ -211,7 +211,6 @@ public final class CinematicSession {
     }
     public int take() { return take; }
     public boolean capturing() { return captures > 0; }
-    public void bearing(double value) { if (Double.isFinite(value)) bearing = value; }
     public double fade() { return fade; }
     public double lensStrength() { return ended ? 0 : lensStrength; }
     public void coveredFrame() { if (fade == 1) covered = true; }
