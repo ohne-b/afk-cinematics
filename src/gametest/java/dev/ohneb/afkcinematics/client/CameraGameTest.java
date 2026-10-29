@@ -61,6 +61,9 @@ public final class CameraGameTest implements FabricClientGameTest {
                     "Cinematic rotated the player");
             });
             screenshot(context, "camera-open");
+            context.runOnClient(client -> java.util.concurrent.locks.LockSupport.parkNanos(1_200_000_000L));
+            context.waitTicks(2);
+            context.runOnClient(client -> require(AfkCinematics.showing(), "A client hitch ended a safe take"));
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
                 require(player.position().distanceToSqr(position.get()) < 0.001, "Cinematic moved the server player");
@@ -93,6 +96,12 @@ public final class CameraGameTest implements FabricClientGameTest {
             context.runOnClient(client -> AfkCinematics.showScreen(new InventoryScreen(client.player)));
             context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Opening inventory left the cinematic active"));
             context.runOnClient(client -> AfkCinematics.showScreen(null));
+
+            start(context);
+            context.runOnClient(client -> client.player.setYRot(client.player.getYRot() + 15));
+            context.waitFor(client -> !AfkCinematics.ownsCamera(), 5);
+            context.runOnClient(client -> require(Math.abs(client.player.getYRot() - rotation.get().x - 15) < 0.001,
+                "Controller wake replaced the player's new rotation"));
 
             start(context);
             context.waitTicks(40);
