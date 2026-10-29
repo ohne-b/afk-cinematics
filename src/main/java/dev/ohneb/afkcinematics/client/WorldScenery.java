@@ -32,11 +32,12 @@ final class WorldScenery {
             vantage = original.position();
             angle = Math.toRadians(bearing + (index - 24) * 45);
         } else {
-            int local = index - 32;
+            int local = (index - 32) / 2;
             angle = Math.toRadians(bearing + local * 137.5);
             double radius = 6 + local % 3 * 3;
             vantage = anchor.add(new Vec(Math.sin(angle) * radius, (local / 3 % 3 - 1) * 8, Math.cos(angle) * radius));
-            angle += Math.PI / 2;
+            // A useful cavern viewpoint can face a wall on one side and open space on the other.
+            angle += index % 2 == 0 ? Math.PI / 2 : -Math.PI / 2;
         }
         if (!inside(level, vantage) || !geometry.clear(vantage, vantage)) return null;
         Vec direction = new Vec(Math.sin(angle), -0.08, Math.cos(angle));
