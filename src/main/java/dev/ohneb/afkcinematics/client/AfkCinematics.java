@@ -53,8 +53,9 @@ public final class AfkCinematics {
     private static MovingGeometry movingGeometry;
     private static Scene.Kind activity = Scene.Kind.PLAYER;
     private static Entity vehicle;
+    private static double carriedYaw;
     private static Entity lastVehicle;
-    private static float lastVehicleYaw;
+    private static Vec3 lastVehiclePosition;
     private static Vec3 observedMotion = Vec3.ZERO;
     private static double course;
     private static boolean manualTravel;
@@ -165,7 +166,9 @@ public final class AfkCinematics {
             lastPosition = player == null ? null : player.position();
             lastYaw = player == null ? 0 : player.getYRot();
             lastPitch = player == null ? 0 : player.getXRot();
+            carriedYaw = 0;
             lastVehicle = null;
+            lastVehiclePosition = null;
             vanillaPose = null;
         }
         boolean focus = client.isWindowActive();
@@ -175,22 +178,20 @@ public final class AfkCinematics {
             focused = focus;
         }
         observedMotion = player == null || lastPosition == null ? Vec3.ZERO : player.position().subtract(lastPosition);
+        if (player != null && boat(player.getVehicle()) && player.getVehicle() == lastVehicle)
+            observedMotion = lastVehicle.position().subtract(lastVehiclePosition);
         boolean moved = player != null && lastPosition != null && movedFrom(lastPosition, false);
         // Controller look can change player rotation without a keyboard or mouse callback.
-        boolean turned = player != null && (Math.abs(Math.IEEEremainder(player.getYRot() - lastYaw, 360)) > 0.001
+        boolean turned = player != null && (Math.abs(Math.IEEEremainder(player.getYRot() - lastYaw - carriedYaw, 360)) > 0.001
             || Math.abs(player.getXRot() - lastPitch) > 0.001);
-        if (player != null && boat(player.getVehicle()) && player.getVehicle() == lastVehicle) {
-            double carriedTurn = Math.IEEEremainder(lastVehicle.getYRot() - lastVehicleYaw, 360);
-            turned = Math.abs(Math.IEEEremainder(player.getYRot() - lastYaw - carriedTurn, 360)) > 0.001
-                || Math.abs(player.getXRot() - lastPitch) > 0.001;
-        }
+        carriedYaw = 0;
         boolean jumped = player != null && lastPosition != null && player.position().distanceToSqr(lastPosition) > 256;
         if (player != null) {
             lastPosition = player.position();
             lastYaw = player.getYRot();
             lastPitch = player.getXRot();
             lastVehicle = player.getVehicle();
-            lastVehicleYaw = lastVehicle == null ? 0 : lastVehicle.getYRot();
+            lastVehiclePosition = lastVehicle == null ? null : lastVehicle.position();
         }
         boolean travel = travelKind() != Scene.Kind.PLAYER;
         boolean eligible = eligible() && (!moved || travel) && (!turned || steering()) && !jumped;
@@ -430,9 +431,13 @@ public final class AfkCinematics {
     }
 
     private static double travelBearing() {
-        Vec3 velocity = player.getVehicle() == null ? observedMotion : player.getVehicle().getDeltaMovement();
-        if (velocity.horizontalDistanceSqr() > 0.0025) course = Math.toDegrees(Math.atan2(-velocity.x, velocity.z));
+        // Remote boats move through interpolation, with no useful velocity on the passenger client.
+        if (observedMotion.horizontalDistanceSqr() > 0.0025) course = Math.toDegrees(Math.atan2(-observedMotion.x, observedMotion.z));
         return course;
+    }
+
+    public static void passengerTurn(Entity passenger, double degrees) {
+        if (passenger == player) carriedYaw += Math.IEEEremainder(degrees, 360);
     }
 
     public static void openSettings() {
