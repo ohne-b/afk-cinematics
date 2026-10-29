@@ -57,6 +57,14 @@ public final class SettingsGameTest implements FabricClientGameTest {
                 context.takeScreenshot(TestScreenshotOptions.of("shot-options").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
+                    press(settings, "Moving only");
+                    require(fixture.config().shots.equals(EnumSet.complementOf(EnumSet.of(Shot.Type.PAN, Shot.Type.STILL))),
+                        "Moving-only selection included stationary shots or omitted a drive");
+                    press(settings, "Enable all");
+                    require(fixture.config().shots.equals(EnumSet.allOf(Shot.Type.class)), "Enable all omitted shot types");
+                });
+                context.runOnClient(client -> {
+                    var settings = (SettingsScreen)AfkCinematics.screen();
                     press(settings, "Display");
                     var fps = fpsSlider(settings);
                     client.setLastInputType(InputType.KEYBOARD_TAB);
