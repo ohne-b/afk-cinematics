@@ -20,14 +20,13 @@ final class ShotPlanner {
     private final boolean sceneryFirst;
     private final List<Scene> candidates = new ArrayList<>();
     private boolean triedPlayer, triedScenery;
-    private boolean continueScenery;
     private int probe, candidate, attempts;
     private Scene selected;
     private ShotSearch search;
     private boolean cut, entering;
 
     ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
-                Scene lastScene, List<Pose> recentViews, int sceneryTakes, Shot.Type lastType, Random random) {
+                Scene lastScene, List<Pose> recentViews, int subjectTakes, Shot.Type lastType, Random random) {
         this.anchor = anchor;
         this.previous = previous;
         this.original = original;
@@ -39,26 +38,20 @@ final class ShotPlanner {
         this.random = random;
         triedPlayer = config.subject == CinematicConfig.Subject.SCENERY;
         triedScenery = config.subject == CinematicConfig.Subject.PLAYER;
-        sceneryFirst = triedPlayer || lastScene != null && !lastScene.scenery();
-        continueScenery = lastScene != null && lastScene.scenery() && sceneryTakes < 2
-            && config.subject != CinematicConfig.Subject.PLAYER && config.motion != CinematicConfig.Motion.STILL
-            && config.shots.stream().anyMatch(type -> type != Shot.Type.STILL);
+        if (triedPlayer || triedScenery) sceneryFirst = triedPlayer;
+        else if (lastScene != null && subjectTakes >= (lastScene.scenery() ? 4 : 2)) sceneryFirst = !lastScene.scenery();
+        else sceneryFirst = random.nextDouble() < 0.75;
     }
 
-    boolean exhausted() { return search == null && !continueScenery && triedPlayer && triedScenery; }
+    boolean exhausted() { return search == null && triedPlayer && triedScenery; }
 
     Plan next(Geometry geometry) {
         if (search == null) {
-            if (continueScenery) {
-                continueScenery = false;
-                selected = lastScene;
-                cut = false;
-                entering = false;
-            } else if (!triedPlayer && (!sceneryFirst || triedScenery)) {
+            if (!triedPlayer && (!sceneryFirst || triedScenery)) {
                 triedPlayer = true;
                 selected = new Scene(anchor, original.position(), false, 0);
-                cut = lastScene != null && lastScene.scenery();
-                entering = lastScene == null || cut;
+                cut = lastScene != null;
+                entering = true;
             } else if (!triedScenery) {
                 if (probe < Scene.PROBES) {
                     Scene scene = geometry.scenery(anchor, original, bearing, probe++);

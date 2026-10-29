@@ -100,7 +100,7 @@ class SceneryTest {
         assertFalse(scenery.showing());
     }
 
-    @Test void mixedModeAlternatesSubjectsAndStaysWithinThePlayerRange() {
+    @Test void mixedModeIncludesBothSubjectsAndStaysWithinThePlayerRange() {
         Geometry open = new Geometry() {
             public boolean clear(Vec a, Vec b, double margin) { return true; }
             public boolean visible(Vec a, Vec b, double margin) { return true; }
@@ -108,12 +108,12 @@ class SceneryTest {
         };
         var session = session(CinematicConfig.Subject.MIXED, open);
         boolean sawScenery = false, returned = false;
-        for (int tick = 0; tick < 1100; tick++) {
+        for (int tick = 0; tick < 2400; tick++) {
             long now = tick * 50_000_000L;
             session.tick(now);
             Pose pose = session.frame(now);
             session.coveredFrame();
-            assertNotNull(pose);
+            if (pose == null) { assertFalse(session.ended()); continue; }
             assertTrue(Scene.inRange(pose.position(), PLAYER));
             if (session.scenery()) sawScenery = true;
             else if (sawScenery) returned = true;
@@ -175,18 +175,48 @@ class SceneryTest {
         };
         var session = session(CinematicConfig.Subject.MIXED, open);
         var views = new ArrayList<Double>();
-        boolean wasScenery = false;
-        for (int tick = 0; tick < 1600; tick++) {
+        for (int tick = 0; tick < 2400; tick++) {
             long now = tick * 50_000_000L;
             session.tick(now);
             Pose pose = session.frame(now);
-            assertNotNull(pose);
-            if (session.scenery() && !wasScenery) views.add(pose.position().x());
-            wasScenery = session.scenery();
+            if (pose == null) { assertFalse(session.ended()); continue; }
+            if (session.scenery() && session.fade() == 1 && (views.isEmpty()
+                || Math.abs(views.getLast() - pose.position().x()) > 3)) views.add(pose.position().x());
             session.coveredFrame();
         }
         assertTrue(views.size() >= 2);
         assertTrue(views.get(0) > 0 && views.get(1) < 0, "Player shots erased scenery variety");
+    }
+
+    @Test void mixedModeCanRepeatASubjectButLimitsLongStreaks() {
+        var config = new CinematicConfig();
+        config.shots = EnumSet.of(Shot.Type.STILL);
+        Geometry open = new Geometry() {
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
+            public Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return probe == 0 ? SURFACE : null; }
+        };
+        Scene player = new Scene(PLAYER, ENTRY.position(), false, 0);
+        for (Scene last : new Scene[]{player, SURFACE}) {
+            Random repeat = new Random(4) {
+                @Override public double nextDouble() { return last.scenery() ? 0 : 0.99; }
+            };
+            var planner = new ShotPlanner(PLAYER, ENTRY, ENTRY, 0, config, last, java.util.List.of(), 1, null, repeat);
+            assertEquals(last.scenery(), find(planner, open).scene().scenery(), "Mixed forced alternation");
+            planner = new ShotPlanner(PLAYER, ENTRY, ENTRY, 0, config, last, java.util.List.of(),
+                last.scenery() ? 4 : 2, null, repeat);
+            var next = find(planner, open);
+            assertNotEquals(last.scenery(), next.scene().scenery(), "Mixed never varied its subject");
+            assertTrue(next.cut(), "A different take changed direction without a covered cut");
+        }
+    }
+
+    private ShotPlanner.Plan find(ShotPlanner planner, Geometry geometry) {
+        for (int step = 0; step < 100 && !planner.exhausted(); step++) {
+            var plan = planner.next(geometry);
+            if (plan != null) return plan;
+        }
+        throw new AssertionError("No take found in open terrain");
     }
 
     private CinematicSession session(CinematicConfig.Subject subject, Geometry geometry) {

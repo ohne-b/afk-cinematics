@@ -16,14 +16,17 @@ class ShotControlTest {
         var session = session(open);
         session.tick(0);
         session.nextShot();
-        for (int tick = 0; tick < 80; tick++) {
+        boolean entered = false;
+        for (int tick = 0; tick < 200; tick++) {
             long now = tick * 50_000_000L;
-            if (!session.settled()) {
+            if (session.settled()) entered = true;
+            if (!entered) {
                 session.nextShot();
                 assertEquals(1, accepted.size());
             }
             session.tick(now);
             assertNotNull(session.frame(now));
+            session.coveredFrame();
         }
         assertTrue(session.settled());
         assertEquals(2, accepted.size(), "Repeated presses queued more than one next shot");

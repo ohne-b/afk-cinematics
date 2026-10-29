@@ -87,10 +87,11 @@ class ShotSequenceTest {
         frame(session, now + 50_000_000L);
         assertTrue(session.current().position().distance(before.position()) < 0.01,
             "Next shot jumped to the preplanned endpoint");
+        for (int tick = 2; tick < 100 && accepted.size() < 3; tick++) frame(session, now + tick * 50_000_000L);
         assertTrue(accepted.size() >= 3, "Next shot reused a plan from a different starting pose");
     }
 
-    @Test void relatedSceneryTakesContinueWithoutAnotherCoveredCut() {
+    @Test void aChangeOfTakeUsesACutInsteadOfStoppingAndReversingInPlace() {
         var session = session(geometry(new ArrayList<>(), new boolean[1]), Shot.Type.ARC, Shot.Type.PAN);
         int covers = 0;
         double previous = 0;
@@ -99,7 +100,7 @@ class ShotSequenceTest {
             if (session.fade() == 1 && previous < 1) covers++;
             previous = session.fade();
         }
-        assertEquals(1, covers, "Every related take faded to black again");
+        assertTrue(covers >= 2, "Independent takes were joined into a stop-and-turn movement");
     }
 
     @Test void recentViewsPreventAnImmediateABACycleWithoutExhaustingTheScene() {
