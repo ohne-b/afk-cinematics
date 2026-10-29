@@ -49,15 +49,15 @@ public final class ShotSearch {
         if (types.size() > 1 && types.remove(last)) types.add(last);
     }
 
-    public boolean exhausted() { return attempt >= angles.size() * types.size(); }
+    public boolean exhausted() { return attempt >= angles.size() * types.size() * (scene.scenery() ? 1 : 2); }
 
     public Shot next(Geometry geometry) {
         if (exhausted()) return null;
         int index = attempt++;
         Shot.Type type = types.get(index % types.size());
         int view = index / types.size();
-        double angle = Math.toRadians(bearing + angles.get(view));
-        double radius = view < 5 ? distance : Math.min(distance, 2.0);
+        double angle = Math.toRadians(bearing + angles.get(view % angles.size()));
+        double radius = view < angles.size() ? distance : Math.min(distance, 2.0);
         Vec start = entering
             ? subject.add(new Vec(Math.sin(angle) * radius, 0.55, -Math.cos(angle) * radius))
             : previous.position();

@@ -99,6 +99,23 @@ class ShotOptionsTest {
         assertEquals(java.util.Set.of(0, 90, -90, 180), views);
     }
 
+    @Test void aNarrowCorridorRetainsCloseSideViews() {
+        Geometry corridor = new Geometry() {
+            public boolean clear(Vec from, Vec to, double margin) {
+                return Math.max(Math.abs(from.x()), Math.abs(to.x())) + margin < 2.3
+                    && Math.max(Math.abs(from.z()), Math.abs(to.z())) + margin < 0.3;
+            }
+            public boolean visible(Vec from, Vec to, double margin) { return true; }
+        };
+        var config = new CinematicConfig();
+        config.shots = EnumSet.of(Shot.Type.STILL);
+        Shot shot = find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), false, 0), ENTRY, 0,
+            config, null, true, false, new Random(4)), corridor);
+        assertNotNull(shot, "No close cardinal fallback remained in the corridor");
+        assertEquals(2, Math.abs(shot.start().x()), 1e-9);
+        assertEquals(0, shot.start().z(), 1e-9);
+    }
+
     private static Shot find(ShotSearch search, Geometry geometry) {
         for (int attempt = 0; attempt < 100 && !search.exhausted(); attempt++) {
             Shot shot = search.next(geometry);
