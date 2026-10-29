@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -152,6 +153,56 @@ side = "CLIENT"
         (incoming / "duplicate" / target["file"]).write_bytes(jar_path.read_bytes())
         with self.assertRaises(ValueError):
             release.bundle(self.root, "0.1.0", "a" * 40, incoming, self.root / "other")
+
+    def test_existing_draft_without_tag_performs_no_publication_writes(self):
+        # The matching draft is on a later API page and has no Git tag at all.
+        pages = [[{"tag_name": "v0.0.9", "draft": False}],
+                 [{"tag_name": "v0.1.0", "draft": True}]]
+        with patch("release.subprocess.check_output", return_value=json.dumps(pages)) as read, \
+                patch("release.subprocess.run") as write:
+            with self.assertRaisesRegex(ValueError, "draft already exists"):
+                release.publish_github("0.1.0", "a" * 40, "release", self.root, self.root / "download")
+            self.assertIn("--paginate", read.call_args.args[0])
+            self.assertIn("--slurp", read.call_args.args[0])
+            write.assert_not_called()
+
+    def test_release_lookup_failure_performs_no_publication_writes(self):
+        with patch("release.subprocess.check_output", side_effect=subprocess.CalledProcessError(1, "gh")), \
+                patch("release.subprocess.run") as write:
+            with self.assertRaises(subprocess.CalledProcessError):
+                release.publish_github("0.1.0", "a" * 40, "release", self.root, self.root / "download")
+            write.assert_not_called()
+
+    def test_existing_tag_performs_no_publication_writes(self):
+        with patch("release.subprocess.check_output", side_effect=["[[]]", '[{"ref":"refs/tags/v0.1.0"}]']), \
+                patch("release.subprocess.run") as write:
+            with self.assertRaisesRegex(ValueError, "tag already exists"):
+                release.publish_github("0.1.0", "a" * 40, "release", self.root, self.root / "download")
+            write.assert_not_called()
+
+    def test_downloaded_manifest_must_match_validated_bundle_before_publication(self):
+        (self.root / "SHA256SUMS").write_text("validated manifest\n")
+        downloaded = self.root / "download"
+        downloaded.mkdir()
+        (downloaded / "SHA256SUMS").write_text("older draft manifest\n")
+        with patch("release.subprocess.check_output", side_effect=["[[]]", "[]"]), \
+                patch("release.subprocess.run") as run:
+            with self.assertRaisesRegex(ValueError, "manifest differs"):
+                release.publish_github("0.1.0", "a" * 40, "release", self.root, downloaded)
+            self.assertEqual([c.args[0][2] for c in run.call_args_list], ["create", "download"])
+
+    def test_publication_waits_for_downloaded_checksum_validation(self):
+        (self.root / "SHA256SUMS").write_text("validated manifest\n")
+        downloaded = self.root / "download"
+        downloaded.mkdir()
+        (downloaded / "SHA256SUMS").write_bytes((self.root / "SHA256SUMS").read_bytes())
+        with patch("release.subprocess.check_output", side_effect=["[[]]", "[]"]), \
+                patch("release.subprocess.run", side_effect=[None, None, subprocess.CalledProcessError(1, "sha256sum")]) as run:
+            with self.assertRaises(subprocess.CalledProcessError):
+                release.publish_github("0.1.0", "a" * 40, "release", self.root, downloaded)
+            self.assertEqual(len(run.call_args_list), 3)
+            self.assertEqual(run.call_args.args[0], ["sha256sum", "--check", "SHA256SUMS"])
+            self.assertTrue(run.call_args.kwargs["check"])
 
 
 if __name__ == "__main__":

@@ -97,6 +97,10 @@ jobs:
       contents: write
       actions: read
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: release-bundle
@@ -104,30 +108,10 @@ jobs:
       - name: Publish the verified release
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
           RELEASE_VERSION: ${{ inputs.version }}
-          REVISION: ${{ inputs.revision }}
+          RELEASE_SHA: ${{ inputs.revision }}
           RELEASE_KIND: ${{ needs.validate.outputs.kind }}
-        run: |
-          # No clobber or tag rewriting. An existing release stops this run.
-          refs=$(gh api "repos/${GH_REPO}/git/matching-refs/tags/v${RELEASE_VERSION}")
-          export RELEASE_REFS="$refs"
-          python3 - <<'PY'
-          import json, os
-          tag = 'refs/tags/v' + os.environ['RELEASE_VERSION']
-          if any(ref['ref'] == tag for ref in json.loads(os.environ['RELEASE_REFS'])):
-              raise SystemExit('The release tag already exists; inspect it without rewriting history.')
-          PY
-          args=()
-          if [[ "$RELEASE_KIND" != release ]]; then args+=(--prerelease); fi
-          gh release create "v${RELEASE_VERSION}" release/*.jar release/*-source.zip release/SHA256SUMS \
-            --target "$REVISION" --title "AFK Cinematics ${RELEASE_VERSION}" \
-            --notes-file release/release-notes.md --draft --latest=false "${args[@]}"
-          gh release download "v${RELEASE_VERSION}" --dir downloaded
-          (cd downloaded && sha256sum --check SHA256SUMS)
-          latest=false
-          if [[ "$RELEASE_KIND" = release ]]; then latest=true; fi
-          gh release edit "v${RELEASE_VERSION}" --draft=false --latest="$latest"
+        run: python3 .github/scripts/release.py publish-github "$RELEASE_VERSION"
 
   distribute:
     needs: validate

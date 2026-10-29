@@ -1,4 +1,4 @@
-"""Prepare reviewed release notes and verify CI artifacts; never publish from here."""
+"""Prepare and verify releases; publish-github is an explicitly invoked write operation."""
 
 import argparse
 import hashlib
@@ -147,6 +147,37 @@ def bundle(root, version, sha, incoming, output):
     return matrix
 
 
+def publish_github(version, sha, kind, bundle_dir, downloaded):
+    version_key(version)
+    if not re.fullmatch(r"[a-f0-9]{40}", sha) or kind not in ("release", "alpha", "beta"):
+        raise ValueError("Invalid release revision or type")
+    tag = f"v{version}"
+    # List all releases: lookup-by-tag can miss unpublished drafts without a Git ref.
+    pages = json.loads(subprocess.check_output(
+        ["gh", "api", "--paginate", "--slurp", f"repos/{REPOSITORY}/releases?per_page=100"], text=True))
+    if any(item["tag_name"] == tag for page in pages for item in page):
+        raise ValueError("A release or draft already exists; inspect it without overwriting it")
+    refs = json.loads(subprocess.check_output(
+        ["gh", "api", f"repos/{REPOSITORY}/git/matching-refs/tags/{tag}"], text=True))
+    if any(ref["ref"] == f"refs/tags/{tag}" for ref in refs):
+        raise ValueError("The release tag already exists; do not rewrite it")
+    assets = sorted(bundle_dir.glob("*.jar")) + sorted(bundle_dir.glob("*-source.zip"))
+    assets.append(bundle_dir / "SHA256SUMS")
+    command = ["gh", "release", "create", tag, *map(str, assets), "--repo", REPOSITORY,
+               "--target", sha, "--title", f"AFK Cinematics {version}",
+               "--notes-file", str(bundle_dir / "release-notes.md"), "--draft", "--latest=false"]
+    if kind != "release":
+        command.append("--prerelease")
+    subprocess.run(command, check=True)
+    subprocess.run(["gh", "release", "download", tag, "--repo", REPOSITORY,
+                    "--dir", str(downloaded)], check=True)
+    if (downloaded / "SHA256SUMS").read_bytes() != (bundle_dir / "SHA256SUMS").read_bytes():
+        raise ValueError("Downloaded manifest differs from the validated release bundle")
+    subprocess.run(["sha256sum", "--check", "SHA256SUMS"], cwd=downloaded, check=True)
+    subprocess.run(["gh", "release", "edit", tag, "--repo", REPOSITORY, "--draft=false",
+                    "--latest=" + str(kind == "release").lower()], check=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -155,10 +186,16 @@ def main():
     verify = commands.add_parser("bundle")
     verify.add_argument("version")
     verify.add_argument("run_id")
+    publish = commands.add_parser("publish-github", help="Publish only after explicit release authorization")
+    publish.add_argument("version")
     args = parser.parse_args()
     root = Path.cwd()
     if args.command == "prepare":
         prepare(root, args.version)
+        return
+    if args.command == "publish-github":
+        publish_github(args.version, os.environ["RELEASE_SHA"], os.environ["RELEASE_KIND"],
+                       Path("release"), Path("downloaded"))
         return
     if not args.run_id.isdecimal():
         raise ValueError("The Build run ID must be numeric")
