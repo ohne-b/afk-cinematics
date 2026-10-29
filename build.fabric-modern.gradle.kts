@@ -19,6 +19,10 @@ dependencies {
     implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api")}")
     compileOnly("maven.modrinth:modmenu:${property("modmenu_version")}")
     implementation(project(":core"))
+    if (minecraftVersion == "26.3" && providers.gradleProperty("ambientTest").isPresent) {
+        runtimeOnly("maven.modrinth:ambientsounds:LFUkYKC1")
+        runtimeOnly("maven.modrinth:creativecore:7YUEsxpw")
+    }
 }
 
 java {

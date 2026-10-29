@@ -26,6 +26,10 @@ dependencies {
     modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api")}")
     modCompileOnly("maven.modrinth:modmenu:${property("modmenu_version")}")
     implementation(project(":core"))
+    if (minecraftVersion == "1.21.11" && providers.gradleProperty("ambientTest").isPresent) {
+        modLocalRuntime("maven.modrinth:ambientsounds:JZUqW70J")
+        modLocalRuntime("maven.modrinth:creativecore:jyLHWJlj")
+    }
     if (minecraftVersion == "1.21.8" && providers.gradleProperty("compatTest").isPresent) {
         modLocalRuntime("maven.modrinth:fabrishot:qaV4jqYg")
     }

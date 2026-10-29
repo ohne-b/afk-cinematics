@@ -46,6 +46,8 @@ They create isolated worlds under `build/run/`.
 On 1.21.11, `-PcompatTest` adds pinned Sodium, Iris, Dynamic FPS, Fabrishot and Mod Menu versions.
 On 1.21.8 it adds Fabrishot for the legacy capture check.
 Shader packs are a separate local check; CI runs that profile without a shader pack.
+`-PambientTest` adds AmbientSounds 6.3.5 / CreativeCore 2.14.11 on Fabric 1.21.11,
+or AmbientSounds 6.3.11 / CreativeCore 2.14.24 on Fabric 26.3, for water-depth checks.
 `-PsmokeTest` makes `runClient` check startup and settings, then exit. Add
 `-PsceneWorld=create` to create a flat test world and check player shots, a cramped
 scenery fallback, the rendered camera and unchanged server state. CI runs this on
