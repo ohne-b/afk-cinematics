@@ -56,7 +56,8 @@ public final class TestSupport {
     public static void start(ClientGameTestContext context) {
         context.waitTicks(3);
         context.runOnClient(client -> AfkCinematics.requestStart());
-        context.waitFor(client -> AfkCinematics.showing(), 120);
+        // Mixed mode may exhaust every player angle before finding its scenery fallback.
+        context.waitFor(client -> AfkCinematics.showing(), 240);
     }
 
     public static void key(ClientGameTestContext context, int key, int action) {

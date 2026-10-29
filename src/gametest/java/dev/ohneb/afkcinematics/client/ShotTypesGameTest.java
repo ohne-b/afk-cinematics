@@ -67,9 +67,10 @@ public final class ShotTypesGameTest implements FabricClientGameTest {
                 }
                 Pose last = pose(context);
                 if (type == Shot.Type.STILL) require(first.position().distance(last.position()) < 0.00001
-                    && Math.abs(first.yaw() - last.yaw()) < 0.00001, "Still shot moved after entry: " + first + " -> " + last);
+                    && Math.abs(Math.IEEEremainder(first.yaw() - last.yaw(), 360)) < 0.00001,
+                    "Still shot moved after entry: " + first + " -> " + last);
                 else if (type == Shot.Type.PAN) require(first.position().distance(last.position()) < 0.00001
-                    && Math.abs(first.yaw() - last.yaw()) > 0.01, "Panorama did not rotate in place");
+                    && Math.abs(Math.IEEEremainder(first.yaw() - last.yaw(), 360)) > 0.01, "Panorama did not rotate in place");
                 else require(first.position().distance(last.position()) > 0.001, "Selected moving shot stayed still: " + type);
                 context.takeScreenshot(TestScreenshotOptions.of("shot-" + type.name().toLowerCase(Locale.ROOT)).withDestinationDir(artifacts));
                 samples.add(type + "," + first.position().x() + "," + first.position().y() + "," + first.position().z()
