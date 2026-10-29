@@ -24,7 +24,8 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
         configure(context);
         var artifacts = Path.of(System.getProperty("afkcinematics.test.artifacts"));
-        try {
+        try (AutoCloseable diagnostics = () -> saveDiagnostics(context, artifacts)) {
+            Files.createDirectories(artifacts);
             try (var world = context.worldBuilder().setUseConsistentSettings(false)
                     .adjustSettings(settings -> settings.setSeed("20261029")).create()) {
                 world.getServer().runOnServer(server -> {
@@ -54,8 +55,11 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                 start(context);
                 context.waitFor(client -> AfkCinematics.scenery() && AfkCinematics.fade() == 0, 200);
                 int duration = Math.clamp(Integer.getInteger("afkcinematics.test.naturalSeconds", 40), 40, 3600);
+                long lastReveal = System.nanoTime();
+                boolean fading = false;
+                int completedShots = 0;
                 for (int tick = 0; tick < duration * 20; tick++) {
-                    context.runOnClient(client -> {
+                    boolean uncovered = context.computeOnClient(client -> {
                         require(AfkCinematics.showing(), "Natural scenery stopped unexpectedly: " + cameraStop);
                         var point = WorldGeometry.point(camera(client).position());
                         require(Scene.inRange(point, playerPose.position()) && new WorldGeometry(client.level).clear(point, point),
@@ -63,13 +67,23 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                         require(WorldGeometry.point(client.player.position()).distance(playerPose.position()) < 0.0001
                             && client.player.getYRot() == playerPose.yaw() && client.player.getXRot() == playerPose.pitch(),
                             "Natural scenery changed the player pose");
+                        return AfkCinematics.fade() == 0;
                     });
+                    if (!uncovered) fading = true;
+                    else if (fading) {
+                        lastReveal = System.nanoTime();
+                        fading = false;
+                        completedShots++;
+                    }
+                    require(System.nanoTime() - lastReveal < 35_000_000_000L,
+                        "Natural scenery did not reveal another shot within 35 seconds");
                     if (tick == 200 || tick == 450 || tick == 700) {
                         context.waitFor(client -> AfkCinematics.fade() == 0, 100);
                         context.takeScreenshot(TestScreenshotOptions.of("natural-scenery-" + tick).withDestinationDir(artifacts));
                     }
                     context.waitTicks(1);
-                    if ((tick + 1) % 1200 == 0) LOGGER.info("Natural scenery validation: {} of {} seconds", (tick + 1) / 20, duration);
+                    if ((tick + 1) % 1200 == 0) LOGGER.info("Natural scenery validation: {} of {} seconds, {} completed shots",
+                        (tick + 1) / 20, duration, completedShots);
                 }
                 world.getServer().runOnServer(server -> {
                     var player = server.getPlayerList().getPlayers().getFirst();
@@ -80,21 +94,21 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
             context.waitTicks(3);
             context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Disconnecting during a shot retained camera ownership"));
         } catch (Exception exception) { throw new AssertionError(exception); }
-        finally {
-            try {
-                var timings = context.computeOnClient(client -> cameraTimings == null ? List.<String>of() : List.copyOf(cameraTimings));
-                var frames = context.computeOnClient(client -> sceneryFrames == null ? List.<String>of() : List.copyOf(sceneryFrames));
-                Files.write(artifacts.resolve("natural-camera-timings.csv"), timings);
-                Files.write(artifacts.resolve("natural-scenery-frames.csv"), frames);
-            } catch (java.io.IOException exception) { throw new AssertionError(exception); }
-            finally {
-                context.runOnClient(client -> {
-                    AfkCinematics.stop();
-                    cameraTimings = null;
-                    sceneryFrames = null;
-                    focused = null;
-                });
-            }
+    }
+
+    private static void saveDiagnostics(ClientGameTestContext context, Path artifacts) throws java.io.IOException {
+        try {
+            var timings = context.computeOnClient(client -> cameraTimings == null ? List.<String>of() : List.copyOf(cameraTimings));
+            var frames = context.computeOnClient(client -> sceneryFrames == null ? List.<String>of() : List.copyOf(sceneryFrames));
+            Files.write(artifacts.resolve("natural-camera-timings.csv"), timings);
+            Files.write(artifacts.resolve("natural-scenery-frames.csv"), frames);
+        } finally {
+            context.runOnClient(client -> {
+                AfkCinematics.stop();
+                cameraTimings = null;
+                sceneryFrames = null;
+                focused = null;
+            });
         }
     }
 }
