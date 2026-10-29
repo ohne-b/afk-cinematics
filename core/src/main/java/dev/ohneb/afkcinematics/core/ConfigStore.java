@@ -40,6 +40,9 @@ public final class ConfigStore {
             config.letterbox = bool("letterbox", false);
             config.music = bool("music", false);
             config.unfocused = bool("unfocused", false);
+            config.boats = bool("boats", true);
+            config.flight = bool("flight", true);
+            config.travelControls = bool("travelControls", true);
         } catch (IOException | RuntimeException exception) {
             readable = false;
             config.enabled = false;
@@ -117,6 +120,9 @@ public final class ConfigStore {
         updated.addProperty("letterbox", config.letterbox);
         updated.addProperty("music", config.music);
         updated.addProperty("unfocused", config.unfocused);
+        updated.addProperty("boats", config.boats);
+        updated.addProperty("flight", config.flight);
+        updated.addProperty("travelControls", config.travelControls);
         Path temporary = null;
         try {
             Path directory = path.toAbsolutePath().getParent();

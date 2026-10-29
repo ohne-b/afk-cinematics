@@ -43,6 +43,7 @@ public final class ShotTypesGameTest implements FabricClientGameTest {
             var playerPose = context.computeOnClient(client -> new Pose(WorldGeometry.point(client.player.position()),
                 client.player.getYRot(), client.player.getXRot()));
             for (Shot.Type type : Shot.Type.values()) {
+                if (type.travelOnly()) continue;
                 context.runOnClient(client -> {
                     AfkCinematics.config().subject = type.sceneryOnly() ? CinematicConfig.Subject.SCENERY : CinematicConfig.Subject.PLAYER;
                     AfkCinematics.config().shots = EnumSet.of(type);

@@ -6,7 +6,8 @@ public final class CinematicSession {
     private enum Phase { ENTRY, SHOT, FADE_OUT, CUT, FADE_IN }
     private final Geometry geometry;
     private final Vec subject;
-    private final double bearing;
+    private double bearing;
+    private final Scene.Kind activity;
     private final CinematicConfig config;
     private final Random random;
     private final Pose entry;
@@ -21,6 +22,7 @@ public final class CinematicSession {
     private long lastUpdate = Long.MIN_VALUE;
     private long captureStarted;
     private int captures;
+    private int take;
     private Phase phase = Phase.ENTRY;
     private boolean ended;
     private boolean covered;
@@ -31,12 +33,17 @@ public final class CinematicSession {
     private double lensStrength;
 
     public CinematicSession(Vec subject, Pose entry, double bearing, CinematicConfig config, Geometry geometry, Random random) {
+        this(subject, entry, bearing, config, geometry, random, Scene.Kind.PLAYER);
+    }
+
+    public CinematicSession(Vec subject, Pose entry, double bearing, CinematicConfig config, Geometry geometry, Random random, Scene.Kind activity) {
         this.subject = subject;
         this.entry = entry;
         this.current = entry;
         this.bearing = bearing;
         this.config = config;
         this.geometry = geometry;
+        this.activity = activity;
         this.random = random;
         planner = planner(current);
     }
@@ -53,7 +60,7 @@ public final class CinematicSession {
                 handoff = now;
                 advanceRequested = false;
             } else if (planner == null && pending == null
-                && (now - started) / 1e9 >= shot.duration() - ShotPlanner.preparationSeconds(config)) {
+                && (now - started) / 1e9 >= shot.duration() - (activity == Scene.Kind.PLAYER ? ShotPlanner.preparationSeconds(config) : 4)) {
                 planner = planner(shot.sample(shot.duration()));
                 handoff = started + Math.round(shot.duration() * 1e9);
             }
@@ -181,6 +188,10 @@ public final class CinematicSession {
     public boolean ended() { return ended; }
     public boolean showing() { return (shot != null || pending != null) && !ended; }
     public Pose current() { return current; }
+    public Vec focus() { return currentFocus; }
+    public int take() { return take; }
+    public boolean capturing() { return captures > 0; }
+    public void bearing(double value) { if (Double.isFinite(value)) bearing = value; }
     public double fade() { return fade; }
     public double lensStrength() { return ended ? 0 : lensStrength; }
     public void coveredFrame() { if (fade == 1) covered = true; }
@@ -202,11 +213,12 @@ public final class CinematicSession {
     }
 
     private void setScene(Scene next) {
+        take++;
         scene = next;
         history.add(scene, shot);
     }
 
     private ShotPlanner planner(Pose from) {
-        return new ShotPlanner(subject, from, entry, bearing, config, history, random);
+        return new ShotPlanner(subject, from, entry, bearing, config, history, random, activity);
     }
 }

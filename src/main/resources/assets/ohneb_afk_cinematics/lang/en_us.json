@@ -94,5 +94,20 @@
   "ohneb_afk_cinematics.shot.fly_through.help": "Travel forward through the scenery with a steady heading, over canopies, near the ground or underwater.",
   "ohneb_afk_cinematics.shot.traverse": "Traverse",
   "ohneb_afk_cinematics.shot.traverse.help": "A broad sideways drive that keeps its heading and lets the environment move through the frame.",
-  "ohneb_afk_cinematics.shots.last": "Enable another shot before turning this one off."
+  "ohneb_afk_cinematics.shots.last": "Enable another shot before turning this one off.",
+  "ohneb_afk_cinematics.activities": "Activities...",
+  "ohneb_afk_cinematics.boats": "Boat cinematics",
+  "ohneb_afk_cinematics.boats.help": "Follow boats and rafts. Start manually while steering, or let the idle timer start a passenger view.",
+  "ohneb_afk_cinematics.flight": "Flight cinematics",
+  "ohneb_afk_cinematics.flight.help": "Follow Elytra and creative flight. Landing, damage and invalid views return control.",
+  "ohneb_afk_cinematics.travelControls": "Steer during manual takes",
+  "ohneb_afk_cinematics.travelControls.help": "Keep movement and mouse look active in manually started boat and flight cinematics. Toggle or Escape exits. Automatic cinematics still wake on input.",
+  "ohneb_afk_cinematics.shot.trail": "Trailing shot",
+  "ohneb_afk_cinematics.shot.trail.help": "Follow a boat or flight from an angled position behind the player.",
+  "ohneb_afk_cinematics.shot.escort": "Side escort",
+  "ohneb_afk_cinematics.shot.escort.help": "Track a boat or flight from the side, letting the landscape pass behind it.",
+  "ohneb_afk_cinematics.shot.lead": "Leading shot",
+  "ohneb_afk_cinematics.shot.lead.help": "Film a boat or flight from an oblique position ahead of the player.",
+  "ohneb_afk_cinematics.shot.wide_track": "Wide escort",
+  "ohneb_afk_cinematics.shot.wide_track.help": "Pull higher and farther out to show the journey and surrounding terrain."
 }
