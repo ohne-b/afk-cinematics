@@ -7,6 +7,8 @@ import java.util.Random;
 
 /** Each step performs one terrain probe or validates one shot. */
 final class ShotPlanner {
+    private static final int SCENERY_CANDIDATES = 4;
+    private static final int SCENERY_ATTEMPTS = 21;
     record Plan(Shot shot, Scene scene, boolean cut, boolean entering) { }
     private final Vec anchor;
     private final Pose previous;
@@ -45,6 +47,14 @@ final class ShotPlanner {
 
     boolean exhausted() { return search == null && triedPlayer && triedScenery; }
 
+    static double preparationSeconds(CinematicConfig config) {
+        int player = config.subject == CinematicConfig.Subject.SCENERY ? 0 : ShotSearch.playerAttempts(config);
+        int scenery = config.subject == CinematicConfig.Subject.PLAYER ? 0
+            : Scene.PROBES + SCENERY_CANDIDATES * (SCENERY_ATTEMPTS + 1);
+        // Two planning steps per tick, including a fallback after a rejected subject.
+        return Math.max(4, (player + scenery + 2) / 40.0 + 0.5);
+    }
+
     Plan next(Geometry geometry) {
         if (search == null) {
             if (!triedPlayer && (!sceneryFirst || triedScenery)) {
@@ -61,7 +71,7 @@ final class ShotPlanner {
                     if (probe == Scene.PROBES) candidates.sort(Comparator.comparingDouble(this::score).reversed());
                     return null;
                 }
-                if (candidate >= Math.min(4, candidates.size())) { triedScenery = true; return null; }
+                if (candidate >= Math.min(SCENERY_CANDIDATES, candidates.size())) { triedScenery = true; return null; }
                 selected = candidates.get(candidate++);
                 cut = true;
                 entering = true;
@@ -72,7 +82,7 @@ final class ShotPlanner {
         Shot shot = search.next(geometry);
         if (shot != null && Scene.inRange(shot.start(), anchor) && Scene.inRange(shot.control(), anchor)
             && Scene.inRange(shot.end(), anchor)) return new Plan(shot, selected, cut, entering);
-        if (search.exhausted() || selected.scenery() && ++attempts >= 21) search = null;
+        if (search.exhausted() || selected.scenery() && ++attempts >= SCENERY_ATTEMPTS) search = null;
         return null;
     }
 
