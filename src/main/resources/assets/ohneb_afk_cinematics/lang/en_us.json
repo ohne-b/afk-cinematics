@@ -46,7 +46,7 @@
   "ohneb_afk_cinematics.page.display": "Display",
   "ohneb_afk_cinematics.motion.help": "Gentle motion, smaller movements, or a still view after entry.",
   "ohneb_afk_cinematics.subject": "Subject",
-  "ohneb_afk_cinematics.subject.help": "Mixed alternates player and scenery shots, falling back to surroundings in tight spaces. Scenery uses nearby loaded terrain only.",
+  "ohneb_afk_cinematics.subject.help": "Mixed favors scenery with occasional player shots, without a fixed order. Scenery uses nearby loaded terrain only and works in tight spaces too.",
   "ohneb_afk_cinematics.mixed": "Mixed",
   "ohneb_afk_cinematics.player": "Player",
   "ohneb_afk_cinematics.scenery": "Scenery",

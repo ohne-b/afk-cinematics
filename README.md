@@ -27,7 +27,7 @@ Open settings with `/afkcinematics settings`, Mod Menu on Fabric, or the Mods sc
 on NeoForge. `/afkcinematics start` previews a cinematic; `/afkcinematics stop` ends it.
 Optional Toggle, Next shot and Settings keys are under Controls.
 
-Mixed mode alternates player and scenery shots, with nearby scenery as a fallback in
+Mixed mode favors scenery with occasional player shots, with nearby scenery as a fallback in
 tight spaces. Choose the subject, shot types and pacing in settings. Separate
 viewpoints use gentle fades; the camera does not travel through walls.
 

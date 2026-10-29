@@ -49,6 +49,16 @@ public abstract class SceneryFrameMixin {
         }
         if (afkCinematics$previous != null && pose.position().distance(afkCinematics$previous.position()) > 2)
             TestSupport.require(afkCinematics$opacity == 1 && session.fade() == 1, "Scenery changed position during an uncovered frame");
+        if (TestSupport.checkTransitions && afkCinematics$previous != null) {
+            double movement = pose.position().distance(afkCinematics$previous.position());
+            double turn = Math.abs(Math.IEEEremainder(pose.yaw() - afkCinematics$previous.yaw(), 360));
+            if (afkCinematics$opacity == 1 && session.fade() == 1) {
+                if (movement >= 0.3 || turn >= 5) TestSupport.coveredCuts++;
+            } else {
+                TestSupport.require(movement < 0.3, "Shot transition jumped position without two opaque frames");
+                TestSupport.require(turn < 5, "Shot transition jumped rotation without two opaque frames");
+            }
+        }
         TestSupport.sceneryFrames.add(now + "," + pose.position().x() + "," + pose.position().y() + ","
             + pose.position().z() + "," + session.fade() + "," + session.scenery() + "," + afkCinematics$shotNumber
             + "," + (shot == null ? "" : shot.type()) + "," + pose.yaw() + "," + pose.pitch());

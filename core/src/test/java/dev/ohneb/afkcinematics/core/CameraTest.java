@@ -26,8 +26,14 @@ class CameraTest {
         assertEquals(slow.yaw(), fast.yaw(), 0.00001);
     }
 
-    private Pose runAt(int rate) {
+    private static CinematicConfig playerConfig() {
         var config = new CinematicConfig();
+        config.subject = CinematicConfig.Subject.PLAYER;
+        return config;
+    }
+
+    private Pose runAt(int rate) {
+        var config = playerConfig();
         config.shots = EnumSet.of(Shot.Type.ARC);
         var session = new CinematicSession(SUBJECT, ENTRY, 0, config, OPEN, new Random(42));
         session.tick(0);
@@ -51,7 +57,7 @@ class CameraTest {
             public boolean clear(Vec from, Vec to, double margin) { return !blocked[0]; }
             public boolean visible(Vec from, Vec target, double margin) { return true; }
         };
-        var session = new CinematicSession(SUBJECT, ENTRY, 0, new CinematicConfig(), changing, new Random(1));
+        var session = new CinematicSession(SUBJECT, ENTRY, 0, playerConfig(), changing, new Random(1));
         session.tick(0);
         assertNotNull(session.frame(100_000_000));
         blocked[0] = true;
@@ -64,7 +70,7 @@ class CameraTest {
             public boolean clear(Vec from, Vec to, double margin) { return Math.min(from.y(), to.y()) - margin > 0.25; }
             public boolean visible(Vec from, Vec target, double margin) { return Math.min(from.y(), target.y()) - margin > 0; }
         };
-        var config = new CinematicConfig();
+        var config = playerConfig();
         config.distance = CinematicConfig.Distance.WIDE;
         config.shots = EnumSet.of(Shot.Type.STILL);
         var session = new CinematicSession(SUBJECT, new Pose(ENTRY.position(), 0, 90), 0, config, ground, new Random(2));
@@ -80,18 +86,18 @@ class CameraTest {
             public boolean clear(Vec from, Vec to, double margin) { return false; }
             public boolean visible(Vec from, Vec target, double margin) { return false; }
         };
-        var session = new CinematicSession(SUBJECT, ENTRY, 0, new CinematicConfig(), closed, new Random(1));
-        for (int i = 0; i < 70; i++) session.tick(i * 50_000_000L);
+        var session = new CinematicSession(SUBJECT, ENTRY, 0, playerConfig(), closed, new Random(1));
+        for (int i = 0; i < 100; i++) session.tick(i * 50_000_000L);
         assertTrue(session.ended());
         assertFalse(session.showing());
-        var open = new CinematicSession(SUBJECT, ENTRY, 0, new CinematicConfig(), OPEN, new Random(1));
+        var open = new CinematicSession(SUBJECT, ENTRY, 0, playerConfig(), OPEN, new Random(1));
         open.tick(0);
         assertNull(open.frame(2_000_000_000L));
         assertTrue(open.ended());
     }
 
     @Test void stillMotionDoesNotMoveAfterEntry() {
-        var config = new CinematicConfig();
+        var config = playerConfig();
         config.motion = CinematicConfig.Motion.STILL;
         var search = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), false, 0), ENTRY, 0, config, null, true, false, new Random(4));
         Shot shot = search.next(OPEN);
@@ -100,7 +106,7 @@ class CameraTest {
     }
 
     @Test void successiveShotsStayWithinTheLocalCameraRange() {
-        var config = new CinematicConfig();
+        var config = playerConfig();
         config.distance = CinematicConfig.Distance.WIDE;
         for (int seed = 0; seed < 3; seed++) {
             var session = new CinematicSession(SUBJECT, ENTRY, 0, config, OPEN, new Random(seed));
@@ -108,6 +114,7 @@ class CameraTest {
                 long now = tick * 50_000_000L;
                 session.tick(now);
                 Pose pose = session.frame(now);
+                session.coveredFrame();
                 assertNotNull(pose);
                 Vec offset = pose.position().subtract(SUBJECT);
                 assertTrue(Math.hypot(offset.x(), offset.z()) <= 6.000001, "Successive shots drifted beyond six blocks");

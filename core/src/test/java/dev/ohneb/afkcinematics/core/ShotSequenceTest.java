@@ -27,6 +27,38 @@ class ShotSequenceTest {
         assertEquals(0, session.fade(), "The prepared take started before the current one finished");
     }
 
+    @Test void rejectedPlayerViewsLeaveTimeToPrepareTheSceneryFallback() {
+        var accepted = new ArrayList<Shot>();
+        Geometry geometry = new Geometry() {
+            public boolean clear(Vec from, Vec to, double margin) { return true; }
+            public boolean visible(Vec from, Vec to, double margin) { return true; }
+            public Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return probe == 0 ? FIRST : null; }
+            public boolean valid(Shot shot, Vec entry) {
+                if (shot.focusStart().y() < 5) return false;
+                if (!accepted.contains(shot)) accepted.add(shot);
+                return true;
+            }
+        };
+        var config = new CinematicConfig();
+        config.pace = CinematicConfig.Pace.SHORT;
+        var session = new CinematicSession(ANCHOR, ENTRY, 0, config, geometry, new Random(5));
+        int stillFrames = 0;
+        Vec previous = ENTRY.position();
+        for (int tick = 0; tick < 2200; tick++) {
+            long now = tick * 50_000_000L;
+            frame(session, now);
+            if (!session.settled()) { stillFrames = 0; continue; }
+            Shot active = accepted.stream().filter(shot -> shot.sample(shot.duration()).position().distance(session.current().position()) < 1e-10)
+                .findFirst().orElse(null);
+            if (active != null && active.type() != Shot.Type.STILL && active.type() != Shot.Type.PAN
+                && previous.distance(session.current().position()) < 1e-10) stillFrames++;
+            else stillFrames = 0;
+            assertTrue(stillFrames < 2, "The current take held its endpoint while waiting for the scenery fallback");
+            previous = session.current().position();
+        }
+        assertTrue(accepted.size() >= 5, "The fixture never reached a forced player-first search");
+    }
+
     @Test void anObstructedPreparedPathIsRecheckedAtHandoff() {
         var accepted = new ArrayList<Shot>();
         boolean[] blocked = {false};
@@ -87,10 +119,11 @@ class ShotSequenceTest {
         frame(session, now + 50_000_000L);
         assertTrue(session.current().position().distance(before.position()) < 0.01,
             "Next shot jumped to the preplanned endpoint");
+        for (int tick = 2; tick < 100 && accepted.size() < 3; tick++) frame(session, now + tick * 50_000_000L);
         assertTrue(accepted.size() >= 3, "Next shot reused a plan from a different starting pose");
     }
 
-    @Test void relatedSceneryTakesContinueWithoutAnotherCoveredCut() {
+    @Test void aChangeOfTakeUsesACutInsteadOfStoppingAndReversingInPlace() {
         var session = session(geometry(new ArrayList<>(), new boolean[1]), Shot.Type.ARC, Shot.Type.PAN);
         int covers = 0;
         double previous = 0;
@@ -99,7 +132,7 @@ class ShotSequenceTest {
             if (session.fade() == 1 && previous < 1) covers++;
             previous = session.fade();
         }
-        assertEquals(1, covers, "Every related take faded to black again");
+        assertTrue(covers >= 2, "Independent takes were joined into a stop-and-turn movement");
     }
 
     @Test void recentViewsPreventAnImmediateABACycleWithoutExhaustingTheScene() {

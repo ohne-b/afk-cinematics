@@ -24,6 +24,8 @@ public final class TestSupport {
     public static java.util.List<String> cameraTimings;
     public static String cameraStop;
     public static Shot revealedShot;
+    public static boolean checkTransitions;
+    public static int coveredCuts;
 
     private TestSupport() { }
 
