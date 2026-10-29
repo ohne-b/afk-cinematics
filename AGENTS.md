@@ -43,3 +43,7 @@ Use isolated worlds for tests. Never access player saves or public servers in au
 tests. A build does not establish visual quality or compatibility. Use a separate
 read-only reviewer for independent review and provide the contributor rules and
 actual validation evidence. Keep this file short; do not add planning documents.
+
+Keep the README short and easy to scan. Do not add a paragraph for every feature or
+fix; change it only when essential setup, usage or project information changes.
+Put contributor rules here or in CONTRIBUTING.md, and release details in CHANGELOG.md.
