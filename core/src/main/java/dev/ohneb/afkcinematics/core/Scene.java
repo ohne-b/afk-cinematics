@@ -2,7 +2,7 @@ package dev.ohneb.afkcinematics.core;
 
 /** A subject and a starting viewpoint, both selected from loaded terrain. */
 public record Scene(Vec focus, Vec vantage, Kind kind, double interest) {
-    public enum Kind { PLAYER, LANDSCAPE, GROUND, WATER }
+    public enum Kind { PLAYER, LANDSCAPE, GROUND, WATER, STRUCTURE }
     public static final int PROBES = 40;
     public Scene {
         if (focus == null || vantage == null || kind == null || !Double.isFinite(interest))

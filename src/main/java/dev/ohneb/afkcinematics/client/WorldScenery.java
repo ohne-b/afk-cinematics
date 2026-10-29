@@ -67,6 +67,11 @@ final class WorldScenery {
                 BlockPos block = new BlockPos(x, y, z);
                 BlockState state = level.getBlockState(block);
                 if (state.isAir() || state.is(Blocks.BEDROCK)) continue;
+                if (building(level, block)) {
+                    Scene structure = structure(level, geometry, anchor, block, viewAngle);
+                    if (structure != null && (best == null || structure.interest() > best.interest())) best = structure;
+                    continue;
+                }
                 if (low && state.getFluidState().is(FluidTags.WATER)) {
                     Scene water = underwater(level, geometry, anchor, block, viewAngle);
                     if (water != null && (best == null || water.interest() > best.interest())) best = water;
@@ -120,6 +125,42 @@ final class WorldScenery {
         return null;
     }
 
+    private static boolean building(ClientLevel level, BlockPos origin) {
+        if (!architectural(level.getBlockState(origin))) return false;
+        int blocks = 0;
+        for (BlockPos block : BlockPos.betweenClosed(origin.offset(-2, -2, -2), origin.offset(2, 0, 2))) {
+            if (!level.getChunkSource().hasChunk(block.getX() >> 4, block.getZ() >> 4)) return false;
+            if (architectural(level.getBlockState(block)) && ++blocks >= 6) return true;
+        }
+        return false;
+    }
+
+    private static boolean architectural(BlockState state) {
+        return state.is(BlockTags.PLANKS) || state.is(BlockTags.STAIRS) || state.is(BlockTags.SLABS)
+            || state.is(BlockTags.STONE_BRICKS) || state.is(BlockTags.WOOL) || state.is(Blocks.BRICKS)
+            || state.is(Blocks.GLASS) || state.is(Blocks.POLISHED_ANDESITE) || state.is(Blocks.POLISHED_DIORITE)
+            || state.is(Blocks.POLISHED_GRANITE);
+    }
+
+    private static Scene structure(ClientLevel level, WorldGeometry geometry, Vec anchor, BlockPos roof, double angle) {
+        Vec center = new Vec(roof.getX() + 0.5, roof.getY() - 1.2, roof.getZ() + 0.5);
+        Vec vantage = center.add(new Vec(Math.sin(angle) * 12, 0, Math.cos(angle) * 12));
+        BlockPos column = BlockPos.containing(vantage.x(), vantage.y(), vantage.z());
+        if (!level.getChunkSource().hasChunk(column.getX() >> 4, column.getZ() >> 4)) return null;
+        double floor = level.getHeight(Heightmap.Types.WORLD_SURFACE, column.getX(), column.getZ());
+        vantage = new Vec(vantage.x(), Math.max(vantage.y(), floor + 1.5), vantage.z());
+        if (!inside(level, vantage) || !loaded(level, vantage, center) || !geometry.clear(vantage, vantage)) return null;
+        var hit = level.clip(new ClipContext(WorldGeometry.vector(vantage), WorldGeometry.vector(center),
+            ClipContext.Block.VISUAL, ClipContext.Fluid.ANY, CollisionContext.empty()));
+        if (hit.getType() != HitResult.Type.BLOCK || !architectural(level.getBlockState(hit.getBlockPos()))) return null;
+        Direction face = hit.getDirection();
+        Vec focus = WorldGeometry.point(hit.getLocation()).add(new Vec(face.getStepX(), face.getStepY(), face.getStepZ()).scale(0.4));
+        Scene scene = new Scene(focus, vantage, Scene.Kind.STRUCTURE, 0);
+        if (!scene.near(anchor) || !geometry.visible(vantage, focus)) return null;
+        double quality = quality(level, vantage, focus, true, false);
+        return quality > 0 ? new Scene(focus, vantage, Scene.Kind.STRUCTURE, quality + 2) : null;
+    }
+
     private static Scene underwater(ClientLevel level, WorldGeometry geometry, Vec anchor, BlockPos surface, double angle) {
         double waterTop = surface.getY() + level.getFluidState(surface).getHeight(level, surface);
         for (int depth = 1; depth <= 12; depth++) {
@@ -155,15 +196,7 @@ final class WorldScenery {
 
     static double depth(ClientLevel level, Vec vantage, Vec direction, boolean water) {
         Vec end = vantage.add(direction.scale(ViewQuality.RANGE));
-        int minX = (int)Math.floor(Math.min(vantage.x(), end.x())) >> 4;
-        int maxX = (int)Math.floor(Math.max(vantage.x(), end.x())) >> 4;
-        int minZ = (int)Math.floor(Math.min(vantage.z(), end.z())) >> 4;
-        int maxZ = (int)Math.floor(Math.max(vantage.z(), end.z())) >> 4;
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                if (!level.getChunkSource().hasChunk(x, z)) return -1;
-            }
-        }
+        if (!loaded(level, vantage, end)) return -1;
         // These bounded rays rank the view; WorldGeometry independently proves safety.
         var hit = level.clip(new ClipContext(WorldGeometry.vector(vantage), WorldGeometry.vector(end),
             ClipContext.Block.VISUAL, ClipContext.Fluid.ANY, CollisionContext.empty()) {
@@ -173,6 +206,19 @@ final class WorldScenery {
         });
         return hit.getType() == HitResult.Type.MISS ? ViewQuality.RANGE
             : hit.getLocation().distanceTo(WorldGeometry.vector(vantage));
+    }
+
+    private static boolean loaded(ClientLevel level, Vec vantage, Vec end) {
+        int minX = (int)Math.floor(Math.min(vantage.x(), end.x())) >> 4;
+        int maxX = (int)Math.floor(Math.max(vantage.x(), end.x())) >> 4;
+        int minZ = (int)Math.floor(Math.min(vantage.z(), end.z())) >> 4;
+        int maxZ = (int)Math.floor(Math.max(vantage.z(), end.z())) >> 4;
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                if (!level.getChunkSource().hasChunk(x, z)) return false;
+            }
+        }
+        return true;
     }
 
     private static boolean inside(ClientLevel level, Vec point) {

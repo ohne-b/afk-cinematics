@@ -10,13 +10,14 @@ final class ShotPlanner {
     private static final int SCENERY_CANDIDATES = 4;
     private static final int SCENERY_ATTEMPTS = 21;
     record Plan(Shot shot, Scene scene, boolean cut, boolean entering) { }
+    record View(Pose pose, Scene.Kind kind) { }
     private final Vec anchor;
     private final Pose previous;
     private final Pose original;
     private final double bearing;
     private final CinematicConfig config;
     private final Scene lastScene;
-    private final List<Pose> recentViews;
+    private final List<View> recentViews;
     private final Shot.Type lastType;
     private final Random random;
     private final boolean sceneryFirst;
@@ -28,7 +29,7 @@ final class ShotPlanner {
     private boolean cut, entering;
 
     ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
-                Scene lastScene, List<Pose> recentViews, int subjectTakes, Shot.Type lastType, Random random) {
+                Scene lastScene, List<View> recentViews, int subjectTakes, Shot.Type lastType, Random random) {
         this.anchor = anchor;
         this.previous = previous;
         this.original = original;
@@ -90,11 +91,18 @@ final class ShotPlanner {
         Pose view = Pose.lookingAt(scene.vantage(), scene.focus());
         double penalty = 0;
         for (int i = 0; i < recentViews.size(); i++) {
-            Pose recent = recentViews.get(i);
+            Pose recent = recentViews.get(i).pose();
             double turn = Math.hypot(Math.IEEEremainder(view.yaw() - recent.yaw(), 360), view.pitch() - recent.pitch());
             double likeness = Math.max(0, 1 - view.position().distance(recent.position()) / 8) * Math.max(0, 1 - turn / 60);
             penalty = Math.max(penalty, 4.5 * likeness * (i + 1) / recentViews.size());
         }
-        return scene.interest() - penalty;
+        double score = scene.interest() - penalty;
+        if (scene.kind() == Scene.Kind.STRUCTURE) {
+            long buildings = recentViews.stream().filter(viewed -> viewed.kind() == Scene.Kind.STRUCTURE).count();
+            if (buildings >= 2) score -= 8;
+            else if (lastScene != null && lastScene.kind() == Scene.Kind.STRUCTURE
+                && lastScene.focus().distance(scene.focus()) < 12) score += 1;
+        }
+        return score;
     }
 }

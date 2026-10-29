@@ -16,7 +16,7 @@ public final class CinematicSession {
     private ShotPlanner.Plan pending;
     private Shot shot;
     private Scene scene;
-    private final List<Pose> recentViews = new ArrayList<>();
+    private final List<ShotPlanner.View> recentViews = new ArrayList<>();
     private Pose current;
     private Vec currentFocus;
     private long started, lastFrame, handoff;
@@ -123,7 +123,7 @@ public final class CinematicSession {
             shot = pending.shot();
             setScene(pending.scene());
             if (scene.scenery()) {
-                recentViews.add(next);
+                recentViews.add(new ShotPlanner.View(next, scene.kind()));
                 if (recentViews.size() > 6) recentViews.removeFirst();
             }
             pending = null;
