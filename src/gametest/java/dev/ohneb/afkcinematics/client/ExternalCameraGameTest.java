@@ -4,7 +4,6 @@ import dev.ohneb.afkcinematics.core.Pose;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ArmorStand;
 
 import static dev.ohneb.afkcinematics.client.TestSupport.*;
@@ -21,8 +20,7 @@ public final class ExternalCameraGameTest implements FabricClientGameTest {
             context.waitFor(client -> client.player.onGround());
             context.waitTicks(20);
             var external = context.computeOnClient(client -> {
-                var cameraEntity = new ArmorStand(EntityType.ARMOR_STAND, client.level);
-                cameraEntity.setPos(client.player.position());
+                var cameraEntity = new ArmorStand(client.level, client.player.getX(), client.player.getY(), client.player.getZ());
                 cameraEntity.setOldPosAndRot();
                 client.setCameraEntity(cameraEntity);
                 return cameraEntity;
