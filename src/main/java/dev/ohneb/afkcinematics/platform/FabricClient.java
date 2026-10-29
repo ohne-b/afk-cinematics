@@ -14,6 +14,7 @@ public final class FabricClient implements ClientModInitializer {
         AfkCinematics.initialize(loader.getConfigDir(), loader::isModLoaded);
         KeyBindingHelper.registerKeyBinding(AfkCinematics.TOGGLE);
         KeyBindingHelper.registerKeyBinding(AfkCinematics.SETTINGS);
+        KeyBindingHelper.registerKeyBinding(AfkCinematics.NEXT);
         ClientTickEvents.END_CLIENT_TICK.register(client -> AfkCinematics.tick());
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registry) -> dispatcher.register(ClientCommands.root()));
     }

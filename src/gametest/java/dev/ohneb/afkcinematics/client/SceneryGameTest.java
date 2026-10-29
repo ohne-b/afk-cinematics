@@ -6,7 +6,6 @@ import dev.ohneb.afkcinematics.core.Scene;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Difficulty;
@@ -32,7 +31,7 @@ public final class SceneryGameTest implements FabricClientGameTest {
         configure(context);
         var artifacts = Path.of(System.getProperty("afkcinematics.test.artifacts"));
         var origin = new AtomicReference<BlockPos>();
-        boolean hidden = context.computeOnClient(SceneryGameTest::hidden);
+        boolean hidden = context.computeOnClient(TestSupport::hidden);
         try (var world = context.worldBuilder().create()) {
             world.getServer().runOnServer(server -> {
                 server.setDifficulty(Difficulty.PEACEFUL, true);
@@ -184,19 +183,4 @@ public final class SceneryGameTest implements FabricClientGameTest {
         } catch (Exception exception) { throw new AssertionError(exception); }
     }
 
-    private static boolean hidden(Minecraft client) {
-        //? if >=26.2 {
-        /*return client.gui.hud.isHidden();
-        *///?} else {
-        return client.options.hideGui;
-        //?}
-    }
-
-    private static void hide(Minecraft client, boolean hidden) {
-        //? if >=26.2 {
-        /*if (client.gui.hud.isHidden() != hidden) client.gui.hud.toggle();
-        *///?} else {
-        client.options.hideGui = hidden;
-        //?}
-    }
 }

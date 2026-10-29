@@ -25,7 +25,7 @@ release it before interacting. Screenshots work during cinematics.
 
 Open settings with `/afkcinematics settings`, Mod Menu on Fabric, or the Mods screen
 on NeoForge. `/afkcinematics start` previews a cinematic; `/afkcinematics stop` ends it.
-Optional toggle and settings keys are under Controls.
+Optional Toggle, Next shot and Settings keys are under Controls.
 
 Mixed mode alternates player and scenery shots, with nearby scenery as a fallback in
 tight spaces. Choose the subject, shot types and pacing in settings. Separate
@@ -38,7 +38,8 @@ character, change server activity or prevent AFK kicks. Minecraft's pause behavi
 and background frame limits still apply.
 
 Cinematics require a stationary player with no menu open. If no clear view is
-available, the normal camera stays active. Known camera replacements disable cinematics to avoid competing for the view;
+available, the normal camera stays active. Known camera replacements disable
+cinematics to avoid competing for the view;
 the settings screen identifies the conflicting mod. Shader and performance-mod
 compatibility needs testing with the exact versions used.
 

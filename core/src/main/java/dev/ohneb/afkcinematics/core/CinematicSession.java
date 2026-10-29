@@ -16,10 +16,12 @@ public final class CinematicSession {
     private Scene scene;
     private Scene lastScenery;
     private Pose current;
+    private Vec currentFocus;
     private long started, lastFrame;
     private Phase phase = Phase.ENTRY;
     private boolean ended;
     private boolean covered;
+    private boolean advanceRequested;
     private double entrySeconds = 1.5;
     private double fade;
 
@@ -36,8 +38,11 @@ public final class CinematicSession {
 
     public void tick(long now) {
         if (ended) return;
-        if (shot != null && phase == Phase.SHOT && planner == null && (now - started) / 1e9 >= shot.duration())
+        if (shot != null && phase == Phase.SHOT && planner == null
+            && (advanceRequested || (now - started) / 1e9 >= shot.duration())) {
             planner = planner();
+            advanceRequested = false;
+        }
         if (planner == null) return;
         for (int i = 0; i < 2 && !planner.exhausted(); i++) {
             var plan = planner.next(geometry);
@@ -52,7 +57,9 @@ public final class CinematicSession {
                 phase = plan.entering() ? Phase.ENTRY : Phase.SHOT;
                 if (plan.entering()) {
                     double distance = entry.position().distance(shot.start());
-                    double turn = Math.abs(Math.IEEEremainder(shot.sample(0).yaw() - entry.yaw(), 360));
+                    Pose target = shot.sample(0);
+                    double turn = Math.max(Math.abs(Math.IEEEremainder(target.yaw() - entry.yaw(), 360)),
+                        Math.abs(target.pitch() - entry.pitch()));
                     entrySeconds = Math.clamp(Math.max(distance / 1.5, turn / 45), 1.5, 4);
                 }
             }
@@ -68,6 +75,8 @@ public final class CinematicSession {
         if (ended || shot == null && pending == null) return null;
         if (now < lastFrame || now - lastFrame > 1_000_000_000L) return end();
         lastFrame = now;
+        if (planner != null && phase == Phase.SHOT)
+            return valid(current, currentFocus, current.position()) ? current : end();
         double elapsed = (now - started) / 1e9;
         if (phase == Phase.FADE_OUT) {
             if (!geometry.clear(current.position(), current.position())) return end();
@@ -85,6 +94,7 @@ public final class CinematicSession {
             if (scene.scenery()) lastScenery = scene;
             pending = null;
             current = next;
+            currentFocus = shot.focus(0);
             phase = Phase.FADE_IN;
             started = now;
             fade = 1;
@@ -108,6 +118,7 @@ public final class CinematicSession {
         Vec focus = shot.focus(sampledSeconds);
         if (!valid(next, focus, current.position())) return end();
         current = next;
+        currentFocus = focus;
         return current;
     }
 
@@ -123,6 +134,8 @@ public final class CinematicSession {
     public double fade() { return fade; }
     public void coveredFrame() { if (fade == 1) covered = true; }
     public boolean scenery() { return scene != null && scene.scenery(); }
+    public boolean settled() { return showing() && phase == Phase.SHOT; }
+    public void nextShot() { if (!ended && planner == null) advanceRequested = true; }
 
     private ShotPlanner planner() {
         return new ShotPlanner(subject, current, entry, bearing, config, scene, lastScenery,

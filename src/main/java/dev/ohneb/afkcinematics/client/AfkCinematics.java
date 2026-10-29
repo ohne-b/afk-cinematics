@@ -30,6 +30,7 @@ public final class AfkCinematics {
     *///?}
     public static final KeyMapping TOGGLE = new KeyMapping("key.ohneb_afk_cinematics.toggle", InputConstants.UNKNOWN.getValue(), CATEGORY);
     public static final KeyMapping SETTINGS = new KeyMapping("key.ohneb_afk_cinematics.settings", InputConstants.UNKNOWN.getValue(), CATEGORY);
+    public static final KeyMapping NEXT = new KeyMapping("key.ohneb_afk_cinematics.next", InputConstants.UNKNOWN.getValue(), CATEGORY);
     private static final IdleTimer IDLE = new IdleTimer();
     private static final InputState INPUT = new InputState();
     private static final Random RANDOM = new Random();
@@ -46,6 +47,7 @@ public final class AfkCinematics {
     private static String conflict = "";
     private static long hintUntil;
     private static boolean pendingSettings;
+    private static boolean manualFeedback;
 
     private AfkCinematics() { }
 
@@ -65,7 +67,14 @@ public final class AfkCinematics {
     public static boolean ownsCamera() { return session != null; }
     public static boolean showing() { return session != null && session.showing(); }
     public static boolean hideHud() { return showing() && config().hideHud; }
-    public static boolean showHint() { return showing() && System.nanoTime() < hintUntil; }
+    public static boolean showHint() {
+        if (!showing() || fade() > 0 || System.nanoTime() >= hintUntil) return false;
+        //? if >=26.2 {
+        /*return !Minecraft.getInstance().gui.hud.isHidden();
+        *///?} else {
+        return !Minecraft.getInstance().options.hideGui;
+        //?}
+    }
     public static double fade() { return session == null ? 0 : session.fade(); }
     public static boolean scenery() { return session != null && session.scenery(); }
     public static void coveredFrame() { if (session != null) session.coveredFrame(); }
@@ -98,15 +107,18 @@ public final class AfkCinematics {
             if (!eligible || player.position().distanceToSqr(anchor) > 0.0001) stop();
             else {
                 session.tick(now);
-                if (session.ended()) stop();
+                if (session.ended()) {
+                    if (manualFeedback) message("no_view");
+                    stop();
+                } else if (session.showing()) manualFeedback = false;
             }
             IDLE.reset(now);
         } else if (manualWait > 0) {
             manualWait--;
             IDLE.reset(now);
-            if (eligible) { manualWait = 0; start(); }
+            if (eligible && vanillaPose != null) { manualWait = 0; start(true); }
             else if (manualWait == 0) message("unavailable");
-        } else if (IDLE.ready(now, config().idleSeconds, eligible && config().automatic)) start();
+        } else if (IDLE.ready(now, config().idleSeconds, eligible && config().automatic)) start(false);
         CinematicMusic.tick();
     }
 
@@ -129,13 +141,14 @@ public final class AfkCinematics {
             && !player.isOnFire() && player.hurtTime == 0 && !player.isSpectator();
     }
 
-    private static void start() {
+    private static void start(boolean manual) {
         if (!eligible() || vanillaPose == null) return;
         anchor = player.position();
         Vec subject = WorldGeometry.point(anchor.add(0, player.getBbHeight() * 0.65, 0));
         session = new CinematicSession(subject, vanillaPose, player.getYRot(), config(), new WorldGeometry(world), RANDOM);
         session.tick(System.nanoTime());
-        hintUntil = System.nanoTime() + 4_000_000_000L;
+        hintUntil = 0;
+        manualFeedback = manual && !session.showing();
     }
 
     public static void requestStart() {
@@ -147,8 +160,12 @@ public final class AfkCinematics {
         session = null;
         anchor = null;
         manualWait = 0;
+        manualFeedback = false;
+        hintUntil = 0;
         IDLE.reset(System.nanoTime());
     }
+
+    public static void nextShot() { if (session != null) session.nextShot(); }
 
     public static Pose cameraFrame(Camera camera) {
         if (session == null) {
@@ -160,8 +177,10 @@ public final class AfkCinematics {
             return null;
         }
         if (!eligible() || player.position().distanceToSqr(anchor) > 0.0001) { stop(); return null; }
-        Pose pose = session.frame(System.nanoTime());
+        long now = System.nanoTime();
+        Pose pose = session.frame(now);
         if (session.ended()) stop();
+        else if (session.settled() && hintUntil == 0) hintUntil = now + 4_000_000_000L;
         return pose;
     }
 
@@ -191,12 +210,14 @@ public final class AfkCinematics {
             return false;
         }
         if (screenshot && !INPUT.suppressed(token)) return false;
-        if (screen() == null && (matches(TOGGLE, key) || matches(SETTINGS, key))) {
+        if (screen() == null && (matches(TOGGLE, key) || matches(SETTINGS, key) || matches(NEXT, key))) {
             INPUT.suppress(token);
             if (action == InputConstants.PRESS) {
                 if (matches(SETTINGS, key)) openSettings();
-                else if (ownsCamera() || manualWait > 0) stop();
-                else requestStart();
+                else if (matches(TOGGLE, key)) {
+                    if (ownsCamera() || manualWait > 0) stop();
+                    else requestStart();
+                } else nextShot();
             }
             return true;
         }

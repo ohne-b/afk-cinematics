@@ -83,5 +83,21 @@ public final class TestSupport {
         //?}
     }
 
+    public static boolean hidden(Minecraft client) {
+        //? if >=26.2 {
+        /*return client.gui.hud.isHidden();
+        *///?} else {
+        return client.options.hideGui;
+        //?}
+    }
+
+    public static void hide(Minecraft client, boolean hidden) {
+        //? if >=26.2 {
+        /*if (client.gui.hud.isHidden() != hidden) client.gui.hud.toggle();
+        *///?} else {
+        client.options.hideGui = hidden;
+        //?}
+    }
+
     public static void require(boolean valid, String message) { if (!valid) throw new AssertionError(message); }
 }
