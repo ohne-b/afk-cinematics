@@ -47,4 +47,7 @@ public final class MovingGeometry implements Geometry {
 
     @Override public boolean clear(Vec from, Vec to, double margin) { return world.clear(from.add(origin), to.add(origin), margin); }
     @Override public boolean visible(Vec from, Vec to, double margin) { return world.visible(from.add(origin), to.add(origin), margin); }
+    @Override public double viewQuality(Pose view) {
+        return world.viewQuality(new Pose(view.position().add(origin), view.yaw(), view.pitch()));
+    }
 }

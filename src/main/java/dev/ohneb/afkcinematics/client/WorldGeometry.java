@@ -47,6 +47,15 @@ public final class WorldGeometry implements Geometry {
         return WorldScenery.probe(level, this, anchor, original, bearing, probe);
     }
 
+    @Override public double viewQuality(Pose view) {
+        Vec point = view.position();
+        BlockPos block = BlockPos.containing(point.x(), point.y(), point.z());
+        if (!level.getChunkSource().hasChunk(block.getX() >> 4, block.getZ() >> 4)) return 0;
+        var fluid = level.getFluidState(block);
+        boolean water = fluid.is(FluidTags.WATER) && point.y() < block.getY() + fluid.getHeight(level, block);
+        return WorldScenery.quality(level, point, view.lookAhead(8), level.canSeeSky(block), water);
+    }
+
     @Override
     public boolean clear(Vec from, Vec to, double margin) {
         int steps = Math.max(1, (int) Math.ceil(from.distance(to) / 0.25));

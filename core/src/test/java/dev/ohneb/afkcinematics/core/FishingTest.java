@@ -16,14 +16,14 @@ class FishingTest {
         var config = new CinematicConfig();
         for (Shot.Type type : new Shot.Type[]{Shot.Type.ANGLER, Shot.Type.CAST_LINE, Shot.Type.FLOAT}) {
             config.shots = EnumSet.of(type);
-            var plan = new FishingSearch(PLAYER, BOBBER, config, new ShotHistory(), new Random(1)).next(OPEN);
+            var plan = find(new FishingSearch(PLAYER, BOBBER, config, new ShotHistory(), new Random(1)), OPEN);
             assertNotNull(plan, type.name());
             assertTrue(plan.cut());
             assertEquals(type, plan.shot().type());
             assertTrue(plan.shot().start().distance(plan.shot().end()) > .5);
         }
         config.shots = EnumSet.of(Shot.Type.STILL);
-        var still = new FishingSearch(PLAYER, BOBBER, config, new ShotHistory(), new Random(1)).next(OPEN).shot();
+        var still = find(new FishingSearch(PLAYER, BOBBER, config, new ShotHistory(), new Random(1)), OPEN).shot();
         assertEquals(still.start(), still.end());
     }
 
@@ -77,4 +77,10 @@ class FishingTest {
         assertTrue(session.take() > previous);
         assertFalse(session.ended());
     }
+    private static ShotPlanner.Plan find(FishingSearch search, Geometry geometry) {
+        ShotPlanner.Plan plan = null;
+        while (!search.exhausted() && plan == null) plan = search.next(geometry);
+        return plan;
+    }
+
 }
