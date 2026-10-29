@@ -9,6 +9,7 @@ import java.util.Random;
 public final class ShotSearch {
     private static final double[] ANGLES = {0, 30, -30, 60, -60, 90, -90, 135, -135, 180};
     private final Vec subject;
+    private final Scene scene;
     private final Pose previous;
     private final double bearing;
     private final double distance;
@@ -16,18 +17,21 @@ public final class ShotSearch {
     private final CinematicConfig.Pace pace;
     private final List<Shot.Type> types;
     private final boolean entering;
+    private final boolean cut;
     private final Random random;
     private int attempt;
 
-    public ShotSearch(Vec subject, Pose previous, double bearing, CinematicConfig config,
-                      Shot.Type last, boolean entering, Random random) {
-        this.subject = subject;
+    public ShotSearch(Scene scene, Pose previous, double bearing, CinematicConfig config,
+                      Shot.Type last, boolean entering, boolean cut, Random random) {
+        this.scene = scene;
+        this.subject = scene.focus();
         this.previous = previous;
         this.bearing = bearing;
         this.distance = config.distance.blocks;
         this.motion = config.motion;
         this.pace = config.pace;
         this.entering = entering;
+        this.cut = cut;
         this.random = random;
         types = new ArrayList<>(config.shots);
         if (motion == CinematicConfig.Motion.STILL || types.isEmpty()) {
@@ -50,12 +54,14 @@ public final class ShotSearch {
         Vec start = entering
             ? subject.add(new Vec(Math.sin(angle) * radius, 0.55, -Math.cos(angle) * radius))
             : previous.position();
-        if (entering && type == Shot.Type.OVERHEAD)
+        if (entering && scene.scenery())
+            start = subject.add(rotate(scene.vantage().subtract(subject), Math.toRadians(ANGLES[view])));
+        if (entering && type == Shot.Type.OVERHEAD && !scene.scenery())
             start = subject.add(new Vec(Math.sin(angle) * 1.7, 4.2, -Math.cos(angle) * 1.7));
         Vec offset = start.subtract(subject);
         double horizontal = Math.hypot(offset.x(), offset.z());
         // Looking back from inside the player's body is never a useful fallback.
-        if (horizontal < 1.25) return null;
+        if (horizontal < (scene.scenery() ? 0.3 : 1.25)) return null;
         double amount = motion == CinematicConfig.Motion.REDUCED ? 0.3 : 1.0;
         double sign = random.nextBoolean() ? 1 : -1;
         Vec tangent = new Vec(-offset.z(), 0, offset.x()).scale(1 / horizontal);
@@ -72,7 +78,7 @@ public final class ShotSearch {
                 control = subject.add(new Vec(midpoint.x() * scale, midpoint.y(), midpoint.z() * scale));
             }
             case DOLLY -> {
-                double change = Math.clamp(horizontal + 0.7 * amount * sign, 1.5, 6.0);
+                double change = Math.clamp(horizontal + 0.7 * amount * sign, 1.5, scene.scenery() ? 12 : 6);
                 end = subject.add(new Vec(offset.x() * change / horizontal, offset.y(), offset.z() * change / horizontal));
                 control = start.lerp(end, 0.5);
             }
@@ -86,7 +92,9 @@ public final class ShotSearch {
                 control = start.lerp(end, 0.5).add(new Vec(0, lift * 0.2, 0));
             }
             case OVERHEAD -> {
-                Vec above = new Vec(offset.x() * 1.7 / horizontal, 4.8, offset.z() * 1.7 / horizontal);
+                double high = scene.scenery() ? 8 : 4.8;
+                double wide = scene.scenery() ? 3 : 1.7;
+                Vec above = new Vec(offset.x() * wide / horizontal, high, offset.z() * wide / horizontal);
                 end = start.lerp(subject.add(rotate(above, Math.toRadians(15 * sign))), amount);
                 control = start.lerp(end, 0.5);
             }
@@ -98,7 +106,7 @@ public final class ShotSearch {
         }
         double duration = pace.minimumSeconds + random.nextDouble() * (pace.maximumSeconds - pace.minimumSeconds);
         Shot candidate = new Shot(type, start, limitDistance(control), limitDistance(end), focusStart, focusEnd, duration);
-        return geometry.valid(candidate, previous.position()) ? candidate : null;
+        return geometry.valid(candidate, cut ? candidate.start() : previous.position()) ? candidate : null;
     }
 
     private static Vec rotate(Vec vector, double angle) {
@@ -109,7 +117,9 @@ public final class ShotSearch {
     private Vec limitDistance(Vec point) {
         Vec offset = point.subtract(subject);
         double radius = Math.hypot(offset.x(), offset.z());
-        double scale = radius > 6 ? 6 / radius : 1;
-        return subject.add(new Vec(offset.x() * scale, Math.clamp(offset.y(), -0.3, 5.5), offset.z() * scale));
+        double maximum = scene.scenery() ? 12 : 6;
+        double scale = radius > maximum ? maximum / radius : 1;
+        return subject.add(new Vec(offset.x() * scale,
+            Math.clamp(offset.y(), scene.scenery() ? -4 : -0.3, scene.scenery() ? 12 : 5.5), offset.z() * scale));
     }
 }

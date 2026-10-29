@@ -51,8 +51,11 @@ class ConfigTest {
         assertTrue(store.config().music);
         assertEquals(EnumSet.of(Shot.Type.PAN, Shot.Type.CRANE), store.config().shots);
         assertEquals(CinematicConfig.Pace.LONG, store.config().pace);
+        assertEquals(CinematicConfig.Subject.MIXED, store.config().subject);
+        store.config().subject = CinematicConfig.Subject.SCENERY;
         assertTrue(store.save());
         assertEquals(store.config().shots, new ConfigStore(path).config().shots);
+        assertEquals(CinematicConfig.Subject.SCENERY, new ConfigStore(path).config().subject);
         Files.writeString(path, "{\"shots\":[],\"pace\":\"invalid\"}");
         var defaults = new ConfigStore(path).config();
         assertEquals(EnumSet.allOf(Shot.Type.class), defaults.shots);

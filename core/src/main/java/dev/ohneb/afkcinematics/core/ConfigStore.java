@@ -29,6 +29,7 @@ public final class ConfigStore {
             config.automatic = bool("automatic", true);
             config.idleSeconds = Math.clamp(integer("idleSeconds", 30), 10, 600);
             config.motion = enumeration("motion", CinematicConfig.Motion.GENTLE);
+            config.subject = enumeration("subject", CinematicConfig.Subject.MIXED);
             config.pace = enumeration("pace", CinematicConfig.Pace.RELAXED);
             config.shots = shots();
             config.distance = enumeration("distance", CinematicConfig.Distance.NORMAL);
@@ -84,6 +85,7 @@ public final class ConfigStore {
         updated.addProperty("automatic", config.automatic);
         updated.addProperty("idleSeconds", Math.clamp(config.idleSeconds, 10, 600));
         updated.addProperty("motion", config.motion.name().toLowerCase(Locale.ROOT));
+        updated.addProperty("subject", config.subject.name().toLowerCase(Locale.ROOT));
         updated.addProperty("pace", config.pace.name().toLowerCase(Locale.ROOT));
         var shots = new JsonArray();
         config.shots.forEach(type -> shots.add(type.name().toLowerCase(Locale.ROOT)));

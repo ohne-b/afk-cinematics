@@ -4,6 +4,7 @@ import java.util.EnumSet;
 
 public final class CinematicConfig {
     public enum Motion { GENTLE, REDUCED, STILL }
+    public enum Subject { MIXED, PLAYER, SCENERY }
     public enum Pace {
         SHORT(12, 18), RELAXED(20, 30), LONG(32, 46);
         public final double minimumSeconds, maximumSeconds;
@@ -22,6 +23,7 @@ public final class CinematicConfig {
     public boolean automatic = true;
     public int idleSeconds = 30;
     public Motion motion = Motion.GENTLE;
+    public Subject subject = Subject.MIXED;
     public Pace pace = Pace.RELAXED;
     public EnumSet<Shot.Type> shots = EnumSet.allOf(Shot.Type.class);
     public Distance distance = Distance.NORMAL;
