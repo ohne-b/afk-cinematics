@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptio
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.InputType;
 import net.minecraft.network.chat.Component;
 
 import java.nio.file.Files;
@@ -54,7 +55,18 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     require(!button(settings, "Panorama: ON").active, "The last enabled shot could be disabled");
                 });
                 context.takeScreenshot(TestScreenshotOptions.of("shot-options").withDestinationDir(artifacts));
-                context.runOnClient(client -> press((SettingsScreen)AfkCinematics.screen(), "Display"));
+                context.runOnClient(client -> {
+                    var settings = (SettingsScreen)AfkCinematics.screen();
+                    press(settings, "Display");
+                    var fps = fpsSlider(settings);
+                    client.setLastInputType(InputType.KEYBOARD_TAB);
+                    settings.setFocused(fps);
+                    fps.setFocused(true);
+                    settings.keyPressed(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
+                    settings.keyPressed(rightArrow());
+                    require(fixture.config().cinematicFps == 60, "Navigation changed FPS after leaving slider editing");
+                    require(settings.getFocused() == button(settings, "Hide HUD: ON"), "Right-arrow navigation remained trapped on the slider");
+                });
                 context.takeScreenshot(TestScreenshotOptions.of("display-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
@@ -64,9 +76,11 @@ public final class SettingsGameTest implements FabricClientGameTest {
                         press(settings, page);
                         checkBounds(settings);
                         if (page.equals("Display")) {
-                            var fps = settings.children().stream().filter(AbstractWidget.class::isInstance).map(AbstractWidget.class::cast)
-                                .filter(widget -> widget.getMessage().getString().startsWith("Cinematic FPS:")).findFirst().orElseThrow();
-                            for (int step = 0; step < 84; step++) fps.keyPressed(new KeyEvent(InputConstants.KEY_RIGHT, 0, 0));
+                            var fps = fpsSlider(settings);
+                            client.setLastInputType(InputType.KEYBOARD_TAB);
+                            settings.setFocused(fps);
+                            fps.setFocused(true);
+                            for (int step = 0; step < 84; step++) settings.keyPressed(rightArrow());
                             require(fixture.config().cinematicFps == 144, "Narrow FPS slider skipped integer values");
                             require(fps.getMessage().getString().equals("Cinematic FPS: 144"), "FPS slider label was stale");
                         }
@@ -94,6 +108,19 @@ public final class SettingsGameTest implements FabricClientGameTest {
         return settings.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
             .filter(button -> button.getMessage().getString().equals(label)).findFirst()
             .orElseThrow(() -> new AssertionError("Missing settings control: " + label));
+    }
+
+    private static AbstractWidget fpsSlider(SettingsScreen settings) {
+        return settings.children().stream().filter(AbstractWidget.class::isInstance).map(AbstractWidget.class::cast)
+            .filter(widget -> widget.getMessage().getString().startsWith("Cinematic FPS:")).findFirst().orElseThrow();
+    }
+
+    private static KeyEvent rightArrow() {
+        //? if >=26.3 {
+        /*return new KeyEvent(InputConstants.KEY_RIGHT, 0x40000000 | InputConstants.KEY_RIGHT, 0);
+        *///?} else {
+        return new KeyEvent(InputConstants.KEY_RIGHT, 0, 0);
+        //?}
     }
 
     private static void press(SettingsScreen settings, String label) {
