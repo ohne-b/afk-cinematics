@@ -41,7 +41,7 @@ final class TravelSearch {
         double scale = switch (view / 2) { case 0 -> 1; case 1 -> 0.75; default -> 0.5; };
         double distance = switch (type) {
             case LOW_ESCORT -> flying ? 12 : 8;
-            case HIGH_TRAIL -> flying ? 25 : 20;
+            case HIGH_TRAIL -> 20;
             case BROADSIDE -> flying ? 20 : 14;
             case WIDE_TRACK -> flying ? 23 : 19;
             default -> flying ? 15 : 10;

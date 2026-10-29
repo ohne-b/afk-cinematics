@@ -47,6 +47,23 @@ class TravelTest {
         assertFalse(moving.follow(new Vec(50, 0, 0), 200_000_000, false), "Covered cuts cannot excuse a teleport");
     }
 
+    @Test void highFlightFramingLeavesRoomForFollowingLag() {
+        Geometry range = new Geometry() {
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return a.distance(b) + 2 * margin <= 32; }
+        };
+        var config = new CinematicConfig();
+        config.shots = EnumSet.of(Shot.Type.HIGH_TRAIL);
+        var moving = new MovingGeometry(range, ZERO, 0);
+        moving.course(0);
+        var search = new TravelSearch(ZERO, Scene.Kind.FLIGHT, config, new ShotHistory(), new Random(3));
+        var plan = search.next(moving);
+        assertNotNull(plan);
+        assertTrue(moving.follow(new Vec(0, 0, 2), 1, false));
+        assertNotNull(moving.apply(plan.shot().sample(0), plan.shot().focus(0), 0, 1, false),
+            "Acceleration in open air must not immediately exhaust the sightline range");
+    }
+
     @Test void screenshotsHoldTheWorldPoseAndResumeSmoothly() {
         var moving = new MovingGeometry(OPEN, ZERO, 0);
         Pose local = new Pose(new Vec(3, 2, -7), 0, 0);
