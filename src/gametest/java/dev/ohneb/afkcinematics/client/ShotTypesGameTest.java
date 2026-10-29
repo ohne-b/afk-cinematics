@@ -73,6 +73,39 @@ public final class ShotTypesGameTest implements FabricClientGameTest {
                     + "," + last.position().x() + "," + last.position().y() + "," + last.position().z() + "," + first.yaw() + "," + last.yaw());
                 context.runOnClient(client -> AfkCinematics.stop());
             }
+            context.runOnClient(client -> {
+                AfkCinematics.config().distance = CinematicConfig.Distance.WIDE;
+                AfkCinematics.config().shots = EnumSet.of(Shot.Type.STILL);
+                client.player.setXRot(90);
+            });
+            start(context);
+            for (int tick = 0; tick < 110; tick++) {
+                context.runOnClient(client -> {
+                    require(AfkCinematics.showing(), "Wide entry aborted while looking down at flat ground");
+                    require(client.player.getXRot() == 90, "Wide entry rotated the player");
+                });
+                context.waitTicks(1);
+            }
+            context.takeScreenshot(TestScreenshotOptions.of("wide-downward-entry").withDestinationDir(artifacts));
+            context.runOnClient(client -> {
+                AfkCinematics.stop();
+                client.player.setXRot((float)playerPose.pitch());
+                AfkCinematics.config().distance = CinematicConfig.Distance.NORMAL;
+                AfkCinematics.config().shots = EnumSet.of(Shot.Type.PAN);
+            });
+            start(context);
+            context.waitTicks(440);
+            double travel = 0;
+            double previousYaw = pose(context).yaw();
+            for (int tick = 0; tick < 180; tick++) {
+                context.runOnClient(client -> require(AfkCinematics.showing(), "Repeated panorama stopped"));
+                context.waitTicks(1);
+                double yaw = pose(context).yaw();
+                travel += Math.abs(Math.IEEEremainder(yaw - previousYaw, 360));
+                previousYaw = yaw;
+            }
+            require(travel > 0.5, "Repeated panorama became a still shot");
+            samples.add("repeated_pan_degrees," + travel);
             try { Files.write(artifacts.resolve("shot-samples.csv"), samples); }
             catch (Exception exception) { throw new AssertionError(exception); }
         } finally {
