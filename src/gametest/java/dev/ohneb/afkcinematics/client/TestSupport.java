@@ -29,6 +29,9 @@ public final class TestSupport {
     public static int playerNameFrames;
     public static boolean checkScreenshotView;
     public static int cinematicScreenshots;
+    public static boolean checkWaterAudio;
+    public static int waterLoops, waterTransitions;
+    public static net.minecraft.client.resources.sounds.TickableSoundInstance waterLoop;
 
     private TestSupport() { }
 

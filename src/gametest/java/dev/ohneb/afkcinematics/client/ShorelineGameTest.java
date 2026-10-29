@@ -68,6 +68,7 @@ public final class ShorelineGameTest implements FabricClientGameTest {
                 } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
             });
             start(context);
+            context.runOnClient(client -> { checkWaterAudio = true; waterLoops = 0; waterTransitions = 0; waterLoop = null; });
             context.waitFor(client -> AfkCinematics.scenery() && AfkCinematics.fade() == 0, 160);
             for (int view = 0; view < 8 && !context.computeOnClient(client -> AfkCinematics.underwater()); view++) next(context);
             context.runOnClient(client -> {
@@ -91,7 +92,10 @@ public final class ShorelineGameTest implements FabricClientGameTest {
             context.runOnClient(client -> {
                 require(!AfkCinematics.underwater(), "Shoreline sequence never returned to a dry view");
                 require(camera(client).getFluidInCamera() != FogType.WATER, "Dry destination retained the water environment");
+                require(waterLoops > 0 && waterTransitions >= 2, "Camera cuts did not drive underwater loop and transition sounds");
             });
+            context.waitTicks(25);
+            context.runOnClient(client -> require(waterLoop != null && waterLoop.isStopped(), "Underwater loop did not fade out above water"));
             context.takeScreenshot(TestScreenshotOptions.of("shoreline-dry-view").withDestinationDir(artifacts));
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
@@ -99,7 +103,7 @@ public final class ShorelineGameTest implements FabricClientGameTest {
                     "Underwater take moved the server player");
             });
         } finally {
-            context.runOnClient(client -> { AfkCinematics.stop(); focused = null; });
+            context.runOnClient(client -> { AfkCinematics.stop(); focused = null; checkWaterAudio = false; waterLoop = null; });
         }
     }
 
