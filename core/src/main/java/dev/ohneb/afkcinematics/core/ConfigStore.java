@@ -33,6 +33,7 @@ public final class ConfigStore {
             config.pace = enumeration("pace", CinematicConfig.Pace.RELAXED);
             config.shots = shots();
             config.distance = enumeration("distance", CinematicConfig.Distance.NORMAL);
+            config.lens = enumeration("lens", CinematicConfig.Lens.CINEMATIC);
             config.hideHud = bool("hideHud", true);
             config.letterbox = bool("letterbox", false);
             config.music = bool("music", false);
@@ -91,6 +92,7 @@ public final class ConfigStore {
         config.shots.forEach(type -> shots.add(type.name().toLowerCase(Locale.ROOT)));
         updated.add("shots", shots);
         updated.addProperty("distance", config.distance.name().toLowerCase(Locale.ROOT));
+        updated.addProperty("lens", config.lens.name().toLowerCase(Locale.ROOT));
         updated.addProperty("hideHud", config.hideHud);
         updated.addProperty("letterbox", config.letterbox);
         updated.addProperty("music", config.music);

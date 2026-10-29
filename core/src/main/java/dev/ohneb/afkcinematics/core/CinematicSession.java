@@ -28,6 +28,7 @@ public final class CinematicSession {
     private boolean heldForNext;
     private double entrySeconds = 1.5;
     private double fade;
+    private double lensStrength;
 
     public CinematicSession(Vec subject, Pose entry, double bearing, CinematicConfig config, Geometry geometry, Random random) {
         this.subject = subject;
@@ -129,6 +130,7 @@ public final class CinematicSession {
             pending = null;
             current = next;
             currentFocus = shot.focus(0);
+            lensStrength = 1;
             phase = Phase.FADE_IN;
             started = now;
             fade = 1;
@@ -140,6 +142,7 @@ public final class CinematicSession {
         if (phase == Phase.ENTRY) {
             sampledSeconds = 0;
             next = entry.blend(shot.sample(0), elapsed / entrySeconds);
+            lensStrength = Pose.ease(elapsed / entrySeconds);
             if (elapsed >= entrySeconds) { phase = Phase.SHOT; started += Math.round(entrySeconds * 1e9); }
         } else if (phase == Phase.FADE_IN) {
             sampledSeconds = 0;
@@ -166,6 +169,7 @@ public final class CinematicSession {
     public boolean showing() { return (shot != null || pending != null) && !ended; }
     public Pose current() { return current; }
     public double fade() { return fade; }
+    public double lensStrength() { return ended ? 0 : lensStrength; }
     public void coveredFrame() { if (fade == 1) covered = true; }
     public boolean scenery() { return scene != null && scene.scenery(); }
     public boolean settled() { return showing() && phase == Phase.SHOT; }

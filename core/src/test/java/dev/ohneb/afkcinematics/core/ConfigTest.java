@@ -52,10 +52,13 @@ class ConfigTest {
         assertEquals(EnumSet.of(Shot.Type.PAN, Shot.Type.CRANE), store.config().shots);
         assertEquals(CinematicConfig.Pace.LONG, store.config().pace);
         assertEquals(CinematicConfig.Subject.MIXED, store.config().subject);
+        assertEquals(CinematicConfig.Lens.CINEMATIC, store.config().lens);
         store.config().subject = CinematicConfig.Subject.SCENERY;
+        store.config().lens = CinematicConfig.Lens.GAME;
         assertTrue(store.save());
         assertEquals(store.config().shots, new ConfigStore(path).config().shots);
         assertEquals(CinematicConfig.Subject.SCENERY, new ConfigStore(path).config().subject);
+        assertEquals(CinematicConfig.Lens.GAME, new ConfigStore(path).config().lens);
         Files.writeString(path, "{\"shots\":[],\"pace\":\"invalid\"}");
         var defaults = new ConfigStore(path).config();
         assertEquals(EnumSet.allOf(Shot.Type.class), defaults.shots);
