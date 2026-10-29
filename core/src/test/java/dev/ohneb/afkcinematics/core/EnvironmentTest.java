@@ -77,6 +77,27 @@ class EnvironmentTest {
         assertEquals(shot.start().y(), shot.end().y());
     }
 
+    @Test void unsupportedGroundViewsDoNotHideAUsableLandscape() {
+        var config = new CinematicConfig();
+        config.subject = CinematicConfig.Subject.SCENERY;
+        config.shots = EnumSet.of(Shot.Type.FLYOVER);
+        var planner = new ShotPlanner(ANCHOR, ENTRY, ENTRY, 0, config, null, java.util.List.of(), 0, null, new Random(1));
+        Geometry geometry = new Geometry() {
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
+            public Scene scenery(Vec anchor, Pose original, double bearing, int probe) {
+                if (probe < 4) return new Scene(new Vec(-12 + probe * 8, 1, 0),
+                    new Vec(-12 + probe * 8, 1.6, -8), Scene.Kind.GROUND, 10);
+                return probe == 4 ? new Scene(new Vec(0, 1, 8), new Vec(0, 3, 0), Scene.Kind.LANDSCAPE, 1) : null;
+            }
+        };
+        ShotPlanner.Plan found = null;
+        for (int step = 0; step < 150 && found == null && !planner.exhausted(); step++) found = planner.next(geometry);
+        assertNotNull(found, "Unsupported ground views consumed the complete candidate budget");
+        assertEquals(Scene.Kind.LANDSCAPE, found.scene().kind());
+        assertEquals(Shot.Type.FLYOVER, found.shot().type());
+    }
+
     private static CinematicSession session(Geometry geometry) {
         var config = new CinematicConfig();
         config.subject = CinematicConfig.Subject.SCENERY;

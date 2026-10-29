@@ -65,7 +65,7 @@ final class ShotPlanner {
             } else if (!triedScenery) {
                 if (probe < Scene.PROBES) {
                     Scene scene = geometry.scenery(anchor, original, bearing, probe++);
-                    if (scene != null && scene.scenery() && scene.near(anchor)
+                    if (scene != null && scene.scenery() && scene.near(anchor) && !ShotSearch.stylesFor(scene, config).isEmpty()
                         && candidates.stream().noneMatch(other -> other.focus().distance(scene.focus()) < 3
                             && other.vantage().distance(scene.vantage()) < 3)) candidates.add(scene);
                     if (probe == Scene.PROBES) candidates.sort(Comparator.comparingDouble(this::score).reversed());

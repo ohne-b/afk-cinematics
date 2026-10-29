@@ -40,16 +40,21 @@ public final class ShotSearch {
             Collections.shuffle(angles, random);
         }
         for (double angle : ANGLES) if (!angles.contains(angle)) angles.add(angle);
-        types = new ArrayList<>(config.shots);
-        if (motion == CinematicConfig.Motion.STILL || types.isEmpty()) {
-            types.clear();
-            types.add(Shot.Type.STILL);
-        }
-        if (scene.kind() == Scene.Kind.GROUND)
-            types.removeIf(type -> type == Shot.Type.FLYOVER || type == Shot.Type.OVERHEAD
-                || type == Shot.Type.REVEAL || type == Shot.Type.CRANE);
+        types = stylesFor(scene, config);
         Collections.shuffle(types, random);
         if (types.size() > 1 && types.remove(last)) types.add(last);
+    }
+
+    static List<Shot.Type> stylesFor(Scene scene, CinematicConfig config) {
+        var styles = new ArrayList<>(config.shots);
+        if (config.motion == CinematicConfig.Motion.STILL || styles.isEmpty()) {
+            styles.clear();
+            styles.add(Shot.Type.STILL);
+        }
+        if (scene.kind() == Scene.Kind.GROUND)
+            styles.removeIf(type -> type == Shot.Type.FLYOVER || type == Shot.Type.OVERHEAD
+                || type == Shot.Type.REVEAL || type == Shot.Type.CRANE);
+        return styles;
     }
 
     public boolean exhausted() { return attempt >= angles.size() * types.size() * (scene.scenery() ? 1 : 2); }
