@@ -25,14 +25,14 @@ final class WorldScenery {
     private WorldScenery() { }
 
     static Scene probe(ClientLevel level, WorldGeometry geometry, Vec anchor, Pose original, double bearing, int index) {
-        if (index < 16) return surface(level, geometry, anchor, bearing, index);
+        if (index < 24) return surface(level, geometry, anchor, bearing, index);
         Vec vantage;
         double angle;
-        if (index < 24) {
+        if (index < 32) {
             vantage = original.position();
-            angle = Math.toRadians(bearing + (index - 16) * 45);
+            angle = Math.toRadians(bearing + (index - 24) * 45);
         } else {
-            int local = index - 24;
+            int local = index - 32;
             angle = Math.toRadians(bearing + local * 137.5);
             double radius = 6 + local % 3 * 3;
             vantage = anchor.add(new Vec(Math.sin(angle) * radius, (local / 3 % 3 - 1) * 8, Math.cos(angle) * radius));
@@ -51,12 +51,13 @@ final class WorldScenery {
 
     private static Scene surface(ClientLevel level, WorldGeometry geometry, Vec anchor, double bearing, int index) {
         double angle = Math.toRadians(bearing + index % 8 * 45);
-        double radius = index < 8 ? 8 : 16;
+        boolean aerial = index >= 16;
+        double radius = aerial ? 14 : index < 8 ? 8 : 16;
         int centerX = (int)Math.floor(anchor.x() + Math.sin(angle) * radius);
         int centerZ = (int)Math.floor(anchor.z() + Math.cos(angle) * radius);
         Scene best = null;
         double viewAngle = angle + Math.PI + Math.toRadians(25);
-        boolean low = index % 2 == 1;
+        boolean low = !aerial && index % 2 == 1;
         for (int dx = -2; dx <= 2; dx += 2) {
             for (int dz = -2; dz <= 2; dz += 2) {
                 int x = centerX + dx, z = centerZ + dz;
@@ -83,8 +84,9 @@ final class WorldScenery {
                 if (!state.getFluidState().isEmpty()) top = Math.max(top, state.getFluidState().getHeight(level, block));
                 Vec target = new Vec(x + 0.5, y + top + 0.35, z + 0.5);
                 if (Math.hypot(target.x() - anchor.x(), target.z() - anchor.z()) > 18) continue;
-                double distance = low ? 8 : 12;
-                Vec vantage = target.add(new Vec(Math.sin(viewAngle) * distance, low ? 0.3 : 2, Math.cos(viewAngle) * distance));
+                double distance = aerial ? (index % 2 == 0 ? 18 : 22) : low ? 8 : 12;
+                double elevation = aerial ? (index % 2 == 0 ? 10 : 14) : low ? 0.3 : 2;
+                Vec vantage = target.add(new Vec(Math.sin(viewAngle) * distance, elevation, Math.cos(viewAngle) * distance));
                 BlockPos column = BlockPos.containing(vantage.x(), vantage.y(), vantage.z());
                 if (!level.getChunkSource().hasChunk(column.getX() >> 4, column.getZ() >> 4)) continue;
                 double floor = level.getHeight(Heightmap.Types.WORLD_SURFACE, column.getX(), column.getZ());
@@ -95,7 +97,7 @@ final class WorldScenery {
                     floor = ground.getY() + (floorShape.isEmpty() ? 1 : floorShape.max(Direction.Axis.Y));
                 }
                 vantage = new Vec(vantage.x(), Math.max(vantage.y(), floor + (low ? 0.6 : 1.5)), vantage.z());
-                Scene.Kind kind = low ? Scene.Kind.GROUND : Scene.Kind.LANDSCAPE;
+                Scene.Kind kind = aerial ? Scene.Kind.AERIAL : low ? Scene.Kind.GROUND : Scene.Kind.LANDSCAPE;
                 Scene scene = new Scene(target, vantage, kind, 0);
                 if (!scene.near(anchor) || !inside(level, vantage) || !geometry.clear(vantage, vantage)
                     || !geometry.visible(vantage, target)) continue;

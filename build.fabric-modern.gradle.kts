@@ -45,6 +45,7 @@ if (minecraftVersion == "26.2" || minecraftVersion == "26.3") {
         providers.gradleProperty("naturalSeconds").orNull?.let { vmArg("-Dafkcinematics.test.naturalSeconds=$it") }
         providers.gradleProperty("cinematicCapture").orNull?.let { vmArg("-Dafkcinematics.test.capture=$it") }
         providers.gradleProperty("cinematicScene").orNull?.let { vmArg("-Dafkcinematics.test.scene=$it") }
+        providers.gradleProperty("cinematicShots").orNull?.let { vmArg("-Dafkcinematics.test.shots=$it") }
         vmArg("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
     }
 }

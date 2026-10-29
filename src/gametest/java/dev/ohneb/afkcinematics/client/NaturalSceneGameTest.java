@@ -104,10 +104,17 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                         } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
                     }
                     AfkCinematics.config().subject = CinematicConfig.Subject.SCENERY;
+                    String selectedShots = System.getProperty("afkcinematics.test.shots");
+                    if (selectedShots != null) {
+                        var choices = java.util.EnumSet.noneOf(Shot.Type.class);
+                        for (String choice : selectedShots.split(",")) choices.add(Shot.Type.valueOf(choice));
+                        AfkCinematics.config().shots = choices;
+                    }
                     AfkCinematics.config().pace = CinematicConfig.Pace.SHORT;
                     AfkCinematics.config().hideHud = true;
                     AfkCinematics.config().letterbox = true;
                     cameraTimings = new ArrayList<>();
+                    recordingFrames = capture != null;
                     cameraStop = null;
                     revealedShot = null;
                     cameraTimings.add("operation,nanoseconds");
@@ -191,6 +198,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
                 cameraTimings = null;
+                recordingFrames = false;
                 sceneryFrames = null;
                 revealedShot = null;
                 focused = null;

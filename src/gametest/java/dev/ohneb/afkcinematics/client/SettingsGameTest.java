@@ -82,6 +82,13 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     var settings = (SettingsScreen)AfkCinematics.screen();
                     settings.resize(220, 140);
                     checkBounds(settings);
+                    press(settings, "Camera");
+                    press(settings, "Shot types: " + Shot.Type.values().length + " enabled");
+                    for (Shot.Type type : Shot.Type.values()) {
+                        String label = Component.translatable("ohneb_afk_cinematics.shot." + type.name().toLowerCase(Locale.ROOT)).getString();
+                        button(settings, label + ": ON");
+                        checkBounds(settings);
+                    }
                     for (String page : new String[]{"Camera", "Display", "General"}) {
                         press(settings, page);
                         checkBounds(settings);
@@ -115,9 +122,15 @@ public final class SettingsGameTest implements FabricClientGameTest {
     }
 
     private static Button button(SettingsScreen settings, String label) {
-        return settings.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
-            .filter(button -> button.getMessage().getString().equals(label)).findFirst()
-            .orElseThrow(() -> new AssertionError("Missing settings control: " + label));
+        for (int direction : new int[]{1, -1}) {
+            for (int step = 0; step <= Shot.Type.values().length + 2; step++) {
+                var found = settings.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
+                    .filter(button -> button.getMessage().getString().equals(label)).findFirst();
+                if (found.isPresent()) return found.get();
+                settings.mouseScrolled(0, 0, 0, direction);
+            }
+        }
+        throw new AssertionError("Missing settings control: " + label);
     }
 
     private static AbstractWidget fpsSlider(SettingsScreen settings) {

@@ -61,7 +61,9 @@ public final class ShotSearch {
         if (scene.kind() == Scene.Kind.GROUND)
             styles.removeIf(type -> type == Shot.Type.FLYOVER || type == Shot.Type.OVERHEAD
                 || type == Shot.Type.REVEAL || type == Shot.Type.CRANE);
-        if (!scene.scenery()) styles.remove(Shot.Type.OVERHEAD);
+        if (scene.kind() == Scene.Kind.AERIAL)
+            styles.removeIf(type -> type == Shot.Type.LOW_PASS || type == Shot.Type.REVEAL || type == Shot.Type.OVERHEAD);
+        if (!scene.scenery()) styles.removeIf(Shot.Type::sceneryOnly);
         return styles;
     }
 
@@ -69,7 +71,7 @@ public final class ShotSearch {
 
     static int playerAttempts(CinematicConfig config) {
         int styles = config.motion == CinematicConfig.Motion.STILL || config.shots.isEmpty() ? 1
-            : config.shots.size() - (config.shots.contains(Shot.Type.OVERHEAD) ? 1 : 0);
+            : (int)config.shots.stream().filter(type -> !type.sceneryOnly()).count();
         return PLAYER_ANGLES.size() * (PLAYER_DISTANCES.size() + 1) * styles;
     }
 
@@ -116,7 +118,7 @@ public final class ShotSearch {
             case DOLLY -> {
                 double travel = (scene.scenery() ? 4 : 3.5) * amount;
                 double minimum = scene.scenery() ? 1.5 : 5.5;
-                double maximum = scene.scenery() ? 12 : 14;
+                double maximum = scene.kind() == Scene.Kind.AERIAL ? 24 : scene.scenery() ? 12 : 14;
                 if (horizontal + travel * sign < minimum || horizontal + travel * sign > maximum) sign = -sign;
                 double change = Math.clamp(horizontal + travel * sign, minimum, maximum);
                 end = subject.add(new Vec(offset.x() * change / horizontal, offset.y(), offset.z() * change / horizontal));
@@ -141,11 +143,20 @@ public final class ShotSearch {
                 control = start.lerp(end, 0.5);
             }
             case FLYOVER -> {
-                double travel = Math.min(scene.scenery() ? 7.5 : 4.5,
+                double travel = Math.min(scene.kind() == Scene.Kind.AERIAL ? 12 : scene.scenery() ? 7.5 : 4.5,
                     Math.max(0, horizontal - (scene.scenery() ? 1.25 : 5.5))) * amount;
                 end = start.add(new Vec(-offset.x(), 0, -offset.z()).scale(travel / horizontal));
                 control = start.lerp(end, 0.5);
                 if (scene.scenery()) focusEnd = subject.add(end.subtract(start));
+            }
+            case FLY_THROUGH, TRAVERSE -> {
+                double travel = (scene.kind() == Scene.Kind.AERIAL ? 14 : scene.kind() == Scene.Kind.WATER ? 7 : 10) * amount;
+                Vec direction = type == Shot.Type.TRAVERSE ? tangent.scale(sign)
+                    : new Vec(-offset.x(), 0, -offset.z()).scale(1 / horizontal);
+                end = limitDistance(start.add(direction.scale(travel)));
+                control = start.lerp(end, 0.5);
+                // Move the composition with the camera: a drive through the scene, not an orbit.
+                focusEnd = subject.add(end.subtract(start));
             }
             case LOW_PASS -> {
                 end = limitDistance(start.add(tangent.scale((scene.scenery() ? 6 : 4.5) * amount * sign)));
@@ -182,9 +193,10 @@ public final class ShotSearch {
     private Vec limitDistance(Vec point) {
         Vec offset = point.subtract(subject);
         double radius = Math.hypot(offset.x(), offset.z());
-        double maximum = scene.scenery() ? 12 : 14;
+        boolean aerial = scene.kind() == Scene.Kind.AERIAL;
+        double maximum = aerial ? 24 : scene.scenery() ? 12 : 14;
         double scale = radius > maximum ? maximum / radius : 1;
         return subject.add(new Vec(offset.x() * scale,
-            Math.clamp(offset.y(), scene.scenery() ? -4 : -0.65, scene.scenery() ? 12 : 5.5), offset.z() * scale));
+            Math.clamp(offset.y(), scene.scenery() ? -4 : -0.65, aerial ? 22 : scene.scenery() ? 12 : 5.5), offset.z() * scale));
     }
 }

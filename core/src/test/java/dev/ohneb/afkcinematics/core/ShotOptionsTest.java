@@ -14,7 +14,8 @@ class ShotOptionsTest {
     };
 
     @Test void eachSelectedStyleHasItsOwnCameraMotion() {
-        for (Shot.Type type : EnumSet.complementOf(EnumSet.of(Shot.Type.OVERHEAD))) {
+        for (Shot.Type type : Shot.Type.values()) {
+            if (type.sceneryOnly()) continue;
             var config = new CinematicConfig();
             config.shots = EnumSet.of(type);
             Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, null, true, false, new Random(2)).next(OPEN);
@@ -35,7 +36,8 @@ class ShotOptionsTest {
         config.shots = EnumSet.of(Shot.Type.PAN);
         Shot pan = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, null, true, false, new Random(2)).next(OPEN);
         Pose previous = pan.sample(pan.duration());
-        for (Shot.Type type : EnumSet.complementOf(EnumSet.of(Shot.Type.OVERHEAD))) {
+        for (Shot.Type type : Shot.Type.values()) {
+            if (type.sceneryOnly()) continue;
             config.shots = EnumSet.of(type);
             Shot next = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), previous, 0, config, pan.type(), false, false, new Random(3)).next(OPEN);
             assertNotNull(next);

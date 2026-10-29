@@ -132,7 +132,7 @@ public final class CinematicSession {
             setScene(pending.scene());
             if (scene.scenery()) {
                 recentViews.add(next);
-                if (recentViews.size() > 6) recentViews.removeFirst();
+                if (recentViews.size() > 10) recentViews.removeFirst();
             }
             pending = null;
             current = next;
