@@ -40,6 +40,7 @@ sourceSets.main { java.exclude("**/FabricClient.java", "**/ModMenuIntegration.ja
 
 if (providers.gradleProperty("smokeTest").isPresent) {
     apply(from = rootProject.file("gradle/smoke.gradle.kts"))
+    stonecutter.tasks.configureSource(sourceSets["smoke"])
     neoForge.mods { register("ohneb_afk_cinematics_smoke") { sourceSet(sourceSets["smoke"]) } }
     neoForge.runs.named("client") {
         systemProperty("afkcinematics.smoke.result", rootProject.file("artifacts/smoke-${project.name}.txt").absolutePath)
