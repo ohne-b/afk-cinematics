@@ -54,6 +54,8 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     require(!button(settings, "Panorama: ON").active, "The last enabled shot could be disabled");
                 });
                 context.takeScreenshot(TestScreenshotOptions.of("shot-options").withDestinationDir(artifacts));
+                context.runOnClient(client -> press((SettingsScreen)AfkCinematics.screen(), "Display"));
+                context.takeScreenshot(TestScreenshotOptions.of("display-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
                     settings.resize(220, 140);

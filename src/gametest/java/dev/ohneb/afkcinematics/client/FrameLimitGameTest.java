@@ -69,9 +69,24 @@ public final class FrameLimitGameTest implements FabricClientGameTest {
 
     private static void checkDynamicFps(int expected) {
         try {
-            var method = Class.forName("dynamic_fps.impl.DynamicFPSMod").getDeclaredMethod("targetFrameRate");
+            var type = Class.forName("dynamic_fps.impl.DynamicFPSMod");
+            var method = type.getDeclaredMethod("targetFrameRate");
             method.setAccessible(true);
-            require((int)method.invoke(null) == expected, "Dynamic FPS still throttled its own renderer");
+            var configField = type.getDeclaredField("config");
+            configField.setAccessible(true);
+            Object config = configField.get(null);
+            var get = config.getClass().getMethod("frameRateTarget");
+            var set = config.getClass().getMethod("setFrameRateTarget", int.class);
+            var render = type.getDeclaredMethod("checkForRender", long.class);
+            render.setAccessible(true);
+            int previous = (int)get.invoke(config);
+            try {
+                for (int limit : new int[]{0, 1}) {
+                    set.invoke(config, limit);
+                    require((int)method.invoke(null) == expected, "Dynamic FPS still throttled its own renderer");
+                    require((boolean)render.invoke(null, 0L), "Dynamic FPS skipped the cinematic frame at target " + limit);
+                }
+            } finally { set.invoke(config, previous); }
         } catch (ClassNotFoundException ignored) {
         } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
     }
