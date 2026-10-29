@@ -46,4 +46,5 @@ public final class CinematicConfig {
     public boolean boats = true;
     public boolean flight = true;
     public boolean travelControls = true;
+    public boolean fishing = true;
 }

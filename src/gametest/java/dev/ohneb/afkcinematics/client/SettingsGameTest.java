@@ -45,6 +45,11 @@ public final class SettingsGameTest implements FabricClientGameTest {
                 context.takeScreenshot(TestScreenshotOptions.of("camera-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
+                    press(settings, "Activities...");
+                    press(settings, "Fishing: ON");
+                    require(!fixture.config().fishing, "Fishing control did not change its setting");
+                    press(settings, "Fishing: OFF");
+                    press(settings, "Camera");
                     press(settings, "Shot types: " + Shot.Type.values().length + " enabled");
                     for (Shot.Type type : Shot.Type.values()) {
                         if (type == Shot.Type.PAN) continue;

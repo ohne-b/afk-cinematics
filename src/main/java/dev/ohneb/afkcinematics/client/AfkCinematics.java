@@ -16,6 +16,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.FishingHook;
 //? if >=1.21.11 {
 import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
 //?} else if >=1.21.2 {
@@ -59,6 +60,9 @@ public final class AfkCinematics {
     private static Vec3 observedMotion = Vec3.ZERO;
     private static double course;
     private static boolean manualTravel;
+    private static FishingHook fishingHook;
+    private static FishingHook lastFishingStart;
+    private static InputConstants.Key activityUse;
     private static ClientLevel world;
     private static LocalPlayer player;
     private static ClientPacketListener connection;
@@ -169,6 +173,7 @@ public final class AfkCinematics {
             carriedYaw = 0;
             lastVehicle = null;
             lastVehiclePosition = null;
+            lastFishingStart = null;
             vanillaPose = null;
         }
         boolean focus = client.isWindowActive();
@@ -193,10 +198,9 @@ public final class AfkCinematics {
             lastVehicle = player.getVehicle();
             lastVehiclePosition = lastVehicle == null ? null : lastVehicle.position();
         }
-        boolean travel = travelKind() != Scene.Kind.PLAYER;
-        boolean eligible = eligible() && (!moved || travel) && (!turned || steering()) && !jumped;
+        boolean eligible = eligible() && (!moved || travelling()) && (!turned || aiming()) && !jumped;
         if (session != null) {
-            if (!eligible || movingGeometry == null && movedFrom(anchor, true)) stop();
+            if (!eligible || !travelling() && movedFrom(anchor, true)) stop();
             else {
                 if (movingGeometry != null) session.bearing(travelBearing());
                 session.tick(now);
@@ -211,6 +215,10 @@ public final class AfkCinematics {
             IDLE.reset(now);
             if (eligible && vanillaPose != null) { start(true); manualWait = 0; }
             else if (manualWait == 0) message("unavailable");
+        } else if (activityKind() == Scene.Kind.FISHING) {
+            // A cast starts once its bobber reaches water; waking never restarts the same cast.
+            if (eligible && config().automatic && FishingActivity.hook(player, world) != lastFishingStart) start(false);
+            IDLE.reset(now);
         } else if (IDLE.ready(now, config().idleSeconds, eligible && config().automatic)) start(false);
         CinematicMusic.tick();
     }
@@ -220,7 +228,8 @@ public final class AfkCinematics {
         if (store == null || !config().enabled || !conflict.isEmpty() || player == null || world == null
             || client.player != player || client.level != world || client.getConnection() != connection
             || screen() != null || client.isPaused()
-            || (!client.isWindowActive() && !config().unfocused) || !steering() && INPUT.held()) return false;
+            || (!client.isWindowActive() && !config().unfocused)
+            || !steering() && (activityUse == null ? INPUT.held() : INPUT.heldExcept(token(activityUse)))) return false;
         //? if >=26.2 {
         /*if (client.gui.overlay() != null) return false;
         *///?} else {
@@ -229,10 +238,11 @@ public final class AfkCinematics {
         var options = client.options;
         if (!steering() && movementInput()) return false;
         if ((!steering() && (options.keyUp.isDown() || options.keyDown.isDown() || options.keyLeft.isDown() || options.keyRight.isDown()
-            || options.keyJump.isDown())) || options.keyAttack.isDown() || options.keyUse.isDown() || options.keyDrop.isDown()) return false;
-        Scene.Kind kind = travelKind();
+            || options.keyJump.isDown())) || options.keyAttack.isDown() || options.keyUse.isDown() && !allowRodUse() || options.keyDrop.isDown()) return false;
+        Scene.Kind kind = activityKind();
         if (session != null && (kind != activity || player.getVehicle() != vehicle)) return false;
-        return player.isAlive() && !player.isSleeping() && (!player.isPassenger() || kind == Scene.Kind.BOAT)
+        if (session != null && activity == Scene.Kind.FISHING && FishingActivity.hook(player, world) != fishingHook) return false;
+        return player.isAlive() && !player.isSleeping() && (!player.isPassenger() || kind == Scene.Kind.BOAT || kind == Scene.Kind.FISHING && boat(player.getVehicle()))
             && (!player.isFallFlying() || kind == Scene.Kind.FLIGHT) && !player.isInLava() && !player.isUsingItem()
             && !player.isOnFire() && player.hurtTime == 0 && !player.isSpectator();
     }
@@ -247,15 +257,18 @@ public final class AfkCinematics {
         if (!eligible() || vanillaPose == null) return;
         anchor = player.position();
         Vec subject = WorldGeometry.point(anchor.add(0, player.getBbHeight() * 0.65, 0));
-        activity = travelKind();
-        manualTravel = manual && activity != Scene.Kind.PLAYER;
+        activity = activityKind();
+        manualTravel = manual && (activity == Scene.Kind.BOAT || activity == Scene.Kind.FLIGHT);
+        fishingHook = activity == Scene.Kind.FISHING ? FishingActivity.hook(player, world) : null;
+        if (fishingHook != null) lastFishingStart = fishingHook;
         vehicle = player.getVehicle();
         course = vehicle == null ? player.getYRot() : vehicle.getYRot();
         if (activity == Scene.Kind.PLAYER) {
             session = new CinematicSession(subject, vanillaPose, player.getYRot(), config(), new WorldGeometry(world), RANDOM);
         } else {
             movingGeometry = new MovingGeometry(new WorldGeometry(world).forScene(null), subject, System.nanoTime());
-            session = new CinematicSession(new Vec(0, 0, 0), movingGeometry.local(vanillaPose), travelBearing(), config(), movingGeometry, RANDOM, activity);
+            Vec bobber = fishingHook == null ? null : FishingActivity.target(fishingHook, 1, subject);
+            session = new CinematicSession(new Vec(0, 0, 0), movingGeometry.local(vanillaPose), travelBearing(), config(), movingGeometry, RANDOM, activity, bobber);
         }
         session.tick(System.nanoTime());
         manualFeedback = manual && !session.showing();
@@ -267,11 +280,17 @@ public final class AfkCinematics {
     }
 
     public static void stop() {
+        if (activityUse != null) {
+            INPUT.suppress(token(activityUse));
+            clearBindings(activityUse);
+            activityUse = null;
+        }
         session = null;
         movingGeometry = null;
         activity = Scene.Kind.PLAYER;
         manualTravel = false;
         vehicle = null;
+        fishingHook = null;
         appliedCamera = null;
         audioReady = false;
         anchor = null;
@@ -310,18 +329,25 @@ public final class AfkCinematics {
             *///?}
             return null;
         }
-        if (!eligible() || movingGeometry == null && movedFrom(anchor, true)) { stop(); return null; }
+        if (!eligible() || !travelling() && movedFrom(anchor, true)) { stop(); return null; }
         long now = System.nanoTime();
+        Vec bobber = null;
         if (movingGeometry != null) {
             float partial = world.tickRateManager().isEntityFrozen(player) ? 1 : delta;
             Vec subject = new Vec(player.xOld + (player.getX() - player.xOld) * partial,
                 player.yOld + (player.getY() - player.yOld) * partial + player.getBbHeight() * 0.65,
                 player.zOld + (player.getZ() - player.zOld) * partial);
             if (!movingGeometry.follow(subject, now, session.capturing())) { stop(); return null; }
+            if (fishingHook != null) {
+                bobber = FishingActivity.target(fishingHook, partial, subject);
+                session.fishing(bobber);
+            }
         }
         Pose pose = session.frame(now);
         if (pose != null && movingGeometry != null) {
             pose = movingGeometry.apply(pose, session.focus(), session.fade(), session.take(), session.capturing());
+            if (pose != null && bobber != null && (!movingGeometry.sees(pose, bobber)
+                || !movingGeometry.sees(pose, new Vec(0, 0, 0)))) pose = null;
             if (pose == null) { stop(); return null; }
         }
         if (session.ended()) stop();
@@ -334,16 +360,14 @@ public final class AfkCinematics {
         long token = token(key);
         if (action == InputConstants.RELEASE) {
             IDLE.reset(System.nanoTime());
+            if (key.equals(activityUse)) {
+                if (!Minecraft.getInstance().isWindowActive()) { stop(); return true; }
+                activityUse = null;
+            }
             // Focus loss can synthesize releases while the physical key is still held.
             if (!Minecraft.getInstance().isWindowActive() && INPUT.suppressed(token)) return true;
             if (INPUT.release(token)) {
-                KeyMapping.set(key, false);
-                for (KeyMapping binding : Minecraft.getInstance().options.keyMappings) {
-                    if (matches(binding, key)) {
-                        binding.setDown(false);
-                        ((KeyMappingAccess)binding).afkCinematics$clicks(0);
-                    }
-                }
+                clearBindings(key);
             }
             return false;
         }
@@ -366,10 +390,15 @@ public final class AfkCinematics {
             }
             return true;
         }
-        boolean suppressed = INPUT.press(token, ownsCamera() && dangerous);
-        if (steering() && !dangerous && (matches(options.keyUp, key) || matches(options.keyDown, key)
-            || matches(options.keyLeft, key) || matches(options.keyRight, key) || matches(options.keyJump, key)
-            || matches(options.keyShift, key) || matches(options.keySprint, key))) {
+        boolean rod = matches(options.keyUse, key) && !matches(options.keyAttack, key) && !matches(options.keyDrop, key)
+            && !movementBinding(key) && allowRodUse();
+        boolean suppressed = INPUT.press(token, ownsCamera() && dangerous && !rod);
+        if (rod && !suppressed) {
+            activityUse = key;
+            IDLE.reset(System.nanoTime());
+            return false;
+        }
+        if (steering() && !dangerous && movementBinding(key)) {
             IDLE.reset(System.nanoTime());
             return suppressed;
         }
@@ -381,10 +410,35 @@ public final class AfkCinematics {
         return ((KeyMappingAccess) mapping).afkCinematics$key().equals(key);
     }
 
+    private static boolean movementBinding(InputConstants.Key key) {
+        var options = Minecraft.getInstance().options;
+        return matches(options.keyUp, key) || matches(options.keyDown, key) || matches(options.keyLeft, key)
+            || matches(options.keyRight, key) || matches(options.keyJump, key) || matches(options.keyShift, key) || matches(options.keySprint, key);
+    }
+
     public static boolean suppressed(InputConstants.Key key) { return INPUT != null && INPUT.suppressed(token(key)); }
+    public static boolean retainsInput(InputConstants.Key key) { return suppressed(key) || key.equals(activityUse); }
+
+    public static boolean allowRodUse() {
+        var client = Minecraft.getInstance();
+        return session != null && activity == Scene.Kind.FISHING && player == client.player && world == client.level
+            && connection == client.getConnection() && FishingActivity.hook(player, world) == fishingHook
+            && FishingActivity.canUse(player, client.hitResult);
+    }
+
+    private static void clearBindings(InputConstants.Key key) {
+        KeyMapping.set(key, false);
+        for (KeyMapping binding : Minecraft.getInstance().options.keyMappings) {
+            if (matches(binding, key)) {
+                binding.setDown(false);
+                ((KeyMappingAccess)binding).afkCinematics$clicks(0);
+            }
+        }
+    }
 
     public static void blockInput(InputConstants.Key key) {
         INPUT.press(token(key), true);
+        clearBindings(key);
         stop();
     }
 
@@ -395,7 +449,7 @@ public final class AfkCinematics {
     public static void mouseMoved(double x, double y) {
         if (Minecraft.getInstance().isWindowActive() && Math.abs(x) + Math.abs(y) > 0.01) {
             IDLE.reset(System.nanoTime());
-            if (!steering()) stop();
+            if (!aiming()) stop();
         }
     }
 
@@ -418,8 +472,10 @@ public final class AfkCinematics {
         *///?}
     }
 
-    private static Scene.Kind travelKind() {
+    private static Scene.Kind activityKind() {
         if (player == null || store == null) return Scene.Kind.PLAYER;
+        if (config().fishing && !player.isFallFlying() && !player.getAbilities().flying
+            && FishingActivity.hook(player, world) != null) return Scene.Kind.FISHING;
         if (config().boats && boat(player.getVehicle())) return Scene.Kind.BOAT;
         if (config().flight && !player.isPassenger() && (player.isFallFlying() || player.getAbilities().flying)) return Scene.Kind.FLIGHT;
         return Scene.Kind.PLAYER;
@@ -427,7 +483,14 @@ public final class AfkCinematics {
 
     private static boolean steering() {
         return store != null && config().travelControls && (movingGeometry != null && manualTravel
-            || session == null && manualWait > 0 && travelKind() != Scene.Kind.PLAYER);
+            || session == null && manualWait > 0 && (activityKind() == Scene.Kind.BOAT || activityKind() == Scene.Kind.FLIGHT));
+    }
+
+    private static boolean aiming() { return steering() || session != null && activity == Scene.Kind.FISHING; }
+
+    private static boolean travelling() {
+        Scene.Kind kind = activityKind();
+        return kind == Scene.Kind.BOAT || kind == Scene.Kind.FLIGHT || kind == Scene.Kind.FISHING && boat(player.getVehicle());
     }
 
     private static double travelBearing() {

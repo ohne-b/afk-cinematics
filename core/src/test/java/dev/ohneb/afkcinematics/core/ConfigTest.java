@@ -32,10 +32,13 @@ class ConfigTest {
         store.config().hidePlayerNames = false;
         store.config().boats = false;
         store.config().travelControls = false;
+        assertTrue(store.config().fishing);
+        store.config().fishing = false;
         assertTrue(store.save());
         assertFalse(new ConfigStore(path).config().hidePlayerNames);
         assertFalse(new ConfigStore(path).config().boats);
         assertFalse(new ConfigStore(path).config().travelControls);
+        assertFalse(new ConfigStore(path).config().fishing);
         assertTrue(new ConfigStore(path).config().flight);
         assertTrue(Files.readString(path).contains("\"future\""));
         assertEquals(600, new ConfigStore(path).config().idleSeconds);
@@ -58,7 +61,7 @@ class ConfigTest {
         assertTrue(store.config().music);
         assertEquals(EnumSet.of(Shot.Type.PAN, Shot.Type.CRANE, Shot.Type.DIAGONAL_GLIDE,
             Shot.Type.RISING_PASS, Shot.Type.DESCENDING_PASS, Shot.Type.PULL_AWAY,
-            Shot.Type.TRAIL, Shot.Type.ESCORT, Shot.Type.LEAD, Shot.Type.WIDE_TRACK), store.config().shots);
+            Shot.Type.TRAIL, Shot.Type.ESCORT, Shot.Type.LEAD, Shot.Type.WIDE_TRACK, Shot.Type.ANGLER, Shot.Type.CAST_LINE, Shot.Type.FLOAT), store.config().shots);
         assertEquals(CinematicConfig.Pace.LONG, store.config().pace);
         assertEquals(CinematicConfig.Subject.MIXED, store.config().subject);
         assertEquals(CinematicConfig.Lens.CINEMATIC, store.config().lens);

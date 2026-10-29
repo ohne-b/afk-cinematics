@@ -16,6 +16,8 @@ Keep suppression across world/player replacement and vanilla key-state restorati
 Consumed cinematic controls retain suppression through screens until physical release.
 Only manually started travel views may retain steering. Follow the rendered subject
 without changing its pose; validate movement from the last applied world-camera position.
+Fishing views follow only the current player's live bobber. Permit genuine rod use
+only through vanilla's hand routing; never cast, retrieve or infer a catch automatically.
 Track the effective mouse button after vanilla's platform-specific remapping.
 Inactive release events can be synthetic; they do not establish physical release.
 

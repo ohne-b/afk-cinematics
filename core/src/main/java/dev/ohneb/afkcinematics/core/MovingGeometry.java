@@ -26,6 +26,7 @@ public final class MovingGeometry implements Geometry {
     }
 
     public Pose local(Pose pose) { return new Pose(pose.position().subtract(origin), pose.yaw(), pose.pitch()); }
+    public boolean sees(Pose pose, Vec focus) { return world.visible(pose.position(), focus.add(target)); }
 
     public Pose apply(Pose pose, Vec focus, double fade, int take, boolean capture) {
         if (pose == null) return null;
@@ -46,4 +47,7 @@ public final class MovingGeometry implements Geometry {
 
     @Override public boolean clear(Vec from, Vec to, double margin) { return world.clear(from.add(origin), to.add(origin), margin); }
     @Override public boolean visible(Vec from, Vec to, double margin) { return world.visible(from.add(origin), to.add(origin), margin); }
+    @Override public double viewQuality(Pose view) {
+        return world.viewQuality(new Pose(view.position().add(origin), view.yaw(), view.pitch()));
+    }
 }

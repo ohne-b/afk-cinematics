@@ -27,6 +27,7 @@ public abstract class CameraStopMixin {
         TestSupport.cameraStop = "position=" + (player == null ? null : player.position())
             + ", onGround=" + (player != null && player.onGround()) + ", hurt=" + (player == null ? 0 : player.hurtTime)
             + ", paused=" + client.isPaused() + ", focus=" + client.isWindowActive() + ", screen=" + AfkCinematics.screen()
+            + ", bobber=" + (player == null || player.fishing == null ? null : player.fishing.position())
             + "\n" + StackWalker.getInstance().walk(frames -> frames.limit(8).map(Object::toString).collect(Collectors.joining("\n")));
         org.slf4j.LoggerFactory.getLogger("CameraValidation").info("Cinematic stopped: {}", TestSupport.cameraStop);
     }
