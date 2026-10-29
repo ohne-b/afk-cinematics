@@ -24,6 +24,7 @@ public final class TransitionsGameTest implements FabricClientGameTest {
         context.runOnClient(client -> {
             limit.set(client.options.framerateLimit().get());
             client.options.framerateLimit().set(20);
+            AfkCinematics.config().cinematicFps = 20;
             AfkCinematics.config().pace = CinematicConfig.Pace.SHORT;
             AfkCinematics.config().shots = EnumSet.of(Shot.Type.DRIFT);
             sceneryFrames = new ArrayList<>();
@@ -71,6 +72,7 @@ public final class TransitionsGameTest implements FabricClientGameTest {
         } finally {
             context.runOnClient(client -> {
                 client.options.framerateLimit().set(limit.get());
+                AfkCinematics.config().cinematicFps = 60;
                 checkTransitions = false;
                 sceneryFrames = null;
                 focused = null;

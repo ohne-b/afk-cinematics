@@ -78,6 +78,19 @@ public final class AfkCinematics {
     }
     public static double fade() { return session == null ? 0 : session.fade(); }
     public static boolean scenery() { return session != null && session.scenery(); }
+    public static int frameLimit() {
+        if (!showing() || !eligible()) return 0;
+        var client = Minecraft.getInstance();
+        //? if >=1.21.5 {
+        if (client.getFramerateLimitTracker().getThrottleReason()
+            == com.mojang.blaze3d.platform.FramerateLimitTracker.FramerateThrottleReason.WINDOW_ICONIFIED) return 0;
+        //?} else if >=1.21.2 {
+        /*if (client.getWindow().isIconified()) return 0;
+        *///?} else {
+        /*if (org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(window(), org.lwjgl.glfw.GLFW.GLFW_ICONIFIED) == org.lwjgl.glfw.GLFW.GLFW_TRUE) return 0;
+        *///?}
+        return Math.clamp(config().cinematicFps, 20, 240);
+    }
     public static double fieldOfView(Camera camera, double normal) {
         if (session == null || camera != appliedCamera) return normal;
         var window = Minecraft.getInstance().getWindow();

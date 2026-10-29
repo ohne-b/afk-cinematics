@@ -34,6 +34,7 @@ public final class ConfigStore {
             config.shots = shots();
             config.distance = enumeration("distance", CinematicConfig.Distance.NORMAL);
             config.lens = enumeration("lens", CinematicConfig.Lens.CINEMATIC);
+            config.cinematicFps = Math.clamp(integer("cinematicFps", 60), 20, 240);
             config.hideHud = bool("hideHud", true);
             config.letterbox = bool("letterbox", false);
             config.music = bool("music", false);
@@ -93,6 +94,7 @@ public final class ConfigStore {
         updated.add("shots", shots);
         updated.addProperty("distance", config.distance.name().toLowerCase(Locale.ROOT));
         updated.addProperty("lens", config.lens.name().toLowerCase(Locale.ROOT));
+        updated.addProperty("cinematicFps", Math.clamp(config.cinematicFps, 20, 240));
         updated.addProperty("hideHud", config.hideHud);
         updated.addProperty("letterbox", config.letterbox);
         updated.addProperty("music", config.music);

@@ -34,8 +34,9 @@ viewpoints use gentle fades; the camera does not travel through walls.
 ## Compatibility
 
 The camera stays near the player and uses loaded terrain. It does not move your
-character, change server activity or prevent AFK kicks. Minecraft's pause behaviour
-and background frame limits still apply.
+character, change server activity or prevent AFK kicks. Display settings include a
+separate cinematic FPS cap; normal FPS settings resume on exit. Paused and minimized
+windows keep their normal behaviour. VSync and hardware still limit actual FPS.
 
 Cinematics require a stationary player with no menu open. If no clear view is
 available, the normal camera stays active. Freecam is allowed, including while active.
