@@ -7,9 +7,11 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
 import net.minecraft.world.Difficulty;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.gamerules.GameRules;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,6 +32,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                     .adjustSettings(settings -> settings.setSeed("20261029")).create()) {
                 world.getServer().runOnServer(server -> {
                     server.setDifficulty(Difficulty.PEACEFUL, true);
+                    server.overworld().getGameRules().set(GameRules.SPAWN_MOBS, false, server);
                     var player = server.getPlayerList().getPlayers().getFirst();
                     player.setGameMode(GameType.SURVIVAL);
                     player.getInventory().clearContent();
@@ -39,6 +42,11 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                 context.waitFor(client -> client.player.onGround() && !client.player.isInWater()
                     && client.player.getInventory().countItem(Items.EMERALD) == 32, 200);
                 context.waitTicks(30);
+                world.getServer().runOnServer(server -> {
+                    var player = server.getPlayerList().getPlayers().getFirst();
+                    // Generated passive mobs can push a stationary player and correctly cancel the camera.
+                    server.overworld().getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(128)).forEach(Mob::discard);
+                });
                 Pose playerPose = context.computeOnClient(client -> new Pose(WorldGeometry.point(client.player.position()),
                     client.player.getYRot(), client.player.getXRot()));
                 context.runOnClient(client -> {

@@ -55,8 +55,8 @@ class ShotControlTest {
 
         boolean[] occupied = {false};
         var blocked = new CinematicSession(SUBJECT, ENTRY, 0, config(), new Geometry() {
-            public boolean clear(Vec a, Vec b) { return !occupied[0]; }
-            public boolean visible(Vec a, Vec b) { return true; }
+            public boolean clear(Vec a, Vec b, double margin) { return !occupied[0]; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
         }, new Random(2));
         for (int tick = 0; tick <= 100; tick++) {
             blocked.tick(tick * 50_000_000L);
@@ -86,8 +86,8 @@ class ShotControlTest {
         var config = config();
         config.subject = CinematicConfig.Subject.SCENERY;
         var session = new CinematicSession(SUBJECT, ENTRY, 0, config, new Geometry() {
-            public boolean clear(Vec a, Vec b) { return true; }
-            public boolean visible(Vec a, Vec b) { return true; }
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
             public Scene scenery(Vec anchor, Pose original, double bearing, int probe) {
                 probes[0]++;
                 return probe == 0 ? new Scene(new Vec(8, 1, 0), new Vec(8, 3, -8), true, 1) : null;
@@ -120,8 +120,8 @@ class ShotControlTest {
 
     private static Geometry geometry(ArrayList<Shot> accepted, int[] rejected) {
         return new Geometry() {
-            public boolean clear(Vec a, Vec b) { return true; }
-            public boolean visible(Vec a, Vec b) { return true; }
+            public boolean clear(Vec a, Vec b, double margin) { return true; }
+            public boolean visible(Vec a, Vec b, double margin) { return true; }
             public boolean valid(Shot shot, Vec entry) {
                 if (rejected[0] > 0) { rejected[0]--; return false; }
                 accepted.add(shot);

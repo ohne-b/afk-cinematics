@@ -9,8 +9,8 @@ class ShotOptionsTest {
     private static final Vec SUBJECT = new Vec(0, 1, 0);
     private static final Pose ENTRY = new Pose(new Vec(0, 1.6, 0), 0, 0);
     private static final Geometry OPEN = new Geometry() {
-        public boolean clear(Vec from, Vec to) { return true; }
-        public boolean visible(Vec from, Vec target) { return true; }
+        public boolean clear(Vec from, Vec to, double margin) { return true; }
+        public boolean visible(Vec from, Vec target, double margin) { return true; }
     };
 
     @Test void eachSelectedStyleHasItsOwnCameraMotion() {
@@ -51,8 +51,8 @@ class ShotOptionsTest {
 
     @Test void aLowCeilingFallsBackOnlyToAnEnabledStyle() {
         Geometry low = new Geometry() {
-            public boolean clear(Vec from, Vec to) { return from.y() <= 2.5 && to.y() <= 2.5; }
-            public boolean visible(Vec from, Vec target) { return true; }
+            public boolean clear(Vec from, Vec to, double margin) { return Math.max(from.y(), to.y()) + margin <= 2.5; }
+            public boolean visible(Vec from, Vec target, double margin) { return true; }
         };
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.OVERHEAD, Shot.Type.DRIFT);
@@ -65,8 +65,8 @@ class ShotOptionsTest {
 
     @Test void visibilityFollowsTheWholePan() {
         Geometry narrow = new Geometry() {
-            public boolean clear(Vec from, Vec to) { return true; }
-            public boolean visible(Vec from, Vec target) { return target.distance(SUBJECT) < 0.5; }
+            public boolean clear(Vec from, Vec to, double margin) { return true; }
+            public boolean visible(Vec from, Vec target, double margin) { return target.distance(SUBJECT) + margin < 0.5; }
         };
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.PAN);

@@ -6,11 +6,13 @@ import dev.ohneb.afkcinematics.core.Scene;
 import dev.ohneb.afkcinematics.core.Vec;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 public final class WorldGeometry implements Geometry {
     private static final double RADIUS = 0.25;
@@ -23,13 +25,13 @@ public final class WorldGeometry implements Geometry {
     }
 
     @Override
-    public boolean clear(Vec from, Vec to) {
+    public boolean clear(Vec from, Vec to, double margin) {
         int steps = Math.max(1, (int) Math.ceil(from.distance(to) / 0.25));
         if (steps > 64) return false;
         Vec previous = from;
         for (int i = 1; i <= steps; i++) {
             Vec next = from.lerp(to, (double) i / steps);
-            AABB box = new AABB(vector(previous), vector(next)).inflate(RADIUS);
+            AABB box = new AABB(vector(previous), vector(next)).inflate(RADIUS + margin);
             if (!level.getWorldBorder().isWithinBounds(box)) return false;
             var volume = Shapes.create(box);
             // Moving pistons and other shapes can extend beyond their owning block.
@@ -49,18 +51,44 @@ public final class WorldGeometry implements Geometry {
     }
 
     @Override
-    public boolean visible(Vec camera, Vec subject) {
-        if (camera.distance(subject) > 16) return false;
+    public boolean visible(Vec camera, Vec subject, double margin) {
+        if (camera.distance(subject) + 2 * margin > 16) return false;
         Vec3 start = vector(camera), end = vector(subject);
-        AABB ray = new AABB(start, end);
+        AABB ray = new AABB(start, end).inflate(margin);
         // A ray can cross a moving shape without crossing the block that owns it.
         for (BlockPos block : BlockPos.betweenClosed(BlockPos.containing(ray.minX, ray.minY, ray.minZ).offset(-1, -1, -1),
                 BlockPos.containing(ray.maxX, ray.maxY, ray.maxZ).offset(1, 1, 1))) {
             if (!level.hasChunkAt(block)) return false;
             var state = level.getBlockState(block);
-            if (state.getVisualShape(level, block, CollisionContext.empty()).clip(start, end, block) != null) return false;
+            if (intersects(state.getVisualShape(level, block, CollisionContext.empty()), block, start, end, margin)) return false;
             var fluid = state.getFluidState();
-            if (!fluid.isEmpty() && fluid.getShape(level, block).clip(start, end, block) != null) return false;
+            if (!fluid.isEmpty() && intersects(fluid.getShape(level, block), block, start, end, margin)) return false;
+        }
+        return true;
+    }
+
+    private static boolean intersects(VoxelShape shape, BlockPos block, Vec3 start, Vec3 end, double margin) {
+        if (margin == 0) return shape.clip(start, end, block) != null;
+        for (AABB part : shape.toAabbs()) {
+            AABB expanded = part.move(block.getX(), block.getY(), block.getZ()).inflate(margin);
+            if (intersects(expanded, start, end)) return true;
+        }
+        return false;
+    }
+
+    private static boolean intersects(AABB box, Vec3 start, Vec3 end) {
+        double enter = 0, leave = 1;
+        for (Direction.Axis axis : Direction.Axis.values()) {
+            double origin = start.get(axis), direction = end.get(axis) - origin;
+            if (direction == 0) {
+                if (origin < box.min(axis) || origin > box.max(axis)) return false;
+            } else {
+                double first = (box.min(axis) - origin) / direction;
+                double last = (box.max(axis) - origin) / direction;
+                enter = Math.max(enter, Math.min(first, last));
+                leave = Math.min(leave, Math.max(first, last));
+                if (enter > leave) return false;
+            }
         }
         return true;
     }
