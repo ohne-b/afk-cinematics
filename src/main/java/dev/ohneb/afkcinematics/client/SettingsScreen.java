@@ -97,6 +97,10 @@ public final class SettingsScreen extends Screen {
                 widgets.add(toggle("unfocused", () -> config.unfocused, value -> config.unfocused = value));
             }
             case CAMERA -> {
+                widgets.add(Button.builder(value("subject", config.subject), button -> {
+                    config.subject = CinematicConfig.Subject.values()[(config.subject.ordinal() + 1) % CinematicConfig.Subject.values().length];
+                    button.setMessage(value("subject", config.subject));
+                }).tooltip(Tooltip.create(text("subject.help"))).build());
                 widgets.add(Button.builder(value("motion", config.motion), button -> {
                     config.motion = CinematicConfig.Motion.values()[(config.motion.ordinal() + 1) % CinematicConfig.Motion.values().length];
                     button.setMessage(value("motion", config.motion));
@@ -104,7 +108,7 @@ public final class SettingsScreen extends Screen {
                 widgets.add(Button.builder(value("distance", config.distance), button -> {
                     config.distance = CinematicConfig.Distance.values()[(config.distance.ordinal() + 1) % CinematicConfig.Distance.values().length];
                     button.setMessage(value("distance", config.distance));
-                }).build());
+                }).tooltip(Tooltip.create(text("distance.help"))).build());
                 widgets.add(Button.builder(value("pace", config.pace), button -> {
                     config.pace = CinematicConfig.Pace.values()[(config.pace.ordinal() + 1) % CinematicConfig.Pace.values().length];
                     button.setMessage(value("pace", config.pace));
