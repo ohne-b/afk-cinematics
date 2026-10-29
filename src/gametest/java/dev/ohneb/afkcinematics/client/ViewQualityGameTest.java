@@ -36,7 +36,12 @@ public final class ViewQualityGameTest implements FabricClientGameTest {
                 } finally {
                     client.level.setBlock(block, old, 3);
                 }
-                require(WorldScenery.depth(client.level, vantage.add(new Vec(1_000_000, 0, 0)), direction) == -1,
+                Vec unloaded = vantage.add(new Vec(1_000_000, 0, 0));
+                var geometry = new WorldGeometry(client.level);
+                require(!geometry.clear(unloaded, unloaded), "Camera clearance accepted an unloaded chunk");
+                require(!geometry.visible(unloaded, unloaded.add(direction.scale(8)), 0.1),
+                    "Swept visibility accepted unloaded terrain");
+                require(WorldScenery.depth(client.level, unloaded, direction) == -1,
                     "Unloaded terrain was counted as distant scenery");
             });
         } finally {
