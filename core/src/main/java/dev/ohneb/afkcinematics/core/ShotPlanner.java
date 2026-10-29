@@ -14,38 +14,47 @@ final class ShotPlanner {
     private final double bearing;
     private final CinematicConfig config;
     private final Scene lastScene;
-    private final Scene lastScenery;
+    private final List<Pose> recentViews;
     private final Shot.Type lastType;
     private final Random random;
     private final boolean sceneryFirst;
     private final List<Scene> candidates = new ArrayList<>();
     private boolean triedPlayer, triedScenery;
+    private boolean continueScenery;
     private int probe, candidate, attempts;
     private Scene selected;
     private ShotSearch search;
     private boolean cut, entering;
 
     ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
-                Scene lastScene, Scene lastScenery, Shot.Type lastType, Random random) {
+                Scene lastScene, List<Pose> recentViews, int sceneryTakes, Shot.Type lastType, Random random) {
         this.anchor = anchor;
         this.previous = previous;
         this.original = original;
         this.bearing = bearing;
         this.config = config;
         this.lastScene = lastScene;
-        this.lastScenery = lastScenery;
+        this.recentViews = List.copyOf(recentViews);
         this.lastType = lastType;
         this.random = random;
         triedPlayer = config.subject == CinematicConfig.Subject.SCENERY;
         triedScenery = config.subject == CinematicConfig.Subject.PLAYER;
         sceneryFirst = triedPlayer || lastScene != null && !lastScene.scenery();
+        continueScenery = lastScene != null && lastScene.scenery() && sceneryTakes < 2
+            && config.subject != CinematicConfig.Subject.PLAYER && config.motion != CinematicConfig.Motion.STILL
+            && config.shots.stream().anyMatch(type -> type != Shot.Type.STILL);
     }
 
-    boolean exhausted() { return search == null && triedPlayer && triedScenery; }
+    boolean exhausted() { return search == null && !continueScenery && triedPlayer && triedScenery; }
 
     Plan next(Geometry geometry) {
         if (search == null) {
-            if (!triedPlayer && (!sceneryFirst || triedScenery)) {
+            if (continueScenery) {
+                continueScenery = false;
+                selected = lastScene;
+                cut = false;
+                entering = false;
+            } else if (!triedPlayer && (!sceneryFirst || triedScenery)) {
                 triedPlayer = true;
                 selected = new Scene(anchor, original.position(), false, 0);
                 cut = lastScene != null && lastScene.scenery();
@@ -54,7 +63,8 @@ final class ShotPlanner {
                 if (probe < Scene.PROBES) {
                     Scene scene = geometry.scenery(anchor, original, bearing, probe++);
                     if (scene != null && scene.scenery() && scene.near(anchor)
-                        && candidates.stream().noneMatch(other -> other.focus().distance(scene.focus()) < 3)) candidates.add(scene);
+                        && candidates.stream().noneMatch(other -> other.focus().distance(scene.focus()) < 3
+                            && other.vantage().distance(scene.vantage()) < 3)) candidates.add(scene);
                     if (probe == Scene.PROBES) candidates.sort(Comparator.comparingDouble(this::score).reversed());
                     return null;
                 }
@@ -74,6 +84,14 @@ final class ShotPlanner {
     }
 
     private double score(Scene scene) {
-        return scene.interest() - (lastScenery != null && lastScenery.focus().distance(scene.focus()) < 5 ? 100 : 0);
+        Pose view = Pose.lookingAt(scene.vantage(), scene.focus());
+        double penalty = 0;
+        for (int i = 0; i < recentViews.size(); i++) {
+            Pose recent = recentViews.get(i);
+            double turn = Math.hypot(Math.IEEEremainder(view.yaw() - recent.yaw(), 360), view.pitch() - recent.pitch());
+            double likeness = Math.max(0, 1 - view.position().distance(recent.position()) / 8) * Math.max(0, 1 - turn / 60);
+            penalty = Math.max(penalty, 4.5 * likeness * (i + 1) / recentViews.size());
+        }
+        return scene.interest() - penalty;
     }
 }

@@ -23,6 +23,7 @@ public final class TestSupport {
     public static java.util.List<String> sceneryFrames;
     public static java.util.List<String> cameraTimings;
     public static String cameraStop;
+    public static Shot revealedShot;
 
     private TestSupport() { }
 

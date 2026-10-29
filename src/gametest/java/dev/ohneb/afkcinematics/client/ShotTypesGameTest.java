@@ -47,13 +47,15 @@ public final class ShotTypesGameTest implements FabricClientGameTest {
                     AfkCinematics.config().shots = EnumSet.of(type);
                     AfkCinematics.config().pace = CinematicConfig.Pace.SHORT;
                     AfkCinematics.config().letterbox = true;
+                    cameraTimings = new ArrayList<>();
+                    cameraStop = null;
                 });
                 start(context);
                 context.waitTicks(90);
                 Pose first = pose(context);
                 for (int tick = 0; tick < 40; tick++) {
                     context.runOnClient(client -> {
-                        require(AfkCinematics.showing(), "Selected shot stopped: " + type);
+                        require(AfkCinematics.showing(), "Selected shot stopped: " + type + "\n" + cameraStop);
                         var position = WorldGeometry.point(camera(client).position());
                         require(new WorldGeometry(client.level).clear(position, position), "Selected shot clipped terrain: " + type);
                         require(WorldGeometry.point(client.player.position()).distance(playerPose.position()) < 0.0001
@@ -113,6 +115,7 @@ public final class ShotTypesGameTest implements FabricClientGameTest {
                 AfkCinematics.stop();
                 AfkCinematics.config().shots = EnumSet.allOf(Shot.Type.class);
                 AfkCinematics.config().pace = CinematicConfig.Pace.RELAXED;
+                cameraTimings = null;
                 focused = null;
             });
         }

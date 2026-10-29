@@ -1,6 +1,8 @@
 package dev.ohneb.afkcinematics.core;
 
 import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class CinematicSession {
     private enum Phase { ENTRY, SHOT, FADE_OUT, CUT, FADE_IN }
@@ -14,14 +16,16 @@ public final class CinematicSession {
     private ShotPlanner.Plan pending;
     private Shot shot;
     private Scene scene;
-    private Scene lastScenery;
+    private final List<Pose> recentViews = new ArrayList<>();
     private Pose current;
     private Vec currentFocus;
-    private long started, lastFrame;
+    private long started, lastFrame, handoff;
+    private int sceneryTakes;
     private Phase phase = Phase.ENTRY;
     private boolean ended;
     private boolean covered;
     private boolean advanceRequested;
+    private boolean heldForNext;
     private double entrySeconds = 1.5;
     private double fade;
 
@@ -33,49 +37,75 @@ public final class CinematicSession {
         this.config = config;
         this.geometry = geometry;
         this.random = random;
-        planner = planner();
+        planner = planner(current);
     }
 
     public void tick(long now) {
         if (ended) return;
-        if (shot != null && phase == Phase.SHOT && planner == null
-            && (advanceRequested || (now - started) / 1e9 >= shot.duration())) {
-            planner = planner();
-            advanceRequested = false;
-        }
-        if (planner == null) return;
-        for (int i = 0; i < 2 && !planner.exhausted(); i++) {
-            var plan = planner.next(geometry);
-            if (plan == null) continue;
-            if (plan.cut()) {
-                pending = plan;
-                phase = Phase.FADE_OUT;
-                covered = false;
-            } else {
-                shot = plan.shot();
-                scene = plan.scene();
-                phase = plan.entering() ? Phase.ENTRY : Phase.SHOT;
-                if (plan.entering()) {
-                    double distance = entry.position().distance(shot.start());
-                    Pose target = shot.sample(0);
-                    double turn = Math.max(Math.abs(Math.IEEEremainder(target.yaw() - entry.yaw(), 360)),
-                        Math.abs(target.pitch() - entry.pitch()));
-                    entrySeconds = Math.clamp(Math.max(distance / 1.5, turn / 45), 1.5, 4);
-                }
+        if (shot != null && phase == Phase.SHOT) {
+            if (advanceRequested && !heldForNext) {
+                planner = planner(current);
+                pending = null;
+                heldForNext = true;
+                handoff = now;
+                advanceRequested = false;
+            } else if (planner == null && pending == null && (now - started) / 1e9 >= shot.duration() - 4) {
+                planner = planner(shot.sample(shot.duration()));
+                handoff = started + Math.round(shot.duration() * 1e9);
             }
-            planner = null;
-            started = now;
-            lastFrame = now;
-            return;
         }
-        if (planner.exhausted()) ended = true;
+        if (planner != null) {
+            for (int i = 0; i < 2 && !planner.exhausted(); i++) {
+                var plan = planner.next(geometry);
+                if (plan == null) continue;
+                pending = plan;
+                planner = null;
+                break;
+            }
+            if (planner != null && planner.exhausted()) {
+                if (shot == null || heldForNext || now >= handoff) ended = true;
+                return;
+            }
+        }
+        if (pending == null || phase != Phase.ENTRY && phase != Phase.SHOT) return;
+        if (shot != null && phase == Phase.SHOT && now < handoff) return;
+        boolean initial = shot == null;
+        if (!initial && phase == Phase.SHOT && !heldForNext) {
+            Pose end = shot.sample(shot.duration());
+            Vec focus = shot.focus(shot.duration());
+            if (!valid(end, focus, current.position())) { end(); return; }
+            current = end;
+            currentFocus = focus;
+        }
+        var plan = pending;
+        if (!geometry.valid(plan.shot(), plan.cut() ? plan.shot().start() : current.position())) { end(); return; }
+        if (plan.cut()) {
+            phase = Phase.FADE_OUT;
+            covered = false;
+        } else {
+            shot = plan.shot();
+            scene = plan.scene();
+            sceneryTakes = scene.scenery() ? sceneryTakes + 1 : 0;
+            pending = null;
+            phase = plan.entering() ? Phase.ENTRY : Phase.SHOT;
+            if (plan.entering()) {
+                double distance = entry.position().distance(shot.start());
+                Pose target = shot.sample(0);
+                double turn = Math.max(Math.abs(Math.IEEEremainder(target.yaw() - entry.yaw(), 360)),
+                    Math.abs(target.pitch() - entry.pitch()));
+                entrySeconds = Math.clamp(Math.max(distance / 1.5, turn / 45), 1.5, 4);
+            }
+        }
+        heldForNext = false;
+        started = now;
+        if (initial) lastFrame = now;
     }
 
     public Pose frame(long now) {
         if (ended || shot == null && pending == null) return null;
         if (now < lastFrame || now - lastFrame > 1_000_000_000L) return end();
         lastFrame = now;
-        if (planner != null && phase == Phase.SHOT)
+        if (heldForNext && phase == Phase.SHOT)
             return valid(current, currentFocus, current.position()) ? current : end();
         double elapsed = (now - started) / 1e9;
         if (phase == Phase.FADE_OUT) {
@@ -91,7 +121,11 @@ public final class CinematicSession {
             if (!valid(next, pending.shot().focus(0), next.position())) return end();
             shot = pending.shot();
             scene = pending.scene();
-            if (scene.scenery()) lastScenery = scene;
+            sceneryTakes = scene.scenery() ? 1 : 0;
+            if (scene.scenery()) {
+                recentViews.add(next);
+                if (recentViews.size() > 6) recentViews.removeFirst();
+            }
             pending = null;
             current = next;
             currentFocus = shot.focus(0);
@@ -135,10 +169,10 @@ public final class CinematicSession {
     public void coveredFrame() { if (fade == 1) covered = true; }
     public boolean scenery() { return scene != null && scene.scenery(); }
     public boolean settled() { return showing() && phase == Phase.SHOT; }
-    public void nextShot() { if (!ended && planner == null) advanceRequested = true; }
+    public void nextShot() { if (!ended && !heldForNext) advanceRequested = true; }
 
-    private ShotPlanner planner() {
-        return new ShotPlanner(subject, current, entry, bearing, config, scene, lastScenery,
+    private ShotPlanner planner(Pose from) {
+        return new ShotPlanner(subject, from, entry, bearing, config, scene, recentViews, sceneryTakes,
             shot == null ? null : shot.type(), random);
     }
 }

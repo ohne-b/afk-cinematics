@@ -85,6 +85,7 @@ class ShotControlTest {
         int[] probes = {0};
         var config = config();
         config.subject = CinematicConfig.Subject.SCENERY;
+        config.shots = EnumSet.of(Shot.Type.STILL);
         var session = new CinematicSession(SUBJECT, ENTRY, 0, config, new Geometry() {
             public boolean clear(Vec a, Vec b, double margin) { return true; }
             public boolean visible(Vec a, Vec b, double margin) { return true; }
@@ -124,7 +125,7 @@ class ShotControlTest {
             public boolean visible(Vec a, Vec b, double margin) { return true; }
             public boolean valid(Shot shot, Vec entry) {
                 if (rejected[0] > 0) { rejected[0]--; return false; }
-                accepted.add(shot);
+                if (!accepted.contains(shot)) accepted.add(shot);
                 return Geometry.super.valid(shot, entry);
             }
         };

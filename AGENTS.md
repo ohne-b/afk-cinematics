@@ -25,6 +25,8 @@ obstructed path. Every stop path uses the same cleanup.
 Separate scenery viewpoints use covered cuts: render a fully opaque old frame,
 then a fully opaque destination frame, and revalidate before revealing it. Keep all
 viewpoints within the player-centered range; never interpolate through terrain.
+Prepare connected takes from the expected endpoint without freezing the current shot.
+Revalidate at handoff; manual Next discards that plan and uses the current pose.
 
 Use isolated worlds for tests. Never access player saves or public servers in automated
 tests. A build does not establish visual quality or compatibility. Use a separate
