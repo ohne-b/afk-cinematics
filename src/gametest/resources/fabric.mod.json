@@ -10,6 +10,7 @@
       "dev.ohneb.afkcinematics.client.ControlBindingsGameTest",
       "dev.ohneb.afkcinematics.client.ShotControlsGameTest",
       "dev.ohneb.afkcinematics.client.CameraGameTest",
+      "dev.ohneb.afkcinematics.client.AirWaterGameTest",
       "dev.ohneb.afkcinematics.client.ExternalCameraGameTest",
       "dev.ohneb.afkcinematics.client.LensGameTest",
       "dev.ohneb.afkcinematics.client.FrameLimitGameTest",

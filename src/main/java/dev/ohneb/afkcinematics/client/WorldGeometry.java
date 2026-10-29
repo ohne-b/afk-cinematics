@@ -17,22 +17,30 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public final class WorldGeometry implements Geometry {
     private static final double RADIUS = 0.25;
+    private enum Medium { DRY, SUBMERGED, PLAYER }
     private final ClientLevel level;
-    private final boolean water;
-    private WorldGeometry alternate;
+    private final Medium medium;
+    private final WorldGeometry[] views;
 
     public WorldGeometry(ClientLevel level) { this(level, false); }
 
-    public WorldGeometry(ClientLevel level, boolean water) { this.level = level; this.water = water; }
+    public WorldGeometry(ClientLevel level, boolean water) {
+        this(level, water ? Medium.SUBMERGED : Medium.DRY, new WorldGeometry[Medium.values().length]);
+    }
+
+    private WorldGeometry(ClientLevel level, Medium medium, WorldGeometry[] views) {
+        this.level = level;
+        this.medium = medium;
+        this.views = views;
+        views[medium.ordinal()] = this;
+    }
 
     @Override public WorldGeometry forScene(Scene scene) {
-        boolean underwater = scene != null && scene.kind() == Scene.Kind.WATER;
-        if (water == underwater) return this;
-        if (alternate == null) {
-            alternate = new WorldGeometry(level, underwater);
-            alternate.alternate = this;
-        }
-        return alternate;
+        // A player view may straddle the surface; underwater scenery must remain submerged.
+        Medium selected = scene == null || !scene.scenery() ? Medium.PLAYER
+            : scene.kind() == Scene.Kind.WATER ? Medium.SUBMERGED : Medium.DRY;
+        var view = views[selected.ordinal()];
+        return view != null ? view : new WorldGeometry(level, selected, views);
     }
 
     @Override public Scene scenery(Vec anchor, Pose original, double bearing, int probe) {
@@ -57,12 +65,12 @@ public final class WorldGeometry implements Geometry {
                 var shape = state.getVisualShape(level, block, CollisionContext.empty());
                 if (!shape.isEmpty() && Shapes.joinIsNotEmpty(volume, shape.move(block.getX(), block.getY(), block.getZ()), BooleanOp.AND)) return false;
                 var fluid = state.getFluidState();
-                if (water && block.getX() < box.maxX && block.getX() + 1 > box.minX
+                if (medium == Medium.SUBMERGED && block.getX() < box.maxX && block.getX() + 1 > box.minX
                     && block.getY() < box.maxY && block.getY() + 1 > box.minY
                     && block.getZ() < box.maxZ && block.getZ() + 1 > box.minZ
                     && (!fluid.is(FluidTags.WATER)
                         || block.getY() + fluid.getHeight(level, block) < Math.min(box.maxY, block.getY() + 1))) return false;
-                if (!fluid.isEmpty() && !(water && fluid.is(FluidTags.WATER)) && Shapes.joinIsNotEmpty(volume,
+                if (!fluid.isEmpty() && !(medium != Medium.DRY && fluid.is(FluidTags.WATER)) && Shapes.joinIsNotEmpty(volume,
                     fluid.getShape(level, block).move(block.getX(), block.getY(), block.getZ()), BooleanOp.AND)) return false;
             }
             previous = next;
@@ -82,7 +90,7 @@ public final class WorldGeometry implements Geometry {
             var state = level.getBlockState(block);
             if (intersects(state.getVisualShape(level, block, CollisionContext.empty()), block, start, end, margin)) return false;
             var fluid = state.getFluidState();
-            if (!fluid.isEmpty() && !(water && fluid.is(FluidTags.WATER))
+            if (!fluid.isEmpty() && !(medium != Medium.DRY && fluid.is(FluidTags.WATER))
                 && intersects(fluid.getShape(level, block), block, start, end, margin)) return false;
         }
         return true;
