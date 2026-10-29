@@ -6,8 +6,7 @@ public final class CinematicSession {
     private final Geometry geometry;
     private final Vec subject;
     private final double bearing;
-    private final double distance;
-    private final CinematicConfig.Motion motion;
+    private final CinematicConfig config;
     private final Random random;
     private ShotSearch search;
     private Shot shot;
@@ -17,14 +16,14 @@ public final class CinematicSession {
     private long lastFrame;
     private boolean entering = true;
     private boolean ended;
+    private double entrySeconds = 1.5;
 
     public CinematicSession(Vec subject, Pose entry, double bearing, CinematicConfig config, Geometry geometry, Random random) {
         this.subject = subject;
         this.entry = entry;
         this.current = entry;
         this.bearing = bearing;
-        this.distance = config.distance.blocks;
-        this.motion = config.motion;
+        this.config = config;
         this.geometry = geometry;
         this.random = random;
         search = search(null, true);
@@ -39,6 +38,11 @@ public final class CinematicSession {
             Shot candidate = search.next(geometry);
             if (candidate == null) continue;
             shot = candidate;
+            if (entering) {
+                double distance = entry.position().distance(shot.start());
+                double turn = Math.abs(Math.IEEEremainder(shot.sample(0).yaw() - entry.yaw(), 360));
+                entrySeconds = Math.clamp(Math.max(distance / 1.5, turn / 45), 1.5, 4);
+            }
             search = null;
             started = now;
             lastFrame = now;
@@ -52,12 +56,14 @@ public final class CinematicSession {
         if (now < lastFrame || now - lastFrame > 1_000_000_000L) { ended = true; return null; }
         lastFrame = now;
         double elapsed = (now - started) / 1e9;
+        double sampledSeconds = entering ? 0 : elapsed;
         Pose next;
         if (entering) {
-            next = entry.blend(shot.sample(0), elapsed / 1.5);
-            if (elapsed >= 1.5) { entering = false; started += 1_500_000_000L; }
+            next = entry.blend(shot.sample(0), elapsed / entrySeconds);
+            if (elapsed >= entrySeconds) { entering = false; started += Math.round(entrySeconds * 1e9); }
         } else next = shot.sample(elapsed);
-        if (!geometry.clear(current.position(), next.position()) || !geometry.visible(next.position(), subject)) {
+        Vec focus = next.lookAhead(Math.max(1, next.position().distance(shot.focus(sampledSeconds))));
+        if (!geometry.clear(current.position(), next.position()) || !geometry.visible(next.position(), focus)) {
             ended = true;
             return null;
         }
@@ -70,6 +76,6 @@ public final class CinematicSession {
     public Pose current() { return current; }
 
     private ShotSearch search(Shot.Type last, boolean first) {
-        return new ShotSearch(subject, current, bearing, distance, motion, last, first, random);
+        return new ShotSearch(subject, current, bearing, config, last, first, random);
     }
 }

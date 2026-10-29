@@ -1,6 +1,7 @@
 package dev.ohneb.afkcinematics.core;
 
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.IOException;
@@ -10,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
+import java.util.EnumSet;
 
 public final class ConfigStore {
     private final Path path;
@@ -27,6 +29,8 @@ public final class ConfigStore {
             config.automatic = bool("automatic", true);
             config.idleSeconds = Math.clamp(integer("idleSeconds", 30), 10, 600);
             config.motion = enumeration("motion", CinematicConfig.Motion.GENTLE);
+            config.pace = enumeration("pace", CinematicConfig.Pace.RELAXED);
+            config.shots = shots();
             config.distance = enumeration("distance", CinematicConfig.Distance.NORMAL);
             config.hideHud = bool("hideHud", true);
             config.letterbox = bool("letterbox", false);
@@ -62,6 +66,17 @@ public final class ConfigStore {
         } catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException exception) { return fallback; }
     }
 
+    private EnumSet<Shot.Type> shots() {
+        var selected = EnumSet.noneOf(Shot.Type.class);
+        if (document.get("shots") instanceof JsonArray array) {
+            for (var value : array) {
+                try { selected.add(Shot.Type.valueOf(value.getAsString().toUpperCase(Locale.ROOT))); }
+                catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException ignored) { }
+            }
+        }
+        return selected.isEmpty() ? EnumSet.allOf(Shot.Type.class) : selected;
+    }
+
     public boolean save() {
         if (!readable) return false;
         JsonObject updated = document.deepCopy();
@@ -69,6 +84,10 @@ public final class ConfigStore {
         updated.addProperty("automatic", config.automatic);
         updated.addProperty("idleSeconds", Math.clamp(config.idleSeconds, 10, 600));
         updated.addProperty("motion", config.motion.name().toLowerCase(Locale.ROOT));
+        updated.addProperty("pace", config.pace.name().toLowerCase(Locale.ROOT));
+        var shots = new JsonArray();
+        config.shots.forEach(type -> shots.add(type.name().toLowerCase(Locale.ROOT)));
+        updated.add("shots", shots);
         updated.addProperty("distance", config.distance.name().toLowerCase(Locale.ROOT));
         updated.addProperty("hideHud", config.hideHud);
         updated.addProperty("letterbox", config.letterbox);

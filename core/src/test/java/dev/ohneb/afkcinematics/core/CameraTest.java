@@ -2,6 +2,7 @@ package dev.ohneb.afkcinematics.core;
 
 import org.junit.jupiter.api.Test;
 import java.util.Random;
+import java.util.EnumSet;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CameraTest {
@@ -26,7 +27,9 @@ class CameraTest {
     }
 
     private Pose runAt(int rate) {
-        var session = new CinematicSession(SUBJECT, ENTRY, 0, new CinematicConfig(), OPEN, new Random(42));
+        var config = new CinematicConfig();
+        config.shots = EnumSet.of(Shot.Type.ARC);
+        var session = new CinematicSession(SUBJECT, ENTRY, 0, config, OPEN, new Random(42));
         session.tick(0);
         for (int i = 0; i <= rate * 8; i++) session.frame(Math.round(i * 1e9 / rate));
         assertFalse(session.ended());
@@ -38,7 +41,7 @@ class CameraTest {
             public boolean clear(Vec from, Vec to) { return !(Math.min(from.x(), to.x()) < 0 && Math.max(from.x(), to.x()) >= 0); }
             public boolean visible(Vec from, Vec target) { return true; }
         };
-        var shot = new Shot(Shot.Type.DRIFT, SUBJECT, new Vec(-2, 2, -4), new Vec(0, 2, -4), new Vec(2, 2, -4), 20);
+        var shot = new Shot(Shot.Type.DRIFT, new Vec(-2, 2, -4), new Vec(0, 2, -4), new Vec(2, 2, -4), SUBJECT, SUBJECT, 20);
         assertFalse(wall.valid(shot, shot.start()));
     }
 
@@ -62,7 +65,7 @@ class CameraTest {
             public boolean visible(Vec from, Vec target) { return false; }
         };
         var session = new CinematicSession(SUBJECT, ENTRY, 0, new CinematicConfig(), closed, new Random(1));
-        for (int i = 0; i < 6; i++) session.tick(i * 50_000_000L);
+        for (int i = 0; i < 50; i++) session.tick(i * 50_000_000L);
         assertTrue(session.ended());
         assertFalse(session.showing());
         var open = new CinematicSession(SUBJECT, ENTRY, 0, new CinematicConfig(), OPEN, new Random(1));
@@ -74,7 +77,7 @@ class CameraTest {
     @Test void stillMotionDoesNotMoveAfterEntry() {
         var config = new CinematicConfig();
         config.motion = CinematicConfig.Motion.STILL;
-        var search = new ShotSearch(SUBJECT, ENTRY, 0, 4, config.motion, null, true, new Random(4));
+        var search = new ShotSearch(SUBJECT, ENTRY, 0, config, null, true, new Random(4));
         Shot shot = search.next(OPEN);
         assertNotNull(shot);
         assertEquals(shot.sample(0), shot.sample(shot.duration()));
@@ -92,6 +95,7 @@ class CameraTest {
                 assertNotNull(pose);
                 Vec offset = pose.position().subtract(SUBJECT);
                 assertTrue(Math.hypot(offset.x(), offset.z()) <= 6.000001, "Successive shots drifted beyond six blocks");
+                assertTrue(offset.y() >= -0.300001 && offset.y() <= 5.500001, "Successive shots drifted vertically");
             }
         }
     }
