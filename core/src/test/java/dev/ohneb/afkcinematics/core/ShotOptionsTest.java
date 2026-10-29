@@ -17,7 +17,7 @@ class ShotOptionsTest {
         for (Shot.Type type : Shot.Type.values()) {
             var config = new CinematicConfig();
             config.shots = EnumSet.of(type);
-            Shot shot = new ShotSearch(SUBJECT, ENTRY, 0, config, null, true, new Random(2)).next(OPEN);
+            Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), false, 0), ENTRY, 0, config, null, true, false, new Random(2)).next(OPEN);
             assertNotNull(shot, type.name());
             assertEquals(type, shot.type());
             Pose first = shot.sample(0), last = shot.sample(shot.duration());
@@ -34,11 +34,11 @@ class ShotOptionsTest {
     @Test void changingFromAPanPreservesTheExactStartingView() {
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.PAN);
-        Shot pan = new ShotSearch(SUBJECT, ENTRY, 0, config, null, true, new Random(2)).next(OPEN);
+        Shot pan = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), false, 0), ENTRY, 0, config, null, true, false, new Random(2)).next(OPEN);
         Pose previous = pan.sample(pan.duration());
         for (Shot.Type type : Shot.Type.values()) {
             config.shots = EnumSet.of(type);
-            Shot next = new ShotSearch(SUBJECT, previous, 0, config, pan.type(), false, new Random(3)).next(OPEN);
+            Shot next = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), false, 0), previous, 0, config, pan.type(), false, false, new Random(3)).next(OPEN);
             assertNotNull(next);
             Pose start = next.sample(0);
             assertEquals(previous.position(), start.position());
@@ -56,11 +56,11 @@ class ShotOptionsTest {
         };
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.OVERHEAD, Shot.Type.DRIFT);
-        Shot shot = find(new ShotSearch(SUBJECT, ENTRY, 0, config, null, true, new Random(2)), low);
+        Shot shot = find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), false, 0), ENTRY, 0, config, null, true, false, new Random(2)), low);
         assertNotNull(shot);
         assertEquals(Shot.Type.DRIFT, shot.type());
         config.shots = EnumSet.of(Shot.Type.OVERHEAD);
-        assertNull(find(new ShotSearch(SUBJECT, ENTRY, 0, config, null, true, new Random(2)), low));
+        assertNull(find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), false, 0), ENTRY, 0, config, null, true, false, new Random(2)), low));
     }
 
     @Test void visibilityFollowsTheWholePan() {
@@ -70,7 +70,7 @@ class ShotOptionsTest {
         };
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.PAN);
-        assertNull(find(new ShotSearch(SUBJECT, ENTRY, 0, config, null, true, new Random(2)), narrow));
+        assertNull(find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), false, 0), ENTRY, 0, config, null, true, false, new Random(2)), narrow));
     }
 
     @Test void pacingControlsDurationAndAvailableStylesAvoidImmediateRepeats() {
@@ -78,7 +78,7 @@ class ShotOptionsTest {
         config.shots = EnumSet.of(Shot.Type.ARC, Shot.Type.DOLLY);
         for (var pace : CinematicConfig.Pace.values()) {
             config.pace = pace;
-            Shot shot = new ShotSearch(SUBJECT, ENTRY, 0, config, Shot.Type.ARC, true, new Random(2)).next(OPEN);
+            Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), false, 0), ENTRY, 0, config, Shot.Type.ARC, true, false, new Random(2)).next(OPEN);
             assertEquals(Shot.Type.DOLLY, shot.type());
             assertTrue(shot.duration() >= pace.minimumSeconds && shot.duration() < pace.maximumSeconds);
         }

@@ -1,6 +1,8 @@
 package dev.ohneb.afkcinematics.client;
 
 import dev.ohneb.afkcinematics.core.Geometry;
+import dev.ohneb.afkcinematics.core.Pose;
+import dev.ohneb.afkcinematics.core.Scene;
 import dev.ohneb.afkcinematics.core.Vec;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -15,6 +17,10 @@ public final class WorldGeometry implements Geometry {
     private final ClientLevel level;
 
     public WorldGeometry(ClientLevel level) { this.level = level; }
+
+    @Override public Scene scenery(Vec anchor, Pose original, double bearing, int probe) {
+        return WorldScenery.probe(level, this, anchor, original, bearing, probe);
+    }
 
     @Override
     public boolean clear(Vec from, Vec to) {

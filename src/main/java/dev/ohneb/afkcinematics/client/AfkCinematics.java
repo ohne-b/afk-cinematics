@@ -66,6 +66,9 @@ public final class AfkCinematics {
     public static boolean showing() { return session != null && session.showing(); }
     public static boolean hideHud() { return showing() && config().hideHud; }
     public static boolean showHint() { return showing() && System.nanoTime() < hintUntil; }
+    public static double fade() { return session == null ? 0 : session.fade(); }
+    public static boolean scenery() { return session != null && session.scenery(); }
+    public static void coveredFrame() { if (session != null) session.coveredFrame(); }
 
     public static void tick() {
         if (store == null) return;

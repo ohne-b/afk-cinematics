@@ -20,6 +20,9 @@ Validate the swept camera volume and subject visibility using loaded terrain onl
 Apply the pose before culling and render extraction. Keep world access on the client
 thread; rendering consumes an immutable pose. Stop safely on invalid state or an
 obstructed path. Every stop path uses the same cleanup.
+Separate scenery viewpoints use covered cuts: render a fully opaque old frame,
+then a fully opaque destination frame, and revalidate before revealing it. Keep all
+viewpoints within the player-centered range; never interpolate through terrain.
 
 Use isolated worlds for tests. Never access player saves or public servers in automated
 tests. A build does not establish visual quality or compatibility. Use a separate

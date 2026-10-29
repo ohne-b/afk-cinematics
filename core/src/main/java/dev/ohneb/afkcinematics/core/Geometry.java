@@ -4,6 +4,8 @@ public interface Geometry {
     boolean clear(Vec from, Vec to);
     boolean visible(Vec camera, Vec subject);
 
+    default Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return null; }
+
     default boolean valid(Shot shot, Vec entry) {
         Vec previous = entry;
         for (int step = 0; step <= 16; step++) {

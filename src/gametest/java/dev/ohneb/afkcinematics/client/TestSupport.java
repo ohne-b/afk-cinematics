@@ -19,6 +19,8 @@ public final class TestSupport {
     public static Boolean focused;
     public static int heldKey = -1;
     public static boolean simulateControlClick;
+    public static Boolean holdCoveredScenery;
+    public static java.util.List<String> sceneryFrames;
 
     private TestSupport() { }
 
@@ -32,6 +34,7 @@ public final class TestSupport {
             config.unfocused = true;
             config.music = false;
             config.motion = CinematicConfig.Motion.GENTLE;
+            config.subject = CinematicConfig.Subject.PLAYER;
             config.pace = CinematicConfig.Pace.RELAXED;
             config.shots = java.util.EnumSet.allOf(Shot.Type.class);
             config.distance = CinematicConfig.Distance.NORMAL;
