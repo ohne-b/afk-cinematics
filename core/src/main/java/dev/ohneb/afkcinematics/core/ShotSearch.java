@@ -16,6 +16,7 @@ public final class ShotSearch {
     private final CinematicConfig.Motion motion;
     private final CinematicConfig.Pace pace;
     private final List<Shot.Type> types;
+    private final List<Double> angles;
     private final boolean entering;
     private final boolean cut;
     private final Random random;
@@ -33,6 +34,12 @@ public final class ShotSearch {
         this.entering = entering;
         this.cut = cut;
         this.random = random;
+        angles = new ArrayList<>();
+        if (!scene.scenery()) {
+            angles.addAll(List.of(0.0, 180.0, 90.0, -90.0));
+            Collections.shuffle(angles, random);
+        }
+        for (double angle : ANGLES) if (!angles.contains(angle)) angles.add(angle);
         types = new ArrayList<>(config.shots);
         if (motion == CinematicConfig.Motion.STILL || types.isEmpty()) {
             types.clear();
@@ -42,20 +49,20 @@ public final class ShotSearch {
         if (types.size() > 1 && types.remove(last)) types.add(last);
     }
 
-    public boolean exhausted() { return attempt >= ANGLES.length * types.size(); }
+    public boolean exhausted() { return attempt >= angles.size() * types.size(); }
 
     public Shot next(Geometry geometry) {
         if (exhausted()) return null;
         int index = attempt++;
         Shot.Type type = types.get(index % types.size());
         int view = index / types.size();
-        double angle = Math.toRadians(bearing + ANGLES[view]);
+        double angle = Math.toRadians(bearing + angles.get(view));
         double radius = view < 5 ? distance : Math.min(distance, 2.0);
         Vec start = entering
             ? subject.add(new Vec(Math.sin(angle) * radius, 0.55, -Math.cos(angle) * radius))
             : previous.position();
         if (entering && scene.scenery())
-            start = limitDistance(subject.add(rotate(scene.vantage().subtract(subject), Math.toRadians(ANGLES[view]))));
+            start = limitDistance(subject.add(rotate(scene.vantage().subtract(subject), Math.toRadians(angles.get(view)))));
         if (entering && type == Shot.Type.OVERHEAD && !scene.scenery())
             start = subject.add(new Vec(Math.sin(angle) * 1.7, 4.2, -Math.cos(angle) * 1.7));
         Vec offset = start.subtract(subject);

@@ -84,6 +84,21 @@ class ShotOptionsTest {
         }
     }
 
+    @Test void playerCoverageIncludesFrontBackAndBothSidesBeforeFallbacks() {
+        var views = new java.util.HashSet<Integer>();
+        var config = new CinematicConfig();
+        config.shots = EnumSet.of(Shot.Type.STILL);
+        var random = new Random(4);
+        for (int seed = 0; seed < 64; seed++) {
+            Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), false, 0), ENTRY, 0,
+                config, null, true, true, random).next(OPEN);
+            Vec offset = shot.start().subtract(SUBJECT);
+            assertEquals(config.distance.blocks, Math.hypot(offset.x(), offset.z()), 1e-9);
+            views.add((int)Math.round(Math.toDegrees(Math.atan2(offset.x(), -offset.z()))));
+        }
+        assertEquals(java.util.Set.of(0, 90, -90, 180), views);
+    }
+
     private static Shot find(ShotSearch search, Geometry geometry) {
         for (int attempt = 0; attempt < 100 && !search.exhausted(); attempt++) {
             Shot shot = search.next(geometry);
