@@ -38,9 +38,9 @@ character, change server activity or prevent AFK kicks. Minecraft's pause behavi
 and background frame limits still apply.
 
 Cinematics require a stationary player with no menu open. If no clear view is
-available, the normal camera stays active. Known camera replacements disable
-cinematics to avoid competing for the view;
-the settings screen identifies the conflicting mod. Shader and performance-mod
+available, the normal camera stays active. Freecam is allowed, including while active.
+Other known camera replacements are identified in settings when they prevent
+activation. Shader and performance-mod
 compatibility needs testing with the exact versions used.
 
 Settings are stored in `config/ohneb-afk-cinematics.json`. An unreadable file is

@@ -53,7 +53,7 @@ public final class AfkCinematics {
 
     public static void initialize(Path configDirectory, Predicate<String> installed) {
         store = new ConfigStore(configDirectory.resolve("ohneb-afk-cinematics.json"));
-        for (String id : new String[]{"freecam", "replaymod", "cameraoverhaul", "shouldersurfing", "betterthirdperson", "afk_cinematics", "afkcinematics"}) {
+        for (String id : new String[]{"replaymod", "cameraoverhaul", "shouldersurfing", "betterthirdperson", "afk_cinematics", "afkcinematics"}) {
             if (installed.test(id)) { conflict = id; break; }
         }
         if (!store.readable()) LOGGER.warn(store.error());
@@ -126,7 +126,7 @@ public final class AfkCinematics {
         Minecraft client = Minecraft.getInstance();
         if (store == null || !config().enabled || !conflict.isEmpty() || player == null || world == null
             || client.player != player || client.level != world || client.getConnection() != connection
-            || client.getCameraEntity() != player || screen() != null || client.isPaused()
+            || screen() != null || client.isPaused()
             || (!client.isWindowActive() && !config().unfocused) || INPUT.held()) return false;
         //? if >=26.2 {
         /*if (client.gui.overlay() != null) return false;
