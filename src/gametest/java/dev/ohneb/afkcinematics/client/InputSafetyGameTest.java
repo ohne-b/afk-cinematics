@@ -182,6 +182,31 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
                 mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.RELEASE);
                 start(context);
                 context.runOnClient(client -> AfkCinematics.stop());
+                //? if >=26.2 {
+                /*start(context);
+                mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS);
+                context.runOnClient(client -> focused = false);
+                mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE);
+                context.runOnClient(client -> { focused = true; AfkCinematics.stop(); });
+                key(context, InputConstants.KEY_LCONTROL, InputConstants.PRESS);
+                context.waitFor(client -> AfkCinematics.showing(), 120);
+                mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS, 2);
+                context.runOnClient(client -> {
+                    require(!AfkCinematics.showing(), "Changed Control-click button inherited screenshot passthrough");
+                    require(!client.options.keyUse.isDown() && !client.options.keyUse.consumeClick(),
+                        "Retained screenshot association activated Use");
+                });
+                key(context, InputConstants.KEY_LCONTROL, InputConstants.RELEASE);
+                mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE);
+                context.runOnClient(client -> {
+                    require(!AfkCinematics.suppressed(InputConstants.Type.MOUSE.getOrCreate(InputConstants.MOUSE_BUTTON_LEFT)),
+                        "Physical release retained the old screenshot binding");
+                    require(!AfkCinematics.suppressed(InputConstants.Type.MOUSE.getOrCreate(InputConstants.MOUSE_BUTTON_RIGHT)),
+                        "Physical release retained the new Control-click binding");
+                });
+                start(context);
+                context.runOnClient(client -> AfkCinematics.stop());
+                *///?}
             } finally {
                 mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE);
                 key(context, InputConstants.KEY_LCONTROL, InputConstants.RELEASE);
