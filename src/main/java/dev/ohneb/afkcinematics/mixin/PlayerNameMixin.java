@@ -6,7 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-//? if >=26.3 {
+//? if >=26.2 {
 /*import net.minecraft.world.entity.EntityTypes;
 *///?} else {
 import net.minecraft.world.entity.EntityType;
@@ -39,7 +39,7 @@ public abstract class PlayerNameMixin {
     *///?}
     //? if >=1.21.9 {
     private void afkCinematics$names(AvatarRenderState state, PoseStack pose, SubmitNodeCollector nodes, CameraRenderState camera, CallbackInfo ci) {
-        //? if >=26.3 {
+        //? if >=26.2 {
         /*if (state.entityType == EntityTypes.PLAYER && AfkCinematics.hidePlayerNames()) ci.cancel();
         *///?} else {
         if (state.entityType == EntityType.PLAYER && AfkCinematics.hidePlayerNames()) ci.cancel();
