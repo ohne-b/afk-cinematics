@@ -1,7 +1,7 @@
 # Contributing
 
 The canonical repository is [ohne-b/afk-cinematics](https://github.com/ohne-b/afk-cinematics).
-The project uses the [MIT license](LICENSE.md). Fabric and NeoForge are supported;
+The project uses the [GPL-3.0-only license](LICENSE.md). Fabric and NeoForge are supported;
 Forge is outside the project scope.
 
 ## Development
