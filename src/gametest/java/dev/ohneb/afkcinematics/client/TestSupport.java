@@ -21,6 +21,7 @@ public final class TestSupport {
     public static boolean simulateControlClick;
     public static Boolean holdCoveredScenery;
     public static java.util.List<String> sceneryFrames;
+    public static java.util.List<String> cameraTimings;
 
     private TestSupport() { }
 
@@ -76,7 +77,7 @@ public final class TestSupport {
     }
 
     public static Camera camera(Minecraft client) {
-        //? if >=26.1 {
+        //? if >=26.2 {
         /*return client.gameRenderer.mainCamera();
         *///?} else {
         return client.gameRenderer.getMainCamera();
