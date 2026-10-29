@@ -19,6 +19,7 @@
     "MusicManagerMixin",
     "OptionsMixin",
     "PlayerNameMixin",
+    "ScreenshotMixin",
     "ToastMixin"
   ],
   "injectors": {"defaultRequire": 1}

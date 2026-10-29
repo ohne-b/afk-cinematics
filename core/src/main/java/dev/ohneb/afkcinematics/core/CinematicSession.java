@@ -20,6 +20,8 @@ public final class CinematicSession {
     private Pose current;
     private Vec currentFocus;
     private long started, lastFrame, handoff;
+    private long captureStarted;
+    private int captures;
     private int subjectTakes;
     private Phase phase = Phase.ENTRY;
     private boolean ended;
@@ -42,7 +44,7 @@ public final class CinematicSession {
     }
 
     public void tick(long now) {
-        if (ended) return;
+        if (ended || captures > 0) return;
         if (shot != null && phase == Phase.SHOT) {
             if (advanceRequested && !heldForNext) {
                 planner = planner(current);
@@ -104,6 +106,12 @@ public final class CinematicSession {
 
     public Pose frame(long now) {
         if (ended || shot == null && pending == null) return null;
+        if (captures > 0) {
+            boolean safe = currentFocus == null
+                ? geometry.forScene(scene).clear(current.position(), current.position())
+                : valid(current, currentFocus, current.position(), scene);
+            return safe ? current : end();
+        }
         if (now < lastFrame || now - lastFrame > 1_000_000_000L) return end();
         lastFrame = now;
         if (heldForNext && phase == Phase.SHOT)
@@ -175,6 +183,18 @@ public final class CinematicSession {
     public boolean underwater() { return scene != null && scene.kind() == Scene.Kind.WATER; }
     public boolean settled() { return showing() && phase == Phase.SHOT; }
     public void nextShot() { if (!ended && !heldForNext) advanceRequested = true; }
+
+    public void beginCapture(long now) {
+        if (captures++ == 0) captureStarted = now;
+    }
+
+    public void endCapture(long now) {
+        if (captures == 0 || --captures > 0) return;
+        long elapsed = Math.max(0, now - captureStarted);
+        started += elapsed;
+        if (handoff != 0) handoff += elapsed;
+        lastFrame = now;
+    }
 
     private void setScene(Scene next) {
         subjectTakes = scene != null && scene.scenery() == next.scenery() ? subjectTakes + 1 : 1;
