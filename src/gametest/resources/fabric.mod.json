@@ -12,6 +12,7 @@
       "dev.ohneb.afkcinematics.client.CameraGameTest",
       "dev.ohneb.afkcinematics.client.ExternalCameraGameTest",
       "dev.ohneb.afkcinematics.client.LensGameTest",
+      "dev.ohneb.afkcinematics.client.FrameLimitGameTest",
       "dev.ohneb.afkcinematics.client.InputSafetyGameTest",
       "dev.ohneb.afkcinematics.client.WorldGeometryGameTest",
       "dev.ohneb.afkcinematics.client.ViewQualityGameTest",

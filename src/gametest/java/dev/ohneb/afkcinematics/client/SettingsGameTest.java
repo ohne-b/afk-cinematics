@@ -61,6 +61,13 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     for (String page : new String[]{"Camera", "Display", "General"}) {
                         press(settings, page);
                         checkBounds(settings);
+                        if (page.equals("Display")) {
+                            var fps = settings.children().stream().filter(AbstractWidget.class::isInstance).map(AbstractWidget.class::cast)
+                                .filter(widget -> widget.getMessage().getString().startsWith("Cinematic FPS:")).findFirst().orElseThrow();
+                            for (int step = 0; step < 84; step++) fps.keyPressed(new KeyEvent(InputConstants.KEY_RIGHT, 0, 0));
+                            require(fixture.config().cinematicFps == 144, "Narrow FPS slider skipped integer values");
+                            require(fps.getMessage().getString().equals("Cinematic FPS: 144"), "FPS slider label was stale");
+                        }
                         settings.mouseScrolled(0, 0, 0, -1);
                         checkBounds(settings);
                     }
