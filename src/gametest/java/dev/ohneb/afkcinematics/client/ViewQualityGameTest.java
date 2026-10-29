@@ -43,6 +43,15 @@ public final class ViewQualityGameTest implements FabricClientGameTest {
                     "Swept visibility accepted unloaded terrain");
                 require(WorldScenery.depth(client.level, unloaded, direction) == -1,
                     "Unloaded terrain was counted as distant scenery");
+                int chunkX = client.player.blockPosition().getX() >> 4;
+                int chunkZ = client.player.blockPosition().getZ() >> 4;
+                int edge = chunkX;
+                while (edge < chunkX + 32 && client.level.getChunkSource().hasChunk(edge, chunkZ)) edge++;
+                require(edge > chunkX && edge < chunkX + 32, "Fixture did not find the loaded chunk boundary");
+                Vec border = new Vec((edge << 4) - 0.6, vantage.y(), (chunkZ << 4) + 4);
+                require(!geometry.clear(border, border), "Camera owner halo crossed into an unloaded chunk");
+                require(!geometry.visible(border, border.add(new Vec(0, 0, 2)), 0.2),
+                    "Expanded sightline accepted an unloaded neighboring shape origin");
             });
         } finally {
             context.runOnClient(client -> focused = null);

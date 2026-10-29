@@ -55,7 +55,7 @@ final class WorldScenery {
         for (int dx = -2; dx <= 2; dx += 2) {
             for (int dz = -2; dz <= 2; dz += 2) {
                 int x = centerX + dx, z = centerZ + dz;
-                if (!level.hasChunkAt(new BlockPos(x, 0, z))) continue;
+                if (!level.getChunkSource().hasChunk(x >> 4, z >> 4)) continue;
                 // WORLD_SURFACE is sent with the chunk; this does not build a new heightmap.
                 int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - 1;
                 if (Math.abs(y - anchor.y()) > 51) continue;
@@ -69,7 +69,7 @@ final class WorldScenery {
                 if (Math.hypot(target.x() - anchor.x(), target.z() - anchor.z()) > 18) continue;
                 Vec vantage = target.add(new Vec(Math.sin(viewAngle) * 12, 2, Math.cos(viewAngle) * 12));
                 BlockPos column = BlockPos.containing(vantage.x(), vantage.y(), vantage.z());
-                if (!level.hasChunkAt(column)) continue;
+                if (!level.getChunkSource().hasChunk(column.getX() >> 4, column.getZ() >> 4)) continue;
                 double ground = level.getHeight(Heightmap.Types.WORLD_SURFACE, column.getX(), column.getZ());
                 vantage = new Vec(vantage.x(), Math.max(vantage.y(), ground + 1.5), vantage.z());
                 Scene scene = new Scene(target, vantage, true, 0);
@@ -103,7 +103,7 @@ final class WorldScenery {
         int maxZ = (int)Math.floor(Math.max(vantage.z(), end.z())) >> 4;
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
-                if (!level.hasChunkAt(new BlockPos(x << 4, 0, z << 4))) return -1;
+                if (!level.getChunkSource().hasChunk(x, z)) return -1;
             }
         }
         // These bounded rays rank the view; WorldGeometry independently proves safety.
@@ -115,7 +115,7 @@ final class WorldScenery {
 
     private static boolean inside(ClientLevel level, Vec point) {
         BlockPos block = BlockPos.containing(point.x(), point.y(), point.z());
-        return !level.isOutsideBuildHeight(block) && level.hasChunkAt(block);
+        return !level.isOutsideBuildHeight(block) && level.getChunkSource().hasChunk(block.getX() >> 4, block.getZ() >> 4);
     }
 
     private static double interest(BlockState state) {

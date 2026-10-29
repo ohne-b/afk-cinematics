@@ -37,7 +37,7 @@ public final class WorldGeometry implements Geometry {
             // Moving pistons and other shapes can extend beyond their owning block.
             for (BlockPos block : BlockPos.betweenClosed(BlockPos.containing(box.minX, box.minY, box.minZ).offset(-1, -1, -1),
                     BlockPos.containing(box.maxX, box.maxY, box.maxZ).offset(1, 1, 1))) {
-                if (!level.hasChunkAt(block)) return false;
+                if (!level.getChunkSource().hasChunk(block.getX() >> 4, block.getZ() >> 4)) return false;
                 var state = level.getBlockState(block);
                 var shape = state.getVisualShape(level, block, CollisionContext.empty());
                 if (!shape.isEmpty() && Shapes.joinIsNotEmpty(volume, shape.move(block.getX(), block.getY(), block.getZ()), BooleanOp.AND)) return false;
@@ -58,7 +58,7 @@ public final class WorldGeometry implements Geometry {
         // A ray can cross a moving shape without crossing the block that owns it.
         for (BlockPos block : BlockPos.betweenClosed(BlockPos.containing(ray.minX, ray.minY, ray.minZ).offset(-1, -1, -1),
                 BlockPos.containing(ray.maxX, ray.maxY, ray.maxZ).offset(1, 1, 1))) {
-            if (!level.hasChunkAt(block)) return false;
+            if (!level.getChunkSource().hasChunk(block.getX() >> 4, block.getZ() >> 4)) return false;
             var state = level.getBlockState(block);
             if (intersects(state.getVisualShape(level, block, CollisionContext.empty()), block, start, end, margin)) return false;
             var fluid = state.getFluidState();
