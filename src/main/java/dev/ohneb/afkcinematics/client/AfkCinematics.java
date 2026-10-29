@@ -46,7 +46,6 @@ public final class AfkCinematics {
     private static boolean focused;
     private static int manualWait;
     private static String conflict = "";
-    private static long hintUntil;
     private static boolean pendingSettings;
     private static boolean manualFeedback;
 
@@ -68,14 +67,7 @@ public final class AfkCinematics {
     public static boolean ownsCamera() { return session != null; }
     public static boolean showing() { return session != null && session.showing(); }
     public static boolean hideHud() { return showing() && config().hideHud; }
-    public static boolean showHint() {
-        if (!showing() || fade() > 0 || System.nanoTime() >= hintUntil) return false;
-        //? if >=26.2 {
-        /*return !Minecraft.getInstance().gui.hud.isHidden();
-        *///?} else {
-        return !Minecraft.getInstance().options.hideGui;
-        //?}
-    }
+    public static boolean hidePlayerNames() { return showing() && config().hidePlayerNames; }
     public static double fade() { return session == null ? 0 : session.fade(); }
     public static boolean scenery() { return session != null && session.scenery(); }
     public static boolean underwater() { return session != null && session.underwater(); }
@@ -167,7 +159,6 @@ public final class AfkCinematics {
         Vec subject = WorldGeometry.point(anchor.add(0, player.getBbHeight() * 0.65, 0));
         session = new CinematicSession(subject, vanillaPose, player.getYRot(), config(), new WorldGeometry(world), RANDOM);
         session.tick(System.nanoTime());
-        hintUntil = 0;
         manualFeedback = manual && !session.showing();
     }
 
@@ -182,7 +173,6 @@ public final class AfkCinematics {
         anchor = null;
         manualWait = 0;
         manualFeedback = false;
-        hintUntil = 0;
         IDLE.reset(System.nanoTime());
     }
 
@@ -202,7 +192,6 @@ public final class AfkCinematics {
         long now = System.nanoTime();
         Pose pose = session.frame(now);
         if (session.ended()) stop();
-        else if (session.settled() && hintUntil == 0) hintUntil = now + 4_000_000_000L;
         if (pose != null && session != null) appliedCamera = camera;
         return pose;
     }

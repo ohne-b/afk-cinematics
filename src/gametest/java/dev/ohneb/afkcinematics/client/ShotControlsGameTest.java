@@ -44,15 +44,7 @@ public final class ShotControlsGameTest implements FabricClientGameTest {
             Pose playerPose = context.computeOnClient(client -> new Pose(WorldGeometry.point(client.player.position()),
                 client.player.getYRot(), client.player.getXRot()));
             start(context);
-            context.runOnClient(client -> require(!AfkCinematics.showHint(), "The hint started before camera entry finished"));
-            context.waitFor(client -> AfkCinematics.showHint(), 140);
-            context.runOnClient(client -> {
-                hide(client, true);
-                require(!AfkCinematics.showHint(), "F1 left the return hint visible");
-                hide(client, false);
-                require(AfkCinematics.showHint(), "Returning from F1 lost the active hint");
-            });
-            context.takeScreenshot(TestScreenshotOptions.of("settled-return-hint").withDestinationDir(artifacts));
+            context.waitTicks(140);
             double before = context.computeOnClient(client -> (double)camera(client).yRot());
             key(context, InputConstants.KEY_N, InputConstants.PRESS);
             key(context, InputConstants.KEY_N, InputConstants.RELEASE);
@@ -64,7 +56,6 @@ public final class ShotControlsGameTest implements FabricClientGameTest {
             });
             context.waitTicks(65);
             context.runOnClient(client -> {
-                require(!AfkCinematics.showHint(), "Advancing repeated the return hint");
                 AfkCinematics.stop();
                 AfkCinematics.config().shots = EnumSet.of(Shot.Type.CRANE);
             });

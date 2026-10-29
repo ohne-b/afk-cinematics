@@ -74,6 +74,8 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     settings.keyPressed(rightArrow());
                     require(fixture.config().cinematicFps == 60, "Navigation changed FPS after leaving slider editing");
                     require(settings.getFocused() == button(settings, "Hide HUD: ON"), "Right-arrow navigation remained trapped on the slider");
+                    press(settings, "Hide player names: ON");
+                    require(!fixture.config().hidePlayerNames, "Player-name control did not change its setting");
                 });
                 context.takeScreenshot(TestScreenshotOptions.of("display-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
