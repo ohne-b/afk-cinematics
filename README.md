@@ -1,4 +1,4 @@
-﻿<p align="center">
+<p align="center">
   <img src="assets/logo.svg" width="180" alt="AFK Cinematics logo">
 </p>
 
