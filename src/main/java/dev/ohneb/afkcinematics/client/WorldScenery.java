@@ -3,15 +3,19 @@ package dev.ohneb.afkcinematics.client;
 import dev.ohneb.afkcinematics.core.Pose;
 import dev.ohneb.afkcinematics.core.Scene;
 import dev.ohneb.afkcinematics.core.Vec;
+import dev.ohneb.afkcinematics.core.ViewQuality;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.HitResult;
 
 final class WorldScenery {
     private WorldScenery() { }
@@ -32,15 +36,13 @@ final class WorldScenery {
         }
         if (!inside(level, vantage) || !geometry.clear(vantage, vantage)) return null;
         Vec direction = new Vec(Math.sin(angle), -0.08, Math.cos(angle));
-        Vec focus = vantage;
-        for (double distance = 0.5; distance <= 8; distance += 0.5) {
-            Vec next = vantage.add(direction.scale(distance));
-            if (!inside(level, next) || !geometry.visible(vantage, next)) break;
-            focus = next;
-        }
-        if (focus.distance(vantage) < 2) return null;
-        var scene = new Scene(focus, vantage, true, 1 + focus.distance(vantage) / 8);
-        return scene.near(anchor) ? scene : null;
+        direction = direction.scale(1 / direction.length());
+        double distance = Math.min(12, depth(level, vantage, direction) - 0.5);
+        if (distance < 3) return null;
+        Vec focus = vantage.add(direction.scale(distance));
+        double quality = quality(level, vantage, focus, false);
+        var scene = new Scene(focus, vantage, true, quality);
+        return quality > 0 && scene.near(anchor) && inside(level, focus) && geometry.visible(vantage, focus) ? scene : null;
     }
 
     private static Scene surface(ClientLevel level, WorldGeometry geometry, Vec anchor, double bearing, int index) {
@@ -48,8 +50,8 @@ final class WorldScenery {
         double radius = index < 8 ? 8 : 16;
         int centerX = (int)Math.floor(anchor.x() + Math.sin(angle) * radius);
         int centerZ = (int)Math.floor(anchor.z() + Math.cos(angle) * radius);
-        Vec focus = null;
-        double score = -1;
+        Scene best = null;
+        double viewAngle = angle + Math.PI + Math.toRadians(25);
         for (int dx = -2; dx <= 2; dx += 2) {
             for (int dz = -2; dz <= 2; dz += 2) {
                 int x = centerX + dx, z = centerZ + dz;
@@ -60,27 +62,55 @@ final class WorldScenery {
                 BlockPos block = new BlockPos(x, y, z);
                 BlockState state = level.getBlockState(block);
                 if (state.isAir() || state.is(Blocks.BEDROCK)) continue;
-                double interest = interest(state) - Math.hypot(dx, dz) * 0.03;
-                if (interest <= score) continue;
                 var shape = state.getVisualShape(level, block, CollisionContext.empty());
                 double top = shape.isEmpty() ? 0.3 : shape.max(Direction.Axis.Y);
                 if (!state.getFluidState().isEmpty()) top = Math.max(top, state.getFluidState().getHeight(level, block));
                 Vec target = new Vec(x + 0.5, y + top + 0.35, z + 0.5);
                 if (Math.hypot(target.x() - anchor.x(), target.z() - anchor.z()) > 18) continue;
-                focus = target;
-                score = interest;
+                Vec vantage = target.add(new Vec(Math.sin(viewAngle) * 12, 2, Math.cos(viewAngle) * 12));
+                BlockPos column = BlockPos.containing(vantage.x(), vantage.y(), vantage.z());
+                if (!level.hasChunkAt(column)) continue;
+                double ground = level.getHeight(Heightmap.Types.WORLD_SURFACE, column.getX(), column.getZ());
+                vantage = new Vec(vantage.x(), Math.max(vantage.y(), ground + 1.5), vantage.z());
+                Scene scene = new Scene(target, vantage, true, 0);
+                if (!scene.near(anchor) || !inside(level, vantage) || !geometry.clear(vantage, vantage)
+                    || !geometry.visible(vantage, target)) continue;
+                double quality = quality(level, vantage, target, true);
+                if (quality <= 0) continue;
+                double score = quality + interest(state) * 0.08;
+                if (best == null || score > best.interest()) best = new Scene(target, vantage, true, score);
             }
         }
-        if (focus == null) return null;
-        double viewAngle = angle + Math.PI + Math.toRadians(25);
-        Vec vantage = focus.add(new Vec(Math.sin(viewAngle) * 8, 2.5, Math.cos(viewAngle) * 8));
-        BlockPos column = BlockPos.containing(vantage.x(), vantage.y(), vantage.z());
-        if (!level.hasChunkAt(column)) return null;
-        double ground = level.getHeight(Heightmap.Types.WORLD_SURFACE, column.getX(), column.getZ());
-        vantage = new Vec(vantage.x(), Math.max(vantage.y(), ground + 1.5), vantage.z());
-        Scene scene = new Scene(focus, vantage, true, 10 + score);
-        return scene.near(anchor) && inside(level, vantage) && geometry.clear(vantage, vantage)
-            && geometry.visible(vantage, focus) ? scene : null;
+        return best;
+    }
+
+    static double quality(ClientLevel level, Vec vantage, Vec focus, boolean outdoors) {
+        var client = Minecraft.getInstance();
+        var window = client.getWindow();
+        Pose pose = Pose.lookingAt(vantage, focus);
+        Vec[] rays = ViewQuality.directions(pose, client.options.fov().get(),
+            (double)window.getWidth() / Math.max(1, window.getHeight()), AfkCinematics.config().letterbox);
+        double[] depths = new double[rays.length];
+        for (int i = 0; i < rays.length; i++) depths[i] = depth(level, vantage, rays[i]);
+        return ViewQuality.score(depths, pose.pitch(), outdoors);
+    }
+
+    static double depth(ClientLevel level, Vec vantage, Vec direction) {
+        Vec end = vantage.add(direction.scale(ViewQuality.RANGE));
+        int minX = (int)Math.floor(Math.min(vantage.x(), end.x())) >> 4;
+        int maxX = (int)Math.floor(Math.max(vantage.x(), end.x())) >> 4;
+        int minZ = (int)Math.floor(Math.min(vantage.z(), end.z())) >> 4;
+        int maxZ = (int)Math.floor(Math.max(vantage.z(), end.z())) >> 4;
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                if (!level.hasChunkAt(new BlockPos(x << 4, 0, z << 4))) return -1;
+            }
+        }
+        // These bounded rays rank the view; WorldGeometry independently proves safety.
+        var hit = level.clip(new ClipContext(WorldGeometry.vector(vantage), WorldGeometry.vector(end),
+            ClipContext.Block.VISUAL, ClipContext.Fluid.ANY, CollisionContext.empty()));
+        return hit.getType() == HitResult.Type.MISS ? ViewQuality.RANGE
+            : hit.getLocation().distanceTo(WorldGeometry.vector(vantage));
     }
 
     private static boolean inside(ClientLevel level, Vec point) {
