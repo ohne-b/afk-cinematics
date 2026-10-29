@@ -11,6 +11,7 @@ public interface Geometry {
     default Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return null; }
 
     default boolean valid(Shot shot, Vec entry) {
+        if (entry.distance(shot.start()) > 16) return false;
         if (!entry.equals(shot.start()) && !validCurve(entry, entry.lerp(shot.start(), 0.5), shot.start(),
             shot.focusStart(), shot.focusStart(), 5)) return false;
         return validCurve(shot.start(), shot.control(), shot.end(), shot.focusStart(), shot.focusEnd(), 5);

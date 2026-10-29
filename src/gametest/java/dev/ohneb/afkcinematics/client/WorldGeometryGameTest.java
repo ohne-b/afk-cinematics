@@ -29,6 +29,8 @@ public final class WorldGeometryGameTest implements FabricClientGameTest {
                     require(!geometry.clear(point, point), "Camera missed a piston shape extending from the adjacent block");
                     require(!geometry.visible(point.add(new Vec(0, 0, -2)), point.add(new Vec(0, 0, 2))),
                         "Sightline missed a moving shape whose owning block is outside the ray");
+                    require(!geometry.visible(point.add(new Vec(0, 0, -2)), point.add(new Vec(0, 0, 2)), 0.1),
+                        "Swept sightline missed a moving shape from the neighboring block");
                     client.level.removeBlockEntity(origin);
                     client.level.setBlock(origin, Blocks.WATER.defaultBlockState(), 3);
                     require(geometry.clear(point, point), "Adjacent water blocked a camera volume outside the fluid");
@@ -40,6 +42,13 @@ public final class WorldGeometryGameTest implements FabricClientGameTest {
                     var wet = new Vec(origin.getX() + 0.5, origin.getY() + 0.5, origin.getZ() + 0.5);
                     require(!geometry.clear(wet, wet), "Camera volume was allowed inside water");
                     client.level.setBlock(origin, Blocks.STONE.defaultBlockState(), 3);
+                    var inside = new Vec(origin.getX() + 0.5, origin.getY() + 0.5, origin.getZ() + 0.5);
+                    require(!geometry.visible(inside, inside, 0.1), "Zero-length sightline inside a block was accepted");
+                    require(!geometry.visible(inside, inside.add(new Vec(2, 0, 0)), 0.1),
+                        "Sightline starting inside a block was accepted");
+                    var tangent = new Vec(origin.getX() + 1.125, origin.getY() + 0.5, origin.getZ() - 1);
+                    require(!geometry.visible(tangent, tangent.add(new Vec(0, 0, 3)), 0.125),
+                        "Sightline grazing an expanded shape boundary was accepted");
                     var shift = new Vec(origin.getX() - 2, origin.getY() - 70, origin.getZ() + 15);
                     var focus = new Vec(2.5, 70.35, -16.5).add(shift);
                     // A recorded crane shot grazed a leaf corner between the sixteen planning samples.

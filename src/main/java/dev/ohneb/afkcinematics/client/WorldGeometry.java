@@ -6,6 +6,7 @@ import dev.ohneb.afkcinematics.core.Scene;
 import dev.ohneb.afkcinematics.core.Vec;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.BooleanOp;
@@ -70,9 +71,26 @@ public final class WorldGeometry implements Geometry {
         if (margin == 0) return shape.clip(start, end, block) != null;
         for (AABB part : shape.toAabbs()) {
             AABB expanded = part.move(block.getX(), block.getY(), block.getZ()).inflate(margin);
-            if (expanded.contains(start) || expanded.contains(end) || expanded.clip(start, end).isPresent()) return true;
+            if (intersects(expanded, start, end)) return true;
         }
         return false;
+    }
+
+    private static boolean intersects(AABB box, Vec3 start, Vec3 end) {
+        double enter = 0, leave = 1;
+        for (Direction.Axis axis : Direction.Axis.values()) {
+            double origin = start.get(axis), direction = end.get(axis) - origin;
+            if (direction == 0) {
+                if (origin < box.min(axis) || origin > box.max(axis)) return false;
+            } else {
+                double first = (box.min(axis) - origin) / direction;
+                double last = (box.max(axis) - origin) / direction;
+                enter = Math.max(enter, Math.min(first, last));
+                leave = Math.min(leave, Math.max(first, last));
+                if (enter > leave) return false;
+            }
+        }
+        return true;
     }
 
     public static Vec3 vector(Vec point) { return new Vec3(point.x(), point.y(), point.z()); }

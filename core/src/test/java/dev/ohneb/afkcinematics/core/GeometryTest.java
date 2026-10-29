@@ -1,9 +1,34 @@
 package dev.ohneb.afkcinematics.core;
 
 import org.junit.jupiter.api.Test;
+import java.util.EnumSet;
+import java.util.Random;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GeometryTest {
+    @Test void wholeShotRangeAndEntryDistanceStayBounded() {
+        Geometry geometry = surface();
+        Vec focus = new Vec(0, 1, 0), start = new Vec(0, 1, -15);
+        Shot excursion = new Shot(Shot.Type.DOLLY, start, new Vec(0, 1, -20), start, focus, focus, 20);
+        assertTrue(geometry.visible(start, focus));
+        assertFalse(geometry.valid(excursion, start));
+        Shot still = new Shot(Shot.Type.STILL, start, start, start, focus, focus, 20);
+        assertTrue(geometry.valid(still, start));
+        assertFalse(geometry.valid(still, start.add(new Vec(17, 0, 0))));
+    }
+
+    @Test void clearSurfaceSceneryStillAcceptsEveryStyle() {
+        for (int distance : new int[]{8, 12}) for (Shot.Type type : Shot.Type.values()) {
+            Vec focus = new Vec(0, 0.35, 0), vantage = new Vec(0, 2.85, -distance);
+            Scene scene = new Scene(focus, vantage, true, 1);
+            var config = new CinematicConfig();
+            config.shots = EnumSet.of(type);
+            Shot shot = new ShotSearch(scene, Pose.lookingAt(vantage, focus), 0, config,
+                null, true, true, new Random(2)).next(surface());
+            assertNotNull(shot, type + " at distance " + distance);
+        }
+    }
+
     @Test void entryVisibilityCoversThePathBetweenClearEndpoints() {
         Vec focus = new Vec(0, 0, 0), start = new Vec(1, 0, -4), entry = new Vec(-1, 0, -4);
         Geometry geometry = obstacle(new Vec(0.013, 0, -2), false);
@@ -40,6 +65,15 @@ class GeometryTest {
             }
             public boolean visible(Vec from, Vec to, double margin) {
                 return camera || distance(obstruction, from, to) > margin + 0.00001;
+            }
+        };
+    }
+
+    private static Geometry surface() {
+        return new Geometry() {
+            public boolean clear(Vec from, Vec to, double margin) { return Math.min(from.y(), to.y()) - margin > 0.25; }
+            public boolean visible(Vec from, Vec to, double margin) {
+                return Math.min(from.y(), to.y()) - margin > 0 && from.distance(to) + 2 * margin <= 16;
             }
         };
     }
