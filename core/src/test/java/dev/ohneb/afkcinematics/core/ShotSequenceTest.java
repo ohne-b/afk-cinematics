@@ -42,6 +42,42 @@ class ShotSequenceTest {
         assertTrue(session.ended(), "A stale prepared path was installed without revalidation");
     }
 
+    @Test void rejectedSuccessorsDoNotCutTheCurrentTakeShort() {
+        Shot[] first = {null};
+        int[] rejected = {0};
+        var geometry = new Geometry() {
+            public boolean clear(Vec from, Vec to, double margin) { return true; }
+            public boolean visible(Vec from, Vec to, double margin) { return true; }
+            public boolean valid(Shot shot, Vec entry) {
+                if (first[0] == null) first[0] = shot;
+                if (shot == first[0]) return true;
+                rejected[0]++;
+                return false;
+            }
+        };
+        var config = new CinematicConfig();
+        config.subject = CinematicConfig.Subject.PLAYER;
+        config.pace = CinematicConfig.Pace.SHORT;
+        config.shots = EnumSet.of(Shot.Type.ARC);
+        var session = new CinematicSession(ANCHOR, ENTRY, 0, config, geometry, new Random(4));
+        long now = 0;
+        while (!session.settled() && now < 5_000_000_000L) frame(session, now += 50_000_000L);
+        assertTrue(session.settled());
+        long finish = now + Math.round(first[0].duration() * 1e9);
+        while (now < finish - 1_500_000_000L) frame(session, now += 50_000_000L);
+        Pose before = session.current();
+        while (now < finish - 500_000_000L) frame(session, now += 50_000_000L);
+        assertTrue(rejected[0] >= 10, "Successor planning did not exhaust its candidates");
+        assertTrue(session.current().position().distance(before.position()) > 0.001,
+            "The valid current take froze after successor planning failed");
+        while (now < finish + 100_000_000L) {
+            now += 50_000_000L;
+            session.tick(now);
+            session.frame(now);
+        }
+        assertTrue(session.ended());
+    }
+
     @Test void nextShotDuringAdvancePlanningStartsFromTheCurrentPose() {
         var accepted = new ArrayList<Shot>();
         var session = session(geometry(accepted, new boolean[1]), Shot.Type.ARC);

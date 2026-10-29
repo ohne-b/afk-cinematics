@@ -62,7 +62,10 @@ public final class CinematicSession {
                 planner = null;
                 break;
             }
-            if (planner != null && planner.exhausted()) { ended = true; return; }
+            if (planner != null && planner.exhausted()) {
+                if (shot == null || heldForNext || now >= handoff) ended = true;
+                return;
+            }
         }
         if (pending == null || phase != Phase.ENTRY && phase != Phase.SHOT) return;
         if (shot != null && phase == Phase.SHOT && now < handoff) return;
