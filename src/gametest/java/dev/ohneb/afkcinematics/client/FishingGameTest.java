@@ -87,6 +87,23 @@ public final class FishingGameTest implements FabricClientGameTest {
             context.waitFor(client -> FishingActivity.hook(client.player, client.level) != null, 100);
             start(context);
             context.waitTicks(20);
+            var use = context.computeOnClient(client -> ((dev.ohneb.afkcinematics.mixin.KeyMappingAccess)client.options.keyUse).afkCinematics$key());
+            try {
+                context.runOnClient(client -> {
+                    client.options.keyUse.setKey(keyboardKey(InputConstants.KEY_W));
+                    net.minecraft.client.KeyMapping.resetMapping();
+                });
+                key(context, InputConstants.KEY_W, InputConstants.PRESS);
+                context.runOnClient(client -> require(!AfkCinematics.ownsCamera() && !client.options.keyUse.isDown()
+                    && !client.options.keyUp.isDown(), "A shared movement key inherited rod-use permission"));
+                key(context, InputConstants.KEY_W, InputConstants.RELEASE);
+            } finally {
+                context.runOnClient(client -> { client.options.keyUse.setKey(use); net.minecraft.client.KeyMapping.resetMapping(); });
+            }
+            world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst().fishing != null,
+                "The shared wake key reeled the bobber"));
+            start(context);
+            context.waitTicks(20);
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
                 player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.APPLE, 16));

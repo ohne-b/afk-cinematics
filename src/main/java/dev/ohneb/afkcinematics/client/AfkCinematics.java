@@ -383,16 +383,15 @@ public final class AfkCinematics {
             }
             return true;
         }
-        boolean rod = matches(options.keyUse, key) && !matches(options.keyAttack, key) && !matches(options.keyDrop, key) && allowRodUse();
+        boolean rod = matches(options.keyUse, key) && !matches(options.keyAttack, key) && !matches(options.keyDrop, key)
+            && !movementBinding(key) && allowRodUse();
         boolean suppressed = INPUT.press(token, ownsCamera() && dangerous && !rod);
         if (rod && !suppressed) {
             activityUse = key;
             IDLE.reset(System.nanoTime());
             return false;
         }
-        if (steering() && !dangerous && (matches(options.keyUp, key) || matches(options.keyDown, key)
-            || matches(options.keyLeft, key) || matches(options.keyRight, key) || matches(options.keyJump, key)
-            || matches(options.keyShift, key) || matches(options.keySprint, key))) {
+        if (steering() && !dangerous && movementBinding(key)) {
             IDLE.reset(System.nanoTime());
             return suppressed;
         }
@@ -402,6 +401,12 @@ public final class AfkCinematics {
 
     public static boolean matches(KeyMapping mapping, InputConstants.Key key) {
         return ((KeyMappingAccess) mapping).afkCinematics$key().equals(key);
+    }
+
+    private static boolean movementBinding(InputConstants.Key key) {
+        var options = Minecraft.getInstance().options;
+        return matches(options.keyUp, key) || matches(options.keyDown, key) || matches(options.keyLeft, key)
+            || matches(options.keyRight, key) || matches(options.keyJump, key) || matches(options.keyShift, key) || matches(options.keySprint, key);
     }
 
     public static boolean suppressed(InputConstants.Key key) { return INPUT != null && INPUT.suppressed(token(key)); }
