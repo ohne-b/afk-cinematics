@@ -1,0 +1,161 @@
+name: Publish release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Reviewed version in gradle.properties and CHANGELOG.md'
+        required: true
+        type: string
+      revision:
+        description: 'Full main commit SHA validated by the Build run'
+        required: true
+        type: string
+      build_run:
+        description: 'Successful Build push run ID for that commit'
+        required: true
+        type: string
+      destination:
+        description: 'Publish GitHub first, then distribute the same files'
+        type: choice
+        options: [github, modrinth, curseforge]
+        default: github
+      publish:
+        description: 'Publish now (false only validates and prepares artifacts)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/main' && github.repository == 'ohne-b/afk-cinematics'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.bundle.outputs.matrix }}
+      kind: ${{ steps.bundle.outputs.kind }}
+    steps:
+      - name: Check identifiers
+        env:
+          REVISION: ${{ inputs.revision }}
+          BUILD_RUN: ${{ inputs.build_run }}
+        run: |
+          [[ "$REVISION" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$BUILD_RUN" =~ ^[0-9]+$ ]]
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.revision }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a commit on canonical main
+        env:
+          REVISION: ${{ inputs.revision }}
+        run: git merge-base --is-ancestor "$REVISION" origin/main
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build_run }}
+          pattern: afk-cinematics-*
+          path: artifacts/download
+      - name: Verify build provenance, jars and release notes
+        id: bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.revision }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          BUILD_RUN: ${{ inputs.build_run }}
+        run: python3 .github/scripts/release.py bundle "$RELEASE_VERSION" "$BUILD_RUN"
+      - name: Require the published GitHub files before distribution
+        if: inputs.destination != 'github'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          REVISION: ${{ inputs.revision }}
+        run: |
+          test "$(gh release view "v${RELEASE_VERSION}" --json isDraft --jq .isDraft)" = false
+          test "$(git rev-list -n 1 "v${RELEASE_VERSION}")" = "$REVISION"
+          gh release download "v${RELEASE_VERSION}" --pattern SHA256SUMS --dir artifacts/published
+          diff artifacts/release/SHA256SUMS artifacts/published/SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-bundle
+          path: artifacts/release/
+          if-no-files-found: error
+
+  github:
+    needs: validate
+    if: inputs.publish && inputs.destination == 'github'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-bundle
+          path: release
+      - name: Publish the verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_SHA: ${{ inputs.revision }}
+          RELEASE_KIND: ${{ needs.validate.outputs.kind }}
+        run: python3 .github/scripts/release.py publish-github "$RELEASE_VERSION"
+
+  distribute:
+    needs: validate
+    if: inputs.publish && inputs.destination != 'github'
+    runs-on: ubuntu-latest
+    environment: release
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.validate.outputs.matrix) }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-bundle
+          path: release
+      - name: Require destination configuration
+        env:
+          DESTINATION: ${{ inputs.destination }}
+          MODRINTH_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        run: |
+          if [[ "$DESTINATION" = modrinth ]]; then
+            test -n "$MODRINTH_ID" && test -n "$MODRINTH_TOKEN"
+          else
+            test -n "$CURSEFORGE_ID" && test -n "$CURSEFORGE_TOKEN"
+          fi
+      - uses: Kira-NT/mc-publish@52307b03863581dec6b652b83e597aec02ebb075 # v3.3.1
+        with:
+          modrinth-id: ${{ inputs.destination == 'modrinth' && vars.MODRINTH_PROJECT_ID || '' }}
+          modrinth-token: ${{ inputs.destination == 'modrinth' && secrets.MODRINTH_TOKEN || '' }}
+          curseforge-id: ${{ inputs.destination == 'curseforge' && vars.CURSEFORGE_PROJECT_ID || '' }}
+          curseforge-token: ${{ inputs.destination == 'curseforge' && secrets.CURSEFORGE_TOKEN || '' }}
+          files: release/${{ matrix.file }}
+          name: AFK Cinematics ${{ inputs.version }} for ${{ matrix.minecraft }} (${{ matrix.loader }})
+          version: ${{ inputs.version }}+mc${{ matrix.target }}
+          version-type: ${{ needs.validate.outputs.kind }}
+          changelog-file: release/release-notes.md
+          loaders: ${{ matrix.loader }}
+          environment: client
+          game-versions: ${{ matrix.minecraft }}
+          game-version-filter: none
+          java: ${{ matrix.java }}
+          dependencies: ${{ matrix.dependencies }}
+          retry-attempts: 1
+          fail-mode: fail

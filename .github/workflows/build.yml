@@ -14,6 +14,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  release-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: python3 -m unittest discover -s .github/scripts -p 'test_*.py' -v
+
   core:
     runs-on: ubuntu-latest
     steps:

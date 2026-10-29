@@ -1,0 +1,50 @@
+name: Prepare release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version, for example 0.1.0 or 0.1.0-alpha.2'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main' && github.repository == 'ohne-b/afk-cinematics'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the PR automation token
+        env:
+          PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: test -n "$PUBLISHER_TOKEN"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          # A dedicated token allows the new PR to trigger ordinary CI.
+          token: ${{ secrets.PUBLISHER_TOKEN }}
+      - name: Prepare version and changelog
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: python3 .github/scripts/release.py prepare "$RELEASE_VERSION"
+      - name: Open draft release PR
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          branch="feat/release-${RELEASE_VERSION}"
+          git switch -c "$branch"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add gradle.properties CHANGELOG.md
+          git commit -m "chore(release): prepare ${RELEASE_VERSION}"
+          git push origin "$branch"
+          printf '%s\n' 'Updates the mod version and moves Unreleased notes into the release entry.' '' \
+            'Review the notes, including changes since the previous stable release for a stable version. Keep this PR draft until normal CI and independent review pass. Merging does not publish; publication requires a separate authorized manual run.' > /tmp/release-body.md
+          gh pr create --draft --base main --head "$branch" --title "chore(release): prepare ${RELEASE_VERSION}" --body-file /tmp/release-body.md

@@ -68,6 +68,12 @@ conventional PR titles. Split substantial work into meaningful changes. Keep PR
 descriptions about the resulting behavior and validation, without conversational
 history. Incomplete work stays in a draft PR.
 
+Start branches from current canonical `main`. Fetch and incorporate it before final
+validation and independent review, and again before merging if it has advanced.
+Resolve conflicts and rerun affected checks; do not repeat unrelated successful CI.
+Use the PR template to record the base, tested revision, evidence and review outcome.
+Ordinary changes go through PRs rather than direct pushes to `main`.
+
 Verify the Git author and committer before committing. Maintainer contributions use
 the verified public `ohne-b` noreply identity, never a private name or email address.
 Keep credentials out of source, artifacts, logs and screenshots.
@@ -79,3 +85,52 @@ authorized, use a merge commit with a conventional subject and PR number, for ex
 Releases require explicit authorization. Publish only validated artifacts with exact
 Minecraft and loader requirements. Use consistent artifact names and concise release
 notes with relevant PR numbers. A normal commit or merge must not publish a release.
+
+### Preparing a release
+
+Maintain concise `CHANGELOG.md` entries under `Unreleased`, with relevant PR numbers.
+Run **Prepare release** from `main` with the next version. It updates `mod_version`
+and moves those notes into a version entry in a draft PR. Review the notes before
+merging. Stable notes must cover everything since the previous stable release,
+including changes already described in release candidates.
+
+The workflow uses a dedicated `PUBLISHER_TOKEN` secret with repository contents and
+pull-request write access so its PR triggers normal CI. Never copy a local CLI token
+into this secret. Without it, run `python .github/scripts/release.py prepare VERSION`
+on a `feat/release-VERSION` branch and open the draft PR normally. Python 3.11+ is
+required; test the helper with `python -m unittest discover -s .github/scripts -v`.
+
+### Publishing and distribution
+
+After explicit release authorization, run **Publish release** from `main` with the
+reviewed version, full merged commit SHA and its successful **Build** push run ID.
+The default is validation only: it verifies all target jars and prepares a downloadable
+bundle without creating tags, releases or platform versions. It reuses CI artifacts;
+if they expired, rerun Build for that same revision rather than substituting local jars.
+
+Select `github` and enable `publish` to upload the jars, SHA-256 checksums and complete
+source archive. Files are downloaded and verified before the draft becomes public.
+Stable releases become latest; alpha/beta/RC versions remain prereleases. An existing
+release stops publication instead of overwriting assets or tags.
+
+Then run the same inputs with destination `modrinth` or `curseforge`. Distribution
+requires the matching public GitHub release and checksum manifest. Each Minecraft
+version/loader is a separate upload, with Fabric API required for Fabric builds.
+The pinned [mc-publish action](https://github.com/Kira-NT/mc-publish) handles these
+uploads. Configure the destinations you use in GitHub's `release` environment:
+
+| Destination | Variable | Secret |
+| --- | --- | --- |
+| Modrinth | `MODRINTH_PROJECT_ID` | `MODRINTH_TOKEN` |
+| CurseForge | `CURSEFORGE_PROJECT_ID` (numeric) | `CURSEFORGE_TOKEN` |
+
+Create the platform projects separately, with GPL-3.0-only licensing and client-only
+support. Tokens belong in GitHub secrets, never chat or source. Environment protection
+can restrict publishing to maintainers. CurseForge is optional; it does not block
+GitHub or Modrinth publication.
+
+Platform uploads are not transactional. If a run partly succeeds, inspect the uploaded
+files before retrying only failed jobs; rerunning successful jobs may create duplicates.
+If upload acknowledgement was lost, verify the destination before retrying. A failed
+GitHub publication may leave a draft: inspect and finish it manually without replacing
+existing files. Never delete or rewrite a published release to recover a failed run.
