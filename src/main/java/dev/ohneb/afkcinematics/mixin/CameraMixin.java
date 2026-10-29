@@ -37,7 +37,7 @@ public abstract class CameraMixin {
     /*@Inject(method = "update", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;alignWithEntity(F)V", shift = At.Shift.AFTER))
     private void afkCinematics$camera(DeltaTracker delta, CallbackInfo ci) {
         boolean wasShowing = AfkCinematics.showing();
-        if (!apply() && wasShowing && !AfkCinematics.showing()) ((Camera)(Object)this).update(delta);
+        if (!apply(delta.getGameTimeDeltaPartialTick(true)) && wasShowing && !AfkCinematics.showing()) ((Camera)(Object)this).update(delta);
     }
     *///?} else {
     @Inject(method = "setup", at = @At("RETURN"))
@@ -47,15 +47,15 @@ public abstract class CameraMixin {
     /*private void afkCinematics$camera(BlockGetter level, Entity entity, boolean detached, boolean mirrored, float delta, CallbackInfo ci) {
     *///?}
         boolean wasShowing = AfkCinematics.showing();
-        if (!apply() && wasShowing && !AfkCinematics.showing()) {
+        if (!apply(delta) && wasShowing && !AfkCinematics.showing()) {
             var type = Minecraft.getInstance().options.getCameraType();
             ((Camera)(Object)this).setup(level, entity, !type.isFirstPerson(), type.isMirrored(), delta);
         }
     }
     //?}
 
-    private boolean apply() {
-        Pose pose = AfkCinematics.cameraFrame((Camera)(Object)this);
+    private boolean apply(float delta) {
+        Pose pose = AfkCinematics.cameraFrame((Camera)(Object)this, delta);
         if (pose == null) {
             //? if >=1.21.11 {
             if (afkCinematics$lastPosition != null) refreshEnvironment();

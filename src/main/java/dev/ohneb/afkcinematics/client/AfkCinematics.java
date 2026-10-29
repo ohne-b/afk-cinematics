@@ -15,6 +15,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.Entity;
+//? if >=1.21.11 {
+import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
+//?} else if >=1.21.2 {
+/*import net.minecraft.world.entity.vehicle.AbstractBoat;
+*///?} else {
+/*import net.minecraft.world.entity.vehicle.Boat;
+*///?}
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
@@ -42,6 +50,14 @@ public final class AfkCinematics {
     private static final Random RANDOM = new Random();
     private static ConfigStore store;
     private static CinematicSession session;
+    private static MovingGeometry movingGeometry;
+    private static Scene.Kind activity = Scene.Kind.PLAYER;
+    private static Entity vehicle;
+    private static Entity lastVehicle;
+    private static float lastVehicleYaw;
+    private static Vec3 observedMotion = Vec3.ZERO;
+    private static double course;
+    private static boolean manualTravel;
     private static ClientLevel world;
     private static LocalPlayer player;
     private static ClientPacketListener connection;
@@ -149,6 +165,7 @@ public final class AfkCinematics {
             lastPosition = player == null ? null : player.position();
             lastYaw = player == null ? 0 : player.getYRot();
             lastPitch = player == null ? 0 : player.getXRot();
+            lastVehicle = null;
             vanillaPose = null;
         }
         boolean focus = client.isWindowActive();
@@ -157,19 +174,30 @@ public final class AfkCinematics {
             if (focus || !config().unfocused) stop();
             focused = focus;
         }
+        observedMotion = player == null || lastPosition == null ? Vec3.ZERO : player.position().subtract(lastPosition);
         boolean moved = player != null && lastPosition != null && movedFrom(lastPosition, false);
         // Controller look can change player rotation without a keyboard or mouse callback.
         boolean turned = player != null && (Math.abs(Math.IEEEremainder(player.getYRot() - lastYaw, 360)) > 0.001
             || Math.abs(player.getXRot() - lastPitch) > 0.001);
+        if (player != null && boat(player.getVehicle()) && player.getVehicle() == lastVehicle) {
+            double carriedTurn = Math.IEEEremainder(lastVehicle.getYRot() - lastVehicleYaw, 360);
+            turned = Math.abs(Math.IEEEremainder(player.getYRot() - lastYaw - carriedTurn, 360)) > 0.001
+                || Math.abs(player.getXRot() - lastPitch) > 0.001;
+        }
+        boolean jumped = player != null && lastPosition != null && player.position().distanceToSqr(lastPosition) > 256;
         if (player != null) {
             lastPosition = player.position();
             lastYaw = player.getYRot();
             lastPitch = player.getXRot();
+            lastVehicle = player.getVehicle();
+            lastVehicleYaw = lastVehicle == null ? 0 : lastVehicle.getYRot();
         }
-        boolean eligible = eligible() && !moved && !turned;
+        boolean travel = travelKind() != Scene.Kind.PLAYER;
+        boolean eligible = eligible() && (!moved || travel) && (!turned || steering()) && !jumped;
         if (session != null) {
-            if (!eligible || movedFrom(anchor, true)) stop();
+            if (!eligible || movingGeometry == null && movedFrom(anchor, true)) stop();
             else {
+                if (movingGeometry != null) session.bearing(travelBearing());
                 session.tick(now);
                 if (session.ended()) {
                     if (manualFeedback) message("no_view");
@@ -180,7 +208,7 @@ public final class AfkCinematics {
         } else if (manualWait > 0) {
             manualWait--;
             IDLE.reset(now);
-            if (eligible && vanillaPose != null) { manualWait = 0; start(true); }
+            if (eligible && vanillaPose != null) { start(true); manualWait = 0; }
             else if (manualWait == 0) message("unavailable");
         } else if (IDLE.ready(now, config().idleSeconds, eligible && config().automatic)) start(false);
         CinematicMusic.tick();
@@ -191,17 +219,20 @@ public final class AfkCinematics {
         if (store == null || !config().enabled || !conflict.isEmpty() || player == null || world == null
             || client.player != player || client.level != world || client.getConnection() != connection
             || screen() != null || client.isPaused()
-            || (!client.isWindowActive() && !config().unfocused) || INPUT.held()) return false;
+            || (!client.isWindowActive() && !config().unfocused) || !steering() && INPUT.held()) return false;
         //? if >=26.2 {
         /*if (client.gui.overlay() != null) return false;
         *///?} else {
         if (client.getOverlay() != null) return false;
         //?}
         var options = client.options;
-        if (options.keyUp.isDown() || options.keyDown.isDown() || options.keyLeft.isDown() || options.keyRight.isDown()
-            || options.keyJump.isDown() || options.keyAttack.isDown() || options.keyUse.isDown() || options.keyDrop.isDown()) return false;
-        return player.isAlive() && !player.isSleeping() && !player.isPassenger()
-            && !player.isFallFlying() && !player.isInLava() && !player.isUsingItem()
+        if (!steering() && movementInput()) return false;
+        if ((!steering() && (options.keyUp.isDown() || options.keyDown.isDown() || options.keyLeft.isDown() || options.keyRight.isDown()
+            || options.keyJump.isDown())) || options.keyAttack.isDown() || options.keyUse.isDown() || options.keyDrop.isDown()) return false;
+        Scene.Kind kind = travelKind();
+        if (session != null && (kind != activity || player.getVehicle() != vehicle)) return false;
+        return player.isAlive() && !player.isSleeping() && (!player.isPassenger() || kind == Scene.Kind.BOAT)
+            && (!player.isFallFlying() || kind == Scene.Kind.FLIGHT) && !player.isInLava() && !player.isUsingItem()
             && !player.isOnFire() && player.hurtTime == 0 && !player.isSpectator();
     }
 
@@ -215,7 +246,16 @@ public final class AfkCinematics {
         if (!eligible() || vanillaPose == null) return;
         anchor = player.position();
         Vec subject = WorldGeometry.point(anchor.add(0, player.getBbHeight() * 0.65, 0));
-        session = new CinematicSession(subject, vanillaPose, player.getYRot(), config(), new WorldGeometry(world), RANDOM);
+        activity = travelKind();
+        manualTravel = manual && activity != Scene.Kind.PLAYER;
+        vehicle = player.getVehicle();
+        course = vehicle == null ? player.getYRot() : vehicle.getYRot();
+        if (activity == Scene.Kind.PLAYER) {
+            session = new CinematicSession(subject, vanillaPose, player.getYRot(), config(), new WorldGeometry(world), RANDOM);
+        } else {
+            movingGeometry = new MovingGeometry(new WorldGeometry(world).forScene(null), subject, System.nanoTime());
+            session = new CinematicSession(new Vec(0, 0, 0), movingGeometry.local(vanillaPose), travelBearing(), config(), movingGeometry, RANDOM, activity);
+        }
         session.tick(System.nanoTime());
         manualFeedback = manual && !session.showing();
     }
@@ -227,6 +267,10 @@ public final class AfkCinematics {
 
     public static void stop() {
         session = null;
+        movingGeometry = null;
+        activity = Scene.Kind.PLAYER;
+        manualTravel = false;
+        vehicle = null;
         appliedCamera = null;
         audioReady = false;
         anchor = null;
@@ -255,7 +299,7 @@ public final class AfkCinematics {
         return false;
     }
 
-    public static Pose cameraFrame(Camera camera) {
+    public static Pose cameraFrame(Camera camera, float delta) {
         appliedCamera = null;
         if (session == null) {
             //? if >1.21.10 {
@@ -265,9 +309,20 @@ public final class AfkCinematics {
             *///?}
             return null;
         }
-        if (!eligible() || movedFrom(anchor, true)) { stop(); return null; }
+        if (!eligible() || movingGeometry == null && movedFrom(anchor, true)) { stop(); return null; }
         long now = System.nanoTime();
+        if (movingGeometry != null) {
+            float partial = world.tickRateManager().isEntityFrozen(player) ? 1 : delta;
+            Vec subject = new Vec(player.xOld + (player.getX() - player.xOld) * partial,
+                player.yOld + (player.getY() - player.yOld) * partial + player.getBbHeight() * 0.65,
+                player.zOld + (player.getZ() - player.zOld) * partial);
+            if (!movingGeometry.follow(subject, now, session.capturing())) { stop(); return null; }
+        }
         Pose pose = session.frame(now);
+        if (pose != null && movingGeometry != null) {
+            pose = movingGeometry.apply(pose, session.focus(), session.fade(), session.take(), session.capturing());
+            if (pose == null) { stop(); return null; }
+        }
         if (session.ended()) stop();
         if (pose != null && session != null) appliedCamera = camera;
         return pose;
@@ -311,6 +366,12 @@ public final class AfkCinematics {
             return true;
         }
         boolean suppressed = INPUT.press(token, ownsCamera() && dangerous);
+        if (steering() && !dangerous && (matches(options.keyUp, key) || matches(options.keyDown, key)
+            || matches(options.keyLeft, key) || matches(options.keyRight, key) || matches(options.keyJump, key)
+            || matches(options.keyShift, key) || matches(options.keySprint, key))) {
+            IDLE.reset(System.nanoTime());
+            return suppressed;
+        }
         stop();
         return suppressed;
     }
@@ -331,7 +392,47 @@ public final class AfkCinematics {
     }
 
     public static void mouseMoved(double x, double y) {
-        if (Minecraft.getInstance().isWindowActive() && Math.abs(x) + Math.abs(y) > 0.01) stop();
+        if (Minecraft.getInstance().isWindowActive() && Math.abs(x) + Math.abs(y) > 0.01) {
+            IDLE.reset(System.nanoTime());
+            if (!steering()) stop();
+        }
+    }
+
+    private static boolean movementInput() {
+        var movement = player.input.getMoveVector();
+        // Controller integrations need not produce keyboard callbacks.
+        if (movement.x * movement.x + movement.y * movement.y > 0.0001) return true;
+        //? if >=1.21.2 {
+        return player.input.keyPresses.jump() || player.input.keyPresses.shift();
+        //?} else {
+        /*return player.input.jumping || player.input.shiftKeyDown;
+        *///?}
+    }
+
+    private static boolean boat(Entity entity) {
+        //? if >=1.21.2 {
+        return entity instanceof AbstractBoat;
+        //?} else {
+        /*return entity instanceof Boat;
+        *///?}
+    }
+
+    private static Scene.Kind travelKind() {
+        if (player == null || store == null) return Scene.Kind.PLAYER;
+        if (config().boats && boat(player.getVehicle())) return Scene.Kind.BOAT;
+        if (config().flight && !player.isPassenger() && (player.isFallFlying() || player.getAbilities().flying)) return Scene.Kind.FLIGHT;
+        return Scene.Kind.PLAYER;
+    }
+
+    private static boolean steering() {
+        return store != null && config().travelControls && (movingGeometry != null && manualTravel
+            || session == null && manualWait > 0 && travelKind() != Scene.Kind.PLAYER);
+    }
+
+    private static double travelBearing() {
+        Vec3 velocity = player.getVehicle() == null ? observedMotion : player.getVehicle().getDeltaMovement();
+        if (velocity.horizontalDistanceSqr() > 0.0025) course = Math.toDegrees(Math.atan2(-velocity.x, velocity.z));
+        return course;
     }
 
     public static void openSettings() {

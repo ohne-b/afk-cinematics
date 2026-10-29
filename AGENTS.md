@@ -14,6 +14,8 @@ game options to produce a cinematic. Restore control before processing wake inpu
 An attack, use or drop action that wakes the camera must stay suppressed until release.
 Keep suppression across world/player replacement and vanilla key-state restoration.
 Consumed cinematic controls retain suppression through screens until physical release.
+Only manually started travel views may retain steering. Follow the rendered subject
+without changing its pose; validate movement from the last applied world-camera position.
 Track the effective mouse button after vanilla's platform-specific remapping.
 Inactive release events can be synthetic; they do not establish physical release.
 
