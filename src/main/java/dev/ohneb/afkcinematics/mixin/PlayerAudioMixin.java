@@ -3,7 +3,6 @@ package dev.ohneb.afkcinematics.mixin;
 import dev.ohneb.afkcinematics.client.AfkCinematics;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
@@ -57,8 +56,7 @@ abstract class PlayerAudioMixin {
         target = "Lnet/minecraft/world/level/Level;playLocalSound(DDDLnet/minecraft/sounds/SoundEvent;Lnet/minecraft/sounds/SoundSource;FFZ)V"))
     private void transitionSound(Level level, double x, double y, double z, SoundEvent sound,
                                  SoundSource category, float volume, float pitch, boolean delay) {
-        if (afkCinematics$audioTransition)
-            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forAmbientAddition(sound));
-        else level.playLocalSound(x, y, z, sound, category, volume, pitch, delay);
+        if (!afkCinematics$audioTransition)
+            level.playLocalSound(x, y, z, sound, category, volume, pitch, delay);
     }
 }

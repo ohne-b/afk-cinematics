@@ -1,61 +1,42 @@
 <p align="center">
-  <img src="assets/logo.svg" width="180" alt="AFK Cinematics logo">
+  <img src="https://raw.githubusercontent.com/ohne-b/afk-cinematics/main/assets/logo.svg" width="128" alt="AFK Cinematics logo">
 </p>
 
 <h1 align="center">AFK Cinematics</h1>
 
+<p align="center">Cinematic views of your character and surroundings while you're AFK.</p>
+
 <p align="center">
-  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-GPL--3.0--only-green?style=flat-square" alt="GPL-3.0-only license"></a>
+  <a href="https://github.com/ohne-b/afk-cinematics/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-GPL--3.0--only-green?style=flat-square" alt="License: GPL-3.0-only"></a>
 </p>
 
-Calm camera shots while you take a break from Minecraft. Move to return to your
-normal view. Client-side, for Fabric and NeoForge.
+**Fabric & NeoForge | Minecraft 1.21–26.3 | Client-side**
 
-This is an independent implementation by [ohne-b](https://github.com/ohne-b).
-Development targets Minecraft 1.21 through 26.3. No release has been published.
+Wide aerial passes, low ground shots, underwater views and angled player shots.
+Choose your shots, pacing and cinematic FPS in settings.
 
-## Install and use
+## Get started
 
-Install the jar matching your Minecraft version and loader. Fabric also needs
-Fabric API. Nothing needs to be installed on the server.
+Download from [Modrinth](https://modrinth.com/project/afkcinematics) or
+[GitHub Releases](https://github.com/ohne-b/afk-cinematics/releases).
+Put the jar for your Minecraft version and loader in `mods`.
+Fabric also needs [Fabric API](https://modrinth.com/mod/fabric-api). No server installation needed.
 
-Stand still for 30 seconds to start a cinematic. Movement or opening a menu restores
-your normal view. An attack, use or drop press that wakes the camera is consumed;
-release it before interacting. F2 and Fabrishot capture the cinematic view without
-ending it.
+Stay still for 30 seconds to start. Move or open a menu to return to normal.
+F2 and supported Fabrishot versions capture the cinematic without ending it.
 
-Open settings with `/afkcinematics settings`, Mod Menu on Fabric, or the Mods screen
-on NeoForge. `/afkcinematics start` previews a cinematic; `/afkcinematics stop` ends it.
-Optional Toggle, Next shot and Settings keys are under Controls.
+| Command | Action |
+| --- | --- |
+| `/afkcinematics settings` | Shots, timing and display settings |
+| `/afkcinematics start` | Start a cinematic now |
+| `/afkcinematics stop` | Stop the cinematic |
 
-Mixed mode favors scenery with occasional player shots, with nearby scenery as a fallback in
-tight spaces. Choose the subject, shot types and pacing in settings. Separate
-viewpoints use gentle fades; the camera does not travel through walls.
+Optional Toggle, Next shot and Settings keys are in Minecraft's Controls menu.
 
-## Compatibility
+Early alpha. The camera uses nearby loaded terrain; it does not prevent AFK kicks.
 
-The camera stays near the player and uses loaded terrain. It does not move your
-character, change server activity or prevent AFK kicks. Display settings include a
-separate cinematic FPS cap; normal FPS settings resume on exit. Paused and minimized
-windows keep their normal behaviour. VSync and hardware still limit actual FPS.
+## Contributing
 
-Cinematics require a stationary player with no menu open. If no clear view is
-available, the normal camera stays active. Freecam is allowed, including while active.
-Other known camera replacements are identified in settings when they prevent
-activation. Shader and performance-mod
-compatibility needs testing with the exact versions used.
-
-AmbientSounds keeps playing. Its water depth follows the cinematic camera with
-6.3.5 on Fabric 1.21.11 and 6.3.11 on 26.3; other versions and its biome/weather
-selection keep their own behaviour.
-
-Settings are stored in `config/ohneb-afk-cinematics.json`. An unreadable file is
-preserved and cinematics are disabled until it is corrected.
-
-## Development
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, validation and review requirements.
-
-## License
-
-[GPL-3.0-only](LICENSE.md)
+[Contributor guide](https://github.com/ohne-b/afk-cinematics/blob/main/CONTRIBUTING.md)
+and [bug reports](https://github.com/ohne-b/afk-cinematics/issues).
+Include your Minecraft version, loader and mod list when reporting a problem.
