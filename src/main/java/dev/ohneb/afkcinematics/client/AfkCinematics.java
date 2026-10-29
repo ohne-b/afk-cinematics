@@ -113,11 +113,11 @@ public final class AfkCinematics {
             if (focus || !config().unfocused) stop();
             focused = focus;
         }
-        boolean moved = player != null && lastPosition != null && player.position().distanceToSqr(lastPosition) > 0.0001;
+        boolean moved = player != null && lastPosition != null && movedFrom(lastPosition, false);
         if (player != null) lastPosition = player.position();
         boolean eligible = eligible() && !moved;
         if (session != null) {
-            if (!eligible || player.position().distanceToSqr(anchor) > 0.0001) stop();
+            if (!eligible || movedFrom(anchor, true)) stop();
             else {
                 session.tick(now);
                 if (session.ended()) {
@@ -149,9 +149,15 @@ public final class AfkCinematics {
         var options = client.options;
         if (options.keyUp.isDown() || options.keyDown.isDown() || options.keyLeft.isDown() || options.keyRight.isDown()
             || options.keyJump.isDown() || options.keyAttack.isDown() || options.keyUse.isDown() || options.keyDrop.isDown()) return false;
-        return player.isAlive() && player.onGround() && !player.isSleeping() && !player.isPassenger()
-            && !player.isFallFlying() && !player.isInWater() && !player.isInLava() && !player.isUsingItem()
+        return player.isAlive() && !player.isSleeping() && !player.isPassenger()
+            && !player.isFallFlying() && !player.isInLava() && !player.isUsingItem()
             && !player.isOnFire() && player.hurtTime == 0 && !player.isSpectator();
+    }
+
+    private static boolean movedFrom(Vec3 origin, boolean fromAnchor) {
+        // Water buoyancy is not user input. Keep a bounded allowance for passive bobbing.
+        double limit = player.isInWater() ? (fromAnchor ? 2 : 0.12) : 0.01;
+        return player.position().distanceToSqr(origin) > limit * limit;
     }
 
     private static void start(boolean manual) {
@@ -207,7 +213,7 @@ public final class AfkCinematics {
             *///?}
             return null;
         }
-        if (!eligible() || player.position().distanceToSqr(anchor) > 0.0001) { stop(); return null; }
+        if (!eligible() || movedFrom(anchor, true)) { stop(); return null; }
         long now = System.nanoTime();
         Pose pose = session.frame(now);
         if (session.ended()) stop();
