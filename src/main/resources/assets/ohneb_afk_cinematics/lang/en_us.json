@@ -109,5 +109,11 @@
   "ohneb_afk_cinematics.shot.lead": "Leading shot",
   "ohneb_afk_cinematics.shot.lead.help": "Film a boat or flight from an oblique position ahead of the player.",
   "ohneb_afk_cinematics.shot.wide_track": "Wide escort",
-  "ohneb_afk_cinematics.shot.wide_track.help": "Pull higher and farther out to show the journey and surrounding terrain."
+  "ohneb_afk_cinematics.shot.wide_track.help": "Pull higher and farther out to show the journey and surrounding terrain.",
+  "ohneb_afk_cinematics.shot.low_escort": "Low escort",
+  "ohneb_afk_cinematics.shot.low_escort.help": "Follow near the waterline or just below a flyer, with the landscape passing behind them.",
+  "ohneb_afk_cinematics.shot.high_trail": "High trailing view",
+  "ohneb_afk_cinematics.shot.high_trail.help": "Follow from high behind the journey, leaving room for the landscape ahead.",
+  "ohneb_afk_cinematics.shot.broadside": "Broadside",
+  "ohneb_afk_cinematics.shot.broadside.help": "Track the journey in profile with space in front of the player."
 }
