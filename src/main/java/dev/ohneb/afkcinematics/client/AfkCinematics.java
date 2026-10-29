@@ -86,6 +86,8 @@ public final class AfkCinematics {
             == com.mojang.blaze3d.platform.FramerateLimitTracker.FramerateThrottleReason.WINDOW_ICONIFIED) return 0;
         //?} else if >=1.21.2 {
         /*if (client.getWindow().isIconified()) return 0;
+        *///?} else {
+        /*if (org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(window(), org.lwjgl.glfw.GLFW.GLFW_ICONIFIED) == org.lwjgl.glfw.GLFW.GLFW_TRUE) return 0;
         *///?}
         return Math.clamp(config().cinematicFps, 20, 240);
     }

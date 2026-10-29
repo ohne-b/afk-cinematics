@@ -136,17 +136,18 @@ public final class SettingsScreen extends Screen {
                     //?} else {
                     /*@Override public boolean keyPressed(int key, int scan, int modifiers) {
                     *///?}
-                        if (key == InputConstants.KEY_LEFT || key == InputConstants.KEY_RIGHT) {
-                            config.cinematicFps = Math.clamp(config.cinematicFps + (key == InputConstants.KEY_RIGHT ? 1 : -1), 20, 240);
+                        int previous = config.cinematicFps;
+                        //? if >=1.21.9 {
+                        boolean handled = super.keyPressed(event);
+                        //?} else {
+                        /*boolean handled = super.keyPressed(key, scan, modifiers);
+                        *///?}
+                        if (handled && (key == InputConstants.KEY_LEFT || key == InputConstants.KEY_RIGHT)) {
+                            config.cinematicFps = Math.clamp(previous + (key == InputConstants.KEY_RIGHT ? 1 : -1), 20, 240);
                             value = (config.cinematicFps - 20) / 220.0;
                             updateMessage();
-                            return true;
                         }
-                        //? if >=1.21.9 {
-                        return super.keyPressed(event);
-                        //?} else {
-                        /*return super.keyPressed(key, scan, modifiers);
-                        *///?}
+                        return handled;
                     }
                 });
                 widgets.add(toggle("hideHud", () -> config.hideHud, value -> config.hideHud = value));
