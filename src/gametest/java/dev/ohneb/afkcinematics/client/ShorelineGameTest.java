@@ -94,7 +94,7 @@ public final class ShorelineGameTest implements FabricClientGameTest {
                 require(!AfkCinematics.underwater(), "Shoreline sequence never returned to a dry view");
                 require(camera(client).getFluidInCamera() != FogType.WATER, "Dry destination retained the water environment");
                 AmbientWaterChecks.verify(client);
-                require(waterLoops > 0 && waterTransitions >= 2, "Camera cuts did not drive underwater loop and transition sounds");
+                require(waterLoops > 0 && waterTransitions == 0, "Camera cuts must change ambience without water splashes");
             });
             context.waitTicks(25);
             context.runOnClient(client -> require(waterLoop != null && waterLoop.isStopped(), "Underwater loop did not fade out above water"));

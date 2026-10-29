@@ -11,6 +11,7 @@ First public alpha for Fabric and NeoForge, with separate jars for Minecraft 1.2
 - Cinematic lenses, a separate FPS cap and clean HUD, hand and name-tag rendering (#12, #14, #18, #20).
 - F2 and supported Fabrishot captures preserve the cinematic view without interrupting it (#21).
 - Stationary flying and underwater entry, camera-relative vanilla underwater ambience, and an optional AmbientSounds water-depth adapter (#24, #25, #27).
+- Camera water transitions change the ambience without playing entry or exit splashes; normal player water sounds are preserved (#28).
 
 Install only the jar matching your Minecraft version and loader. Fabric requires Fabric API. No server installation is needed.
 

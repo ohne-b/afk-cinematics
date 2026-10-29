@@ -111,13 +111,13 @@ public final class AirWaterGameTest implements FabricClientGameTest {
                     require(sounds.updateWater() && client.player.isUnderWater(), "Audio override changed real player fluid state");
                     require(!AfkCinematics.audioUnderwater(client.player, true), "Dry camera retained underwater audio");
                     AmbientWaterChecks.drySnapshot(client);
-                    require(waterTransitions == 1, "Dry camera did not play its exit transition");
+                    require(waterTransitions == 0, "Dry camera played a water exit splash");
                     AfkCinematics.stop();
                     require(sounds.updateWater() && client.player.isUnderWater(), "Restoring audio changed player fluid state");
                     AmbientWaterChecks.verify(client);
-                    require(waterLoops == 1 && waterTransitions == 2, "Cancelling did not recreate the player's underwater ambience");
+                    require(waterLoops == 1 && waterTransitions == 0, "Cancelling did not silently restore underwater ambience");
                     sounds.updateWater();
-                    require(waterLoops == 1 && waterTransitions == 2, "Audio restoration repeated on the next update");
+                    require(waterLoops == 1 && waterTransitions == 0, "Audio restoration repeated on the next update");
                 } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
                 finally { checkWaterAudio = false; }
             });
@@ -128,6 +128,20 @@ public final class AirWaterGameTest implements FabricClientGameTest {
             key(context, InputConstants.KEY_W, InputConstants.PRESS);
             context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Swimming input did not wake the cinematic"));
             key(context, InputConstants.KEY_W, InputConstants.RELEASE);
+            context.runOnClient(client -> {
+                checkWaterAudio = true;
+                waterTransitions = 0;
+            });
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                player.teleportTo(player.getX(), floor.get().getY() + 12, player.getZ());
+            });
+            context.waitFor(client -> !client.player.isUnderWater() && waterTransitions == 1);
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                player.teleportTo(position.get().x, position.get().y, position.get().z);
+            });
+            context.waitFor(client -> client.player.isUnderWater() && waterTransitions == 2);
         } finally {
             context.runOnClient(client -> { AfkCinematics.stop(); focused = null; checkWaterAudio = false; waterLoop = null; waterAudioHistory = null; });
         }

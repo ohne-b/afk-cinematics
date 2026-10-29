@@ -22,7 +22,6 @@ abstract class UnderwaterAudioProbe {
             TestSupport.waterLoop = loop;
             TestSupport.waterLoops++;
         } else if (id.equals("ambient.underwater.enter") || id.equals("ambient.underwater.exit")) {
-            TestSupport.require(sound.isRelative(), "Cinematic water transition was positioned at the player");
             TestSupport.waterTransitions++;
         }
     }
