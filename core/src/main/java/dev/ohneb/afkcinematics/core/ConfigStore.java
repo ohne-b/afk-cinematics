@@ -30,6 +30,7 @@ public final class ConfigStore {
             config.idleSeconds = Math.clamp(integer("idleSeconds", 30), 10, 600);
             config.motion = enumeration("motion", CinematicConfig.Motion.GENTLE);
             config.subject = enumeration("subject", CinematicConfig.Subject.MIXED);
+            config.playerShare = Math.clamp(integer("playerShare", 25), 0, 100);
             config.pace = enumeration("pace", CinematicConfig.Pace.RELAXED);
             config.shots = shots();
             config.lens = enumeration("lens", CinematicConfig.Lens.CINEMATIC);
@@ -77,7 +78,20 @@ public final class ConfigStore {
                 catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException ignored) { }
             }
         }
-        return selected.isEmpty() ? EnumSet.allOf(Shot.Type.class) : selected;
+        if (selected.isEmpty()) return EnumSet.allOf(Shot.Type.class);
+        // Alpha 1 saved selections without a catalog. Preserve its disabled shots on upgrade.
+        var known = EnumSet.of(Shot.Type.ARC, Shot.Type.DOLLY, Shot.Type.DRIFT, Shot.Type.CRANE,
+            Shot.Type.OVERHEAD, Shot.Type.FLYOVER, Shot.Type.LOW_PASS, Shot.Type.REVEAL,
+            Shot.Type.FLY_THROUGH, Shot.Type.TRAVERSE, Shot.Type.PAN, Shot.Type.STILL);
+        if (document.get("knownShots") instanceof JsonArray catalog) {
+            known.clear();
+            for (var value : catalog) {
+                try { known.add(Shot.Type.valueOf(value.getAsString().toUpperCase(Locale.ROOT))); }
+                catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException ignored) { }
+            }
+        }
+        for (Shot.Type type : Shot.Type.values()) if (!known.contains(type)) selected.add(type);
+        return selected;
     }
 
     public boolean save() {
@@ -88,10 +102,14 @@ public final class ConfigStore {
         updated.addProperty("idleSeconds", Math.clamp(config.idleSeconds, 10, 600));
         updated.addProperty("motion", config.motion.name().toLowerCase(Locale.ROOT));
         updated.addProperty("subject", config.subject.name().toLowerCase(Locale.ROOT));
+        updated.addProperty("playerShare", Math.clamp(config.playerShare, 0, 100));
         updated.addProperty("pace", config.pace.name().toLowerCase(Locale.ROOT));
         var shots = new JsonArray();
         config.shots.forEach(type -> shots.add(type.name().toLowerCase(Locale.ROOT)));
         updated.add("shots", shots);
+        var catalog = new JsonArray();
+        for (Shot.Type type : Shot.Type.values()) catalog.add(type.name().toLowerCase(Locale.ROOT));
+        updated.add("knownShots", catalog);
         updated.addProperty("lens", config.lens.name().toLowerCase(Locale.ROOT));
         updated.addProperty("cinematicFps", Math.clamp(config.cinematicFps, 20, 240));
         updated.addProperty("hideHud", config.hideHud);
