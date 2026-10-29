@@ -17,7 +17,8 @@ public final class CinematicSession {
     private final ShotHistory history = new ShotHistory();
     private Pose current;
     private Vec currentFocus;
-    private long started, lastFrame, handoff;
+    private long started, handoff, clockOffset;
+    private long lastUpdate = Long.MIN_VALUE;
     private long captureStarted;
     private int captures;
     private Phase phase = Phase.ENTRY;
@@ -42,6 +43,8 @@ public final class CinematicSession {
 
     public void tick(long now) {
         if (ended || captures > 0) return;
+        now = timeline(now);
+        if (ended) return;
         if (shot != null && phase == Phase.SHOT) {
             if (advanceRequested && !heldForNext) {
                 planner = planner(current);
@@ -98,7 +101,6 @@ public final class CinematicSession {
         }
         heldForNext = false;
         started = now;
-        if (initial) lastFrame = now;
     }
 
     public Pose frame(long now) {
@@ -109,8 +111,8 @@ public final class CinematicSession {
                 : valid(current, currentFocus, current.position(), scene);
             return safe ? current : end();
         }
-        if (now < lastFrame || now - lastFrame > 1_000_000_000L) return end();
-        lastFrame = now;
+        now = timeline(now);
+        if (ended) return null;
         if (heldForNext && phase == Phase.SHOT)
             return valid(current, currentFocus, current.position(), scene) ? current : end();
         double elapsed = (now - started) / 1e9;
@@ -166,6 +168,16 @@ public final class CinematicSession {
     }
 
     private Pose end() { ended = true; fade = 0; return null; }
+
+    private long timeline(long now) {
+        if (lastUpdate != Long.MIN_VALUE) {
+            if (now < lastUpdate) end();
+            // A client hitch pauses the take instead of skipping its path or exiting the camera.
+            else if (now - lastUpdate > 1_000_000_000L) clockOffset += now - lastUpdate;
+        }
+        lastUpdate = now;
+        return now - clockOffset;
+    }
     public boolean ended() { return ended; }
     public boolean showing() { return (shot != null || pending != null) && !ended; }
     public Pose current() { return current; }
@@ -186,7 +198,7 @@ public final class CinematicSession {
         long elapsed = Math.max(0, now - captureStarted);
         started += elapsed;
         if (handoff != 0) handoff += elapsed;
-        lastFrame = now;
+        lastUpdate = now;
     }
 
     private void setScene(Scene next) {

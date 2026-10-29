@@ -80,7 +80,7 @@ class CameraTest {
         assertFalse(session.ended());
     }
 
-    @Test void noSpaceAndLongFrameGapsStopWithoutAnInvalidPose() {
+    @Test void noSpaceAndBackwardTimeStopWithoutAnInvalidPose() {
         Geometry closed = new Geometry() {
             public boolean clear(Vec from, Vec to, double margin) { return false; }
             public boolean visible(Vec from, Vec target, double margin) { return false; }
@@ -91,8 +91,34 @@ class CameraTest {
         assertFalse(session.showing());
         var open = new CinematicSession(SUBJECT, ENTRY, 0, playerConfig(), OPEN, new Random(1));
         open.tick(0);
-        assertNull(open.frame(2_000_000_000L));
+        assertNotNull(open.frame(50_000_000L));
+        assertNull(open.frame(0));
         assertTrue(open.ended());
+    }
+
+    @Test void aClientHitchPausesMotionAndStillChecksChangedTerrain() {
+        boolean[] blocked = {false};
+        Geometry world = new Geometry() {
+            public boolean clear(Vec from, Vec to, double margin) { return !blocked[0]; }
+            public boolean visible(Vec from, Vec to, double margin) { return !blocked[0]; }
+        };
+        var config = playerConfig();
+        config.shots = EnumSet.of(Shot.Type.DRIFT);
+        var session = new CinematicSession(SUBJECT, ENTRY, 0, config, world, new Random(5));
+        for (int tick = 0; tick <= 180; tick++) {
+            session.tick(tick * 50_000_000L);
+            session.frame(tick * 50_000_000L);
+        }
+        assertTrue(session.settled());
+        Pose before = session.current();
+        session.tick(14_000_000_000L);
+        assertEquals(before, session.frame(14_000_000_000L));
+        assertFalse(session.ended());
+        assertNotEquals(before.position(), session.frame(14_050_000_000L).position());
+        blocked[0] = true;
+        session.tick(19_000_000_000L);
+        assertNull(session.frame(19_000_000_000L));
+        assertTrue(session.ended());
     }
 
     @Test void stillMotionDoesNotMoveAfterEntry() {

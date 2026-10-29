@@ -14,7 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(value = CinematicSession.class, remap = false)
 public abstract class SceneryFrameMixin {
-    @Shadow private long lastFrame;
     @Shadow private Shot shot;
     @Unique private Shot afkCinematics$lastShot;
     @Unique private int afkCinematics$shotNumber;
@@ -23,12 +22,14 @@ public abstract class SceneryFrameMixin {
     @Unique private long afkCinematics$frameStarted;
     @Unique private long afkCinematics$tickStarted;
     @Unique private long afkCinematics$gap;
+    @Unique private long afkCinematics$lastFrame;
 
     @Inject(method = "frame", at = @At("HEAD"), cancellable = true)
     private void afkCinematics$holdCoveredFrame(long now, CallbackInfoReturnable<Pose> cir) {
         if (TestSupport.cameraTimings != null) {
             afkCinematics$frameStarted = System.nanoTime();
-            afkCinematics$gap = now - lastFrame;
+            afkCinematics$gap = afkCinematics$lastFrame == 0 ? 0 : now - afkCinematics$lastFrame;
+            afkCinematics$lastFrame = now;
         }
         var session = (CinematicSession)(Object)this;
         if (TestSupport.holdCoveredScenery != null && session.fade() == 1
