@@ -13,6 +13,31 @@ class EnvironmentDriveTest {
         public boolean visible(Vec from, Vec to, double margin) { return from.distance(to) + 2 * margin <= 32; }
     };
 
+    @Test void newDrivesMoveWithoutTurningOrReversingMidTake() {
+        Vec focus = new Vec(0, 0.35, 0), vantage = new Vec(0, 14.35, -22);
+        var scene = new Scene(focus, vantage, Scene.Kind.AERIAL, 8);
+        for (Shot.Type type : new Shot.Type[]{Shot.Type.DIAGONAL_GLIDE, Shot.Type.RISING_PASS,
+                Shot.Type.DESCENDING_PASS, Shot.Type.PULL_AWAY}) {
+            var config = new CinematicConfig();
+            config.shots = EnumSet.of(type);
+            Shot shot = new ShotSearch(scene, Pose.lookingAt(vantage, focus), 0, config, null, true, true, new Random(4)).next(OPEN);
+            assertNotNull(shot, type.name());
+            assertTrue(shot.start().distance(shot.end()) > 8, type.name());
+            if (type == Shot.Type.RISING_PASS) assertTrue(shot.end().y() > shot.start().y());
+            if (type == Shot.Type.DESCENDING_PASS) assertTrue(shot.end().y() < shot.start().y());
+            if (type == Shot.Type.PULL_AWAY) assertTrue(shot.end().distance(focus) > shot.start().distance(focus));
+            double previousDistance = 0;
+            for (int sample = 0; sample <= 100; sample++) {
+                Pose pose = shot.sample(shot.duration() * sample / 100);
+                assertEquals(shot.sample(0).yaw(), pose.yaw(), 1e-9);
+                assertEquals(shot.sample(0).pitch(), pose.pitch(), 1e-9);
+                double distance = pose.position().distance(shot.start());
+                assertTrue(distance >= previousDistance, type.name());
+                previousDistance = distance;
+            }
+        }
+    }
+
     @Test void aerialDrivesKeepTheirAltitudeHeadingAndMeaningfulTravel() {
         Vec focus = new Vec(0, 0.35, 0), vantage = new Vec(0, 14.35, -22);
         var scene = new Scene(focus, vantage, Scene.Kind.AERIAL, 8);
@@ -78,7 +103,7 @@ class EnvironmentDriveTest {
         var random = new Random(9);
         for (int take = 0; take < 5; take++) {
             var planner = new ShotPlanner(new Vec(0, 1, 0), new Pose(new Vec(0, 1, 0), 0, 0),
-                new Pose(new Vec(0, 1, 0), 0, 0), 0, config, null, List.of(), 0, null, random);
+                new Pose(new Vec(0, 1, 0), 0, 0), 0, config, new ShotHistory(), random);
             planner.next(geometry);
         }
         assertEquals(5, directions.stream().distinct().count());

@@ -33,6 +33,7 @@ public final class CinematicConfig {
     public int idleSeconds = 30;
     public Motion motion = Motion.GENTLE;
     public Subject subject = Subject.MIXED;
+    public int playerShare = 25;
     public Pace pace = Pace.RELAXED;
     public EnumSet<Shot.Type> shots = EnumSet.allOf(Shot.Type.class);
     public Lens lens = Lens.CINEMATIC;

@@ -2,6 +2,7 @@ package dev.ohneb.afkcinematics.core;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
@@ -60,7 +61,8 @@ public final class ShotSearch {
         }
         if (scene.kind() == Scene.Kind.GROUND)
             styles.removeIf(type -> type == Shot.Type.FLYOVER || type == Shot.Type.OVERHEAD
-                || type == Shot.Type.REVEAL || type == Shot.Type.CRANE);
+                || type == Shot.Type.REVEAL || type == Shot.Type.CRANE
+                || type == Shot.Type.RISING_PASS || type == Shot.Type.DESCENDING_PASS);
         if (scene.kind() == Scene.Kind.AERIAL)
             styles.removeIf(type -> type == Shot.Type.LOW_PASS || type == Shot.Type.REVEAL || type == Shot.Type.OVERHEAD);
         if (!scene.scenery()) styles.removeIf(Shot.Type::sceneryOnly);
@@ -68,6 +70,20 @@ public final class ShotSearch {
     }
 
     public boolean exhausted() { return attempt >= angles.size() * types.size() * distances.size(); }
+
+    void prioritize(ShotHistory history) {
+        types.sort(Comparator.comparingInt(history::lastUse));
+        if (!scene.scenery()) {
+            distances.subList(0, PLAYER_DISTANCES.size()).sort(Comparator.comparingDouble(radius -> angles.stream().mapToDouble(angle ->
+                history.viewPenalty(playerView(angle, radius), false)).average().orElse(0)));
+            angles.sort(Comparator.comparingDouble(angle -> history.viewPenalty(playerView(angle, distances.getFirst()), false)));
+        }
+    }
+
+    private Pose playerView(double angle, double radius) {
+        double radians = Math.toRadians(bearing + angle);
+        return Pose.lookingAt(subject.add(new Vec(Math.sin(radians) * radius, 0.55, -Math.cos(radians) * radius)), subject);
+    }
 
     static int playerAttempts(CinematicConfig config) {
         int styles = config.motion == CinematicConfig.Motion.STILL || config.shots.isEmpty() ? 1
@@ -87,6 +103,12 @@ public final class ShotSearch {
             : previous.position();
         if (entering && scene.scenery())
             start = limitDistance(subject.add(rotate(scene.vantage().subtract(subject), Math.toRadians(angles.get(view)))));
+        if (entering && type == Shot.Type.PULL_AWAY) {
+            Vec offset = start.subtract(subject);
+            start = subject.add(new Vec(offset.x() * 0.65, offset.y(), offset.z() * 0.65));
+        }
+        if (entering && type == Shot.Type.DESCENDING_PASS && scene.kind() != Scene.Kind.WATER)
+            start = new Vec(start.x(), Math.max(start.y(), subject.y() + 6), start.z());
         if (entering && type == Shot.Type.LOW_PASS)
             start = new Vec(start.x(), subject.y() + (scene.scenery() ? 0.25 : -0.6), start.z());
         if (entering && type == Shot.Type.FLYOVER && scene.kind() != Scene.Kind.WATER)
@@ -157,6 +179,22 @@ public final class ShotSearch {
                 control = start.lerp(end, 0.5);
                 // Move the composition with the camera: a drive through the scene, not an orbit.
                 focusEnd = subject.add(end.subtract(start));
+            }
+            case DIAGONAL_GLIDE, RISING_PASS, DESCENDING_PASS, PULL_AWAY -> {
+                double travel = (scene.kind() == Scene.Kind.AERIAL ? 12 : scene.kind() == Scene.Kind.WATER ? 5 : 8) * amount;
+                Vec forward = new Vec(-offset.x(), 0, -offset.z()).scale(1 / horizontal);
+                Vec direction = type == Shot.Type.PULL_AWAY ? forward.scale(-1) : forward;
+                if (type == Shot.Type.DIAGONAL_GLIDE) {
+                    direction = forward.add(tangent.scale(0.75 * sign));
+                    direction = direction.scale(1 / direction.length());
+                }
+                double lift = type == Shot.Type.RISING_PASS ? 1 : type == Shot.Type.DESCENDING_PASS ? -1 : 0;
+                lift *= (scene.kind() == Scene.Kind.WATER ? 1 : 4) * amount;
+                end = limitDistance(start.add(direction.scale(travel)).add(new Vec(0, lift, 0)));
+                control = start.lerp(end, 0.5);
+                // Descend toward the surface without carrying the sightline below it.
+                focusStart = subject.add(new Vec(0, Math.max(0, start.y() - end.y()), 0));
+                focusEnd = focusStart.add(end.subtract(start));
             }
             case LOW_PASS -> {
                 end = limitDistance(start.add(tangent.scale((scene.scenery() ? 6 : 4.5) * amount * sign)));

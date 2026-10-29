@@ -2,8 +2,12 @@ package dev.ohneb.afkcinematics.core;
 
 public record Shot(Type type, Vec start, Vec control, Vec end, Vec focusStart, Vec focusEnd, double duration) {
     public enum Type {
-        ARC, DOLLY, DRIFT, CRANE, OVERHEAD, FLYOVER, LOW_PASS, REVEAL, FLY_THROUGH, TRAVERSE, PAN, STILL;
-        public boolean sceneryOnly() { return this == OVERHEAD || this == FLY_THROUGH || this == TRAVERSE; }
+        ARC, DOLLY, DRIFT, CRANE, OVERHEAD, FLYOVER, LOW_PASS, REVEAL, FLY_THROUGH, TRAVERSE, PAN, STILL,
+        DIAGONAL_GLIDE, RISING_PASS, DESCENDING_PASS, PULL_AWAY;
+        public boolean sceneryOnly() {
+            return this == OVERHEAD || this == FLY_THROUGH || this == TRAVERSE
+                || this == DIAGONAL_GLIDE || this == RISING_PASS || this == DESCENDING_PASS || this == PULL_AWAY;
+        }
     }
 
     public Shot {
