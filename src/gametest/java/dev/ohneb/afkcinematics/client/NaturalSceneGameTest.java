@@ -3,6 +3,7 @@ package dev.ohneb.afkcinematics.client;
 import dev.ohneb.afkcinematics.core.CinematicConfig;
 import dev.ohneb.afkcinematics.core.Pose;
 import dev.ohneb.afkcinematics.core.Scene;
+import dev.ohneb.afkcinematics.core.Vec;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
@@ -12,6 +13,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.server.level.ServerLevel;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,10 +31,14 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
         configure(context);
         String capture = System.getProperty("afkcinematics.test.capture");
+        String scene = System.getProperty("afkcinematics.test.scene", "forest");
         if (capture != null && !capture.matches("[a-z0-9-]+")) throw new IllegalArgumentException("Invalid capture label");
+        if (capture != null && !List.of("forest", "plains", "cavern").contains(scene))
+            throw new IllegalArgumentException("Unknown capture scene: " + scene);
         Path root = Path.of(System.getProperty("afkcinematics.test.artifacts"));
         Path artifacts = capture == null ? root : root.resolve("cinematography-" + capture);
         var captures = new ArrayList<String>();
+        var capturePosition = new java.util.concurrent.atomic.AtomicReference<Vec>();
         if (capture != null) captures.add("file,nanoseconds");
         if (capture != null) {
             try {
@@ -53,11 +62,30 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                     player.inventoryMenu.broadcastFullState();
                     if (capture != null) {
                         player.teleportTo(-8.5, 65, -5.5);
+                        if (scene.equals("plains")) {
+                            var biome = server.overworld().findClosestBiome3d(holder -> holder.is(Biomes.PLAINS),
+                                BlockPos.ZERO, 4096, 32, 64);
+                            require(biome != null, "Capture seed has no nearby plains");
+                            var position = dryGround(server.overworld(), biome.getFirst());
+                            player.teleportTo(position.getX() + 0.5, position.getY(), position.getZ() + 0.5);
+                        } else if (scene.equals("cavern")) {
+                            floor(player);
+                            SceneryGameTest.cavern(player, player.blockPosition().below());
+                        }
+                        LOGGER.info("Capture scene {} starts at {}", scene, player.position());
+                        capturePosition.set(WorldGeometry.point(player.position()));
                         server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(), "time set 1000");
                     }
                 });
-                context.waitFor(client -> client.player.onGround() && !client.player.isInWater()
+                context.waitFor(client -> client.player.isAlive() && client.player.onGround() && !client.player.isInWater()
+                    && (capture == null || WorldGeometry.point(client.player.position()).distance(capturePosition.get()) < 2)
                     && client.player.getInventory().countItem(Items.EMERALD) == 32, 200);
+                if (capture != null) context.waitFor(client -> {
+                    int x = client.player.blockPosition().getX() >> 4, z = client.player.blockPosition().getZ() >> 4;
+                    for (int dx : new int[]{-3, 3}) for (int dz : new int[]{-3, 3})
+                        if (!client.level.getChunkSource().hasChunk(x + dx, z + dz)) return false;
+                    return true;
+                }, 400);
                 context.waitTicks(30);
                 world.getServer().runOnServer(server -> {
                     var player = server.getPlayerList().getPlayers().getFirst();
@@ -134,6 +162,21 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
             context.waitTicks(3);
             context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Disconnecting during a shot retained camera ownership"));
         } catch (Exception exception) { throw new AssertionError(exception); }
+    }
+
+    private static BlockPos dryGround(ServerLevel level, BlockPos center) {
+        for (int radius = 0; radius <= 32; radius += 4) {
+            for (int dx = -radius; dx <= radius; dx += 4) for (int dz = -radius; dz <= radius; dz += 4) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) != radius) continue;
+                BlockPos column = center.offset(dx, 0, dz);
+                level.getChunkAt(column);
+                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ());
+                BlockPos ground = new BlockPos(column.getX(), y - 1, column.getZ());
+                var state = level.getBlockState(ground);
+                if (!state.isAir() && state.getFluidState().isEmpty()) return ground.above();
+            }
+        }
+        throw new AssertionError("Plains capture has no nearby dry ground");
     }
 
     private static void saveDiagnostics(ClientGameTestContext context, Path artifacts, List<String> captures) throws java.io.IOException {

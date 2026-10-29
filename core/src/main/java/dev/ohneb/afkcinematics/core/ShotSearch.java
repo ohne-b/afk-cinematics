@@ -78,17 +78,20 @@ public final class ShotSearch {
                 control = subject.add(new Vec(midpoint.x() * scale, midpoint.y(), midpoint.z() * scale));
             }
             case DOLLY -> {
-                double change = Math.clamp(horizontal + 0.7 * amount * sign, 1.5, scene.scenery() ? 12 : 6);
+                double travel = (scene.scenery() ? 2.6 : 1.6) * amount;
+                double maximum = scene.scenery() ? 12 : 6;
+                if (horizontal + travel * sign < 1.5 || horizontal + travel * sign > maximum) sign = -sign;
+                double change = Math.clamp(horizontal + travel * sign, 1.5, maximum);
                 end = subject.add(new Vec(offset.x() * change / horizontal, offset.y(), offset.z() * change / horizontal));
                 control = start.lerp(end, 0.5);
             }
             case DRIFT -> {
-                end = start.add(tangent.scale(amount * sign));
+                end = start.add(tangent.scale((scene.scenery() ? 3 : 1.8) * amount * sign));
                 control = start.lerp(end, 0.5);
             }
             case CRANE -> {
-                double lift = (offset.y() > 2.5 ? -1.2 : 1.2) * amount;
-                end = start.add(tangent.scale(0.4 * amount * sign)).add(new Vec(0, lift, 0));
+                double lift = (offset.y() > 2.5 ? -1 : 1) * (scene.scenery() ? 2.2 : 1.6) * amount;
+                end = start.add(tangent.scale(0.8 * amount * sign)).add(new Vec(0, lift, 0));
                 control = start.lerp(end, 0.5).add(new Vec(0, lift * 0.2, 0));
             }
             case OVERHEAD -> {

@@ -147,7 +147,7 @@ public final class SceneryGameTest implements FabricClientGameTest {
         for (int x = -10; x <= 10; x += 2) player.level().setBlockAndUpdate(origin.offset(x, 11, -8), Blocks.POPPY.defaultBlockState());
     }
 
-    private static void cavern(ServerPlayer player, BlockPos origin) {
+    static void cavern(ServerPlayer player, BlockPos origin) {
         // Skip plant survival checks while replacing the fixture's garden.
         for (BlockPos block : BlockPos.betweenClosed(origin.offset(-18, 1, -18), origin.offset(18, 20, 18))) {
             if (playerCell(block, origin)) continue;
