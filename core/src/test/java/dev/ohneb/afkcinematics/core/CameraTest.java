@@ -118,7 +118,7 @@ class CameraTest {
                 assertNotNull(pose);
                 Vec offset = pose.position().subtract(SUBJECT);
                 assertTrue(Math.hypot(offset.x(), offset.z()) <= 6.000001, "Successive shots drifted beyond six blocks");
-                assertTrue(offset.y() >= -0.300001 && offset.y() <= 5.500001, "Successive shots drifted vertically");
+                assertTrue(offset.y() >= -0.650001 && offset.y() <= 5.500001, "Successive shots drifted vertically");
             }
         }
     }

@@ -70,6 +70,15 @@ public final class ShotSearch {
             start = limitDistance(subject.add(rotate(scene.vantage().subtract(subject), Math.toRadians(angles.get(view)))));
         if (entering && type == Shot.Type.OVERHEAD && !scene.scenery())
             start = subject.add(new Vec(Math.sin(angle) * 1.7, 4.2, -Math.cos(angle) * 1.7));
+        if (entering && type == Shot.Type.LOW_PASS)
+            start = new Vec(start.x(), subject.y() + (scene.scenery() ? 0.25 : -0.6), start.z());
+        if (entering && type == Shot.Type.FLYOVER)
+            start = new Vec(start.x(), Math.max(start.y(), subject.y() + (scene.scenery() ? 6 : 4)), start.z());
+        if (entering && type == Shot.Type.REVEAL) {
+            Vec offset = start.subtract(subject);
+            double scale = Math.min(1, (scene.scenery() ? 7 : 3) / Math.hypot(offset.x(), offset.z()));
+            start = subject.add(new Vec(offset.x() * scale, Math.min(offset.y(), 1.2), offset.z() * scale));
+        }
         Vec offset = start.subtract(subject);
         double horizontal = Math.hypot(offset.x(), offset.z());
         // Looking back from inside the player's body is never a useful fallback.
@@ -90,7 +99,7 @@ public final class ShotSearch {
                 control = subject.add(new Vec(midpoint.x() * scale, midpoint.y(), midpoint.z() * scale));
             }
             case DOLLY -> {
-                double travel = (scene.scenery() ? 2.6 : 1.6) * amount;
+                double travel = (scene.scenery() ? 4 : 2) * amount;
                 double maximum = scene.scenery() ? 12 : 6;
                 if (horizontal + travel * sign < 1.5 || horizontal + travel * sign > maximum) sign = -sign;
                 double change = Math.clamp(horizontal + travel * sign, 1.5, maximum);
@@ -98,11 +107,12 @@ public final class ShotSearch {
                 control = start.lerp(end, 0.5);
             }
             case DRIFT -> {
-                end = start.add(tangent.scale((scene.scenery() ? 3 : 1.8) * amount * sign));
+                end = limitDistance(start.add(tangent.scale((scene.scenery() ? 6 : 3) * amount * sign)));
                 control = start.lerp(end, 0.5);
+                if (scene.scenery()) focusEnd = subject.add(end.subtract(start).scale(0.35));
             }
             case CRANE -> {
-                double lift = (offset.y() > 2.5 ? -1 : 1) * (scene.scenery() ? 2.2 : 1.6) * amount;
+                double lift = (offset.y() > 2.5 ? -1 : 1) * (scene.scenery() ? 3.5 : 2) * amount;
                 end = start.add(tangent.scale(0.8 * amount * sign)).add(new Vec(0, lift, 0));
                 control = start.lerp(end, 0.5).add(new Vec(0, lift * 0.2, 0));
             }
@@ -111,6 +121,22 @@ public final class ShotSearch {
                 double wide = scene.scenery() ? 3 : 1.7;
                 Vec above = new Vec(offset.x() * wide / horizontal, high, offset.z() * wide / horizontal);
                 end = start.lerp(subject.add(rotate(above, Math.toRadians(15 * sign))), amount);
+                control = start.lerp(end, 0.5);
+            }
+            case FLYOVER -> {
+                double travel = Math.min(scene.scenery() ? 7.5 : 2.5, Math.max(0, horizontal - 1.25)) * amount;
+                end = start.add(new Vec(-offset.x(), 0, -offset.z()).scale(travel / horizontal));
+                control = start.lerp(end, 0.5);
+                if (scene.scenery()) focusEnd = subject.add(end.subtract(start));
+            }
+            case LOW_PASS -> {
+                end = limitDistance(start.add(tangent.scale((scene.scenery() ? 6 : 3) * amount * sign)));
+                control = start.lerp(end, 0.5);
+                if (scene.scenery()) focusEnd = subject.add(end.subtract(start).scale(0.5));
+            }
+            case REVEAL -> {
+                Vec retreat = new Vec(offset.x(), 0, offset.z()).scale((scene.scenery() ? 4 : 2.5) * amount / horizontal);
+                end = limitDistance(start.add(retreat).add(new Vec(0, (scene.scenery() ? 3.5 : 2.5) * amount, 0)));
                 control = start.lerp(end, 0.5);
             }
             case PAN -> {
@@ -125,6 +151,7 @@ public final class ShotSearch {
         }
         double duration = pace.minimumSeconds + random.nextDouble() * (pace.maximumSeconds - pace.minimumSeconds);
         Shot candidate = new Shot(type, start, limitDistance(control), limitDistance(end), focusStart, focusEnd, duration);
+        if (type != Shot.Type.STILL && type != Shot.Type.PAN && candidate.start().distance(candidate.end()) < 0.01) return null;
         return geometry.valid(candidate, cut ? candidate.start() : previous.position()) ? candidate : null;
     }
 
@@ -139,6 +166,6 @@ public final class ShotSearch {
         double maximum = scene.scenery() ? 12 : 6;
         double scale = radius > maximum ? maximum / radius : 1;
         return subject.add(new Vec(offset.x() * scale,
-            Math.clamp(offset.y(), scene.scenery() ? -4 : -0.3, scene.scenery() ? 12 : 5.5), offset.z() * scale));
+            Math.clamp(offset.y(), scene.scenery() ? -4 : -0.65, scene.scenery() ? 12 : 5.5), offset.z() * scale));
     }
 }
