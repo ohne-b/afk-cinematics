@@ -207,6 +207,11 @@ public final class AfkCinematics {
 
     public static boolean suppressed(InputConstants.Key key) { return INPUT != null && INPUT.suppressed(token(key)); }
 
+    public static void blockInput(InputConstants.Key key) {
+        INPUT.press(token(key), true);
+        stop();
+    }
+
     private static long token(InputConstants.Key key) {
         return ((long)key.getType().ordinal() << 32) | (key.getValue() & 0xffffffffL);
     }
