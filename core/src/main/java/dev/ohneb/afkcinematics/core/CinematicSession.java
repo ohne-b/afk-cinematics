@@ -88,14 +88,15 @@ public final class CinematicSession {
         if (shot != null && phase == Phase.SHOT && now < handoff) return;
         boolean initial = shot == null;
         if (!initial && phase == Phase.SHOT && !heldForNext) {
-            Pose end = shot.sample(shot.duration());
-            Vec focus = shot.focus(shot.duration());
+            Shot active = aimed(shot, scene);
+            Pose end = active.sample(active.duration());
+            Vec focus = active.focus(active.duration());
             if (!valid(end, focus, current.position(), scene)) { end(); return; }
             current = end;
             currentFocus = focus;
         }
         var plan = pending;
-        if (!geometry.forScene(plan.scene()).valid(plan.shot(), plan.cut() ? plan.shot().start() : current.position())) { end(); return; }
+        if (!geometry.forScene(plan.scene()).valid(aimed(plan.shot(), plan.scene()), plan.cut() ? plan.shot().start() : current.position())) { end(); return; }
         if (plan.cut()) {
             phase = Phase.FADE_OUT;
             covered = false;
@@ -138,13 +139,14 @@ public final class CinematicSession {
         }
         if (phase == Phase.CUT) {
             if (!covered) return geometry.forScene(scene).clear(current.position(), current.position()) ? current : end();
-            Pose next = pending.shot().sample(0);
-            if (!valid(next, pending.shot().focus(0), next.position(), pending.scene())) return end();
+            Shot destination = aimed(pending.shot(), pending.scene());
+            Pose next = destination.sample(0);
+            if (!valid(next, destination.focus(0), next.position(), pending.scene())) return end();
             shot = pending.shot();
             setScene(pending.scene());
             pending = null;
             current = next;
-            currentFocus = shot.focus(0);
+            currentFocus = destination.focus(0);
             lensStrength = 1;
             phase = Phase.FADE_IN;
             started = now;
@@ -153,21 +155,22 @@ public final class CinematicSession {
             return current;
         }
         Pose next;
+        Shot active = aimed(shot, scene);
         double sampledSeconds = elapsed;
         if (phase == Phase.ENTRY) {
             sampledSeconds = 0;
-            next = entry.blend(shot.sample(0), elapsed / entrySeconds);
+            next = entry.blend(active.sample(0), elapsed / entrySeconds);
             lensStrength = Pose.ease(elapsed / entrySeconds);
             if (elapsed >= entrySeconds) { phase = Phase.SHOT; started += Math.round(entrySeconds * 1e9); }
         } else if (phase == Phase.FADE_IN) {
             sampledSeconds = 0;
-            next = shot.sample(0);
+            next = active.sample(0);
             if (!covered) started = now;
             elapsed = (now - started) / 1e9;
             fade = 1 - Pose.ease(elapsed / 0.45);
             if (fade == 0) { phase = Phase.SHOT; started = now; }
-        } else next = shot.sample(elapsed);
-        Vec focus = shot.focus(sampledSeconds);
+        } else next = active.sample(elapsed);
+        Vec focus = active.focus(sampledSeconds);
         if (!valid(next, focus, current.position(), scene)) return end();
         current = next;
         currentFocus = focus;
@@ -178,6 +181,13 @@ public final class CinematicSession {
         Geometry environment = geometry.forScene(view);
         return Scene.inRange(pose.position(), subject) && environment.clear(previous, pose.position())
             && environment.visible(pose.position(), focus);
+    }
+
+    private Shot aimed(Shot candidate, Scene view) {
+        if (activity != Scene.Kind.FISHING || view == null) return candidate;
+        Vec shift = fishingTarget.subtract(view.focus()).scale(FishingSearch.weight(candidate.type()));
+        return new Shot(candidate.type(), candidate.start(), candidate.control(), candidate.end(),
+            candidate.focusStart().add(shift), candidate.focusEnd().add(shift), candidate.duration());
     }
 
     private Pose end() { ended = true; fade = 0; return null; }
@@ -194,10 +204,7 @@ public final class CinematicSession {
     public boolean ended() { return ended; }
     public boolean showing() { return (shot != null || pending != null) && !ended; }
     public Pose current() { return current; }
-    public Vec focus() {
-        return activity == Scene.Kind.FISHING && scene != null && currentFocus != null
-            ? currentFocus.add(fishingTarget.subtract(scene.focus()).scale(FishingSearch.weight(shot.type()))) : currentFocus;
-    }
+    public Vec focus() { return currentFocus; }
     public void fishing(Vec target) {
         if (activity != Scene.Kind.FISHING) return;
         fishingTarget = target;
