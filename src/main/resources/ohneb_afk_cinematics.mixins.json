@@ -6,6 +6,7 @@
   "client": [
     "ActivityUseMixin",
     "AmbientSoundsMixin",
+    "BoatMixin",
     "CameraMixin",
     "DynamicFpsMixin",
     "FrameLimitMixin",
