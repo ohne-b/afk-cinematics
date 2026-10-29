@@ -23,10 +23,11 @@ final class AmbientWaterChecks {
             Object saved = position.get(null);
             boolean wasSubmerged = submerged.getBoolean(null);
             try {
-                position.set(null, client.player.getEyePosition().add(0, 12, 0));
+                var dry = client.player.getEyePosition().add(0, 12, 0);
+                position.set(null, dry);
                 submerged.setBoolean(null, false);
                 require(client.player.isUnderWater(), "Dry snapshot fixture needs a wet player");
-                verify(client);
+                verify(client, dry);
             } finally {
                 position.set(null, saved);
                 submerged.setBoolean(null, wasSubmerged);
@@ -35,6 +36,10 @@ final class AmbientWaterChecks {
     }
 
     static void verify(Minecraft client) {
+        verify(client, AfkCinematics.showing() ? TestSupport.camera(client).position() : client.player.getEyePosition());
+    }
+
+    private static void verify(Minecraft client, net.minecraft.world.phys.Vec3 expectedPosition) {
         if (!FabricLoader.getInstance().isModLoaded("ambientsounds")) return;
         try {
             require(!AmbientSoundsPlugin.supportedVersion("unknown"), "Unknown AmbientSounds version is enabled");
@@ -43,10 +48,11 @@ final class AmbientWaterChecks {
             Object environment = handler.getClass().getField("environment").get(handler);
             Object sounds = handler.getClass().getField("soundEngine").get(handler);
             require(environment != null && engine != null, "AmbientSounds did not initialize");
-            var position = AfkCinematics.ambientPosition(client.player);
+            BlockPos origin = BlockPos.containing(expectedPosition);
+            var fluid = client.level.getFluidState(origin);
             int expected = 0;
-            if (AfkCinematics.ambientFluid(client.player, FluidTags.WATER)) {
-                for (BlockPos block = BlockPos.containing(position); client.level.getFluidState(block).is(FluidTags.WATER); block = block.above())
+            if (fluid.is(FluidTags.WATER) && expectedPosition.y < origin.getY() + fluid.getHeight(client.level, origin)) {
+                for (BlockPos block = origin; client.level.getFluidState(block).is(FluidTags.WATER); block = block.above())
                     expected++;
             }
             //? if >=26.3 {
