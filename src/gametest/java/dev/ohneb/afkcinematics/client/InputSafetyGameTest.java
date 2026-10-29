@@ -82,6 +82,7 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
                 context.runOnClient(client -> require(AfkCinematics.showing(), "Screenshot press stopped the cinematic"));
                 key(context, InputConstants.KEY_Q, InputConstants.REPEAT);
                 context.waitTicks(5);
+                context.runOnClient(client -> require(AfkCinematics.showing(), "Held screenshot key stopped the cinematic"));
                 world.getServer().runOnServer(server -> {
                     var player = server.getPlayerList().getPlayers().getFirst();
                     require(player.getInventory().countItem(Items.EMERALD) == 32, "Shared Screenshot/Drop binding dropped an item");

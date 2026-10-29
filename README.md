@@ -21,7 +21,8 @@ Fabric API. Nothing needs to be installed on the server.
 
 Stand still for 30 seconds to start a cinematic. Movement or opening a menu restores
 your normal view. An attack, use or drop press that wakes the camera is consumed;
-release it before interacting. Screenshots work during cinematics.
+release it before interacting. F2 and Fabrishot capture the cinematic view without
+ending it.
 
 Open settings with `/afkcinematics settings`, Mod Menu on Fabric, or the Mods screen
 on NeoForge. `/afkcinematics start` previews a cinematic; `/afkcinematics stop` ends it.

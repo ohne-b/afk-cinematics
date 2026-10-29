@@ -24,6 +24,7 @@ public abstract class KeyboardMixin {
         InputConstants.Key key = InputConstants.getKey(keyCode, scan);
         boolean screenshot = keyCode == InputConstants.KEY_F2;
     *///?}
-        if (window == AfkCinematics.window() && AfkCinematics.input(key, action, screenshot)) ci.cancel();
+        if (window == AfkCinematics.window()
+            && AfkCinematics.input(key, action, screenshot || AfkCinematics.fabrishotKey(key))) ci.cancel();
     }
 }

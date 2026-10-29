@@ -16,7 +16,7 @@
     "client": ["dev.ohneb.afkcinematics.platform.FabricClient"],
     "modmenu": ["dev.ohneb.afkcinematics.platform.ModMenuIntegration"]
   },
-  "mixins": ["ohneb_afk_cinematics.mixins.json"],
+  "mixins": ["ohneb_afk_cinematics.mixins.json", "ohneb_afk_cinematics.fabric.mixins.json"],
   "depends": {
     "fabricloader": ">=0.19.3",
     "fabric-api": "*",
