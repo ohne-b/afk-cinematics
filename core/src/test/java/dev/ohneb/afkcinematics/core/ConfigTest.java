@@ -58,7 +58,7 @@ class ConfigTest {
         assertTrue(store.config().music);
         assertEquals(EnumSet.of(Shot.Type.PAN, Shot.Type.CRANE, Shot.Type.DIAGONAL_GLIDE,
             Shot.Type.RISING_PASS, Shot.Type.DESCENDING_PASS, Shot.Type.PULL_AWAY,
-            Shot.Type.TRAIL, Shot.Type.ESCORT, Shot.Type.LEAD, Shot.Type.WIDE_TRACK), store.config().shots);
+            Shot.Type.TRAIL, Shot.Type.ESCORT, Shot.Type.LEAD, Shot.Type.WIDE_TRACK, Shot.Type.ANGLER, Shot.Type.CAST_LINE, Shot.Type.FLOAT), store.config().shots);
         assertEquals(CinematicConfig.Pace.LONG, store.config().pace);
         assertEquals(CinematicConfig.Subject.MIXED, store.config().subject);
         assertEquals(CinematicConfig.Lens.CINEMATIC, store.config().lens);

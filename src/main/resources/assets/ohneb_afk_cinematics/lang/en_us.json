@@ -109,5 +109,13 @@
   "ohneb_afk_cinematics.shot.lead": "Leading shot",
   "ohneb_afk_cinematics.shot.lead.help": "Film a boat or flight from an oblique position ahead of the player.",
   "ohneb_afk_cinematics.shot.wide_track": "Wide escort",
-  "ohneb_afk_cinematics.shot.wide_track.help": "Pull higher and farther out to show the journey and surrounding terrain."
+  "ohneb_afk_cinematics.shot.wide_track.help": "Pull higher and farther out to show the journey and surrounding terrain.",
+  "ohneb_afk_cinematics.fishing": "Fishing",
+  "ohneb_afk_cinematics.fishing.help": "Frame your line after 10 idle seconds with a bobber in water. You can look around and reel normally; reeling, movement or another interaction ends the view.",
+  "ohneb_afk_cinematics.shot.angler": "Angler",
+  "ohneb_afk_cinematics.shot.angler.help": "A wide side view of you and your fishing line.",
+  "ohneb_afk_cinematics.shot.cast_line": "Along the line",
+  "ohneb_afk_cinematics.shot.cast_line.help": "Look past the angler toward the floating bobber.",
+  "ohneb_afk_cinematics.shot.float": "Bobber close-up",
+  "ohneb_afk_cinematics.shot.float.help": "A low view of the bobber. A received bite can bring this view forward."
 }

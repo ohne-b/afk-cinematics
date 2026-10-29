@@ -26,6 +26,7 @@ public final class MovingGeometry implements Geometry {
     }
 
     public Pose local(Pose pose) { return new Pose(pose.position().subtract(origin), pose.yaw(), pose.pitch()); }
+    public boolean sees(Pose pose, Vec focus) { return world.visible(pose.position(), focus.add(target)); }
 
     public Pose apply(Pose pose, Vec focus, double fade, int take, boolean capture) {
         if (pose == null) return null;

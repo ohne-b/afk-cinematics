@@ -23,6 +23,8 @@ public final class CinematicSession {
     private long captureStarted;
     private int captures;
     private int take;
+    private Vec fishingTarget;
+    private boolean biting;
     private Phase phase = Phase.ENTRY;
     private boolean ended;
     private boolean covered;
@@ -37,6 +39,10 @@ public final class CinematicSession {
     }
 
     public CinematicSession(Vec subject, Pose entry, double bearing, CinematicConfig config, Geometry geometry, Random random, Scene.Kind activity) {
+        this(subject, entry, bearing, config, geometry, random, activity, null);
+    }
+
+    public CinematicSession(Vec subject, Pose entry, double bearing, CinematicConfig config, Geometry geometry, Random random, Scene.Kind activity, Vec bobber) {
         this.subject = subject;
         this.entry = entry;
         this.current = entry;
@@ -44,6 +50,7 @@ public final class CinematicSession {
         this.config = config;
         this.geometry = geometry;
         this.activity = activity;
+        this.fishingTarget = bobber;
         this.random = random;
         planner = planner(current);
     }
@@ -188,7 +195,16 @@ public final class CinematicSession {
     public boolean ended() { return ended; }
     public boolean showing() { return (shot != null || pending != null) && !ended; }
     public Pose current() { return current; }
-    public Vec focus() { return currentFocus; }
+    public Vec focus() {
+        return activity == Scene.Kind.FISHING && scene != null && currentFocus != null
+            ? currentFocus.add(fishingTarget.subtract(scene.focus()).scale(FishingSearch.weight(shot.type()))) : currentFocus;
+    }
+    public void fishing(Vec target, boolean bite) {
+        if (activity != Scene.Kind.FISHING) return;
+        fishingTarget = target;
+        if (bite && !biting && shot != null && shot.type() != Shot.Type.FLOAT && config.shots.contains(Shot.Type.FLOAT)) nextShot();
+        biting = bite;
+    }
     public int take() { return take; }
     public boolean capturing() { return captures > 0; }
     public void bearing(double value) { if (Double.isFinite(value)) bearing = value; }
@@ -219,6 +235,6 @@ public final class CinematicSession {
     }
 
     private ShotPlanner planner(Pose from) {
-        return new ShotPlanner(subject, from, entry, bearing, config, history, random, activity);
+        return new ShotPlanner(subject, from, entry, bearing, config, history, random, activity, fishingTarget, biting);
     }
 }

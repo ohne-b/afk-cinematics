@@ -26,14 +26,15 @@ final class ShotPlanner {
     private ShotSearch search;
     private boolean cut, entering;
     private final TravelSearch travel;
+    private final FishingSearch fishing;
 
     ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
                 ShotHistory history, Random random) {
-        this(anchor, previous, original, bearing, config, history, random, Scene.Kind.PLAYER);
+        this(anchor, previous, original, bearing, config, history, random, Scene.Kind.PLAYER, null, false);
     }
 
     ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
-                ShotHistory history, Random random, Scene.Kind activity) {
+                ShotHistory history, Random random, Scene.Kind activity, Vec bobber, boolean biting) {
         this.anchor = anchor;
         this.previous = previous;
         this.original = original;
@@ -44,13 +45,14 @@ final class ShotPlanner {
         this.random = random;
         travel = activity == Scene.Kind.BOAT || activity == Scene.Kind.FLIGHT
             ? new TravelSearch(anchor, activity, bearing, config, history, random) : null;
+        fishing = activity == Scene.Kind.FISHING ? new FishingSearch(anchor, bobber, biting, config, history, random) : null;
         triedPlayer = config.subject == CinematicConfig.Subject.SCENERY;
         triedScenery = config.subject == CinematicConfig.Subject.PLAYER;
         if (triedPlayer || triedScenery) sceneryFirst = triedPlayer;
         else sceneryFirst = history.sceneryFirst(config.playerShare, random);
     }
 
-    boolean exhausted() { return travel != null ? travel.exhausted() : search == null && triedPlayer && triedScenery; }
+    boolean exhausted() { return fishing != null ? fishing.exhausted() : travel != null ? travel.exhausted() : search == null && triedPlayer && triedScenery; }
 
     static double preparationSeconds(CinematicConfig config) {
         int player = config.subject == CinematicConfig.Subject.SCENERY ? 0 : ShotSearch.playerAttempts(config);
@@ -61,6 +63,7 @@ final class ShotPlanner {
     }
 
     Plan next(Geometry geometry) {
+        if (fishing != null) return fishing.next(geometry);
         if (travel != null) return travel.next(geometry);
         if (search == null) {
             if (!triedPlayer && (!sceneryFirst || triedScenery)) {

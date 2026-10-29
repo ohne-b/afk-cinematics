@@ -19,7 +19,7 @@ class GeometryTest {
 
     @Test void clearSurfaceSceneryStillAcceptsEveryStyle() {
         for (int distance : new int[]{8, 12}) for (Shot.Type type : Shot.Type.values()) {
-            if (type.travelOnly()) continue;
+            if (type.travelOnly() || type.fishingOnly()) continue;
             Vec focus = new Vec(0, 0.35, 0), vantage = new Vec(0, 2.85, -distance);
             Scene scene = new Scene(focus, vantage, Scene.Kind.LANDSCAPE, 1);
             var config = new CinematicConfig();

@@ -85,7 +85,7 @@ public abstract class MouseMixin {
         boolean screenshot = false;
         //?}
         boolean blocked = AfkCinematics.input(key, action, screenshot);
-        if (action == InputConstants.PRESS && AfkCinematics.suppressed(key))
+        if (action == InputConstants.PRESS && AfkCinematics.retainsInput(key))
             afkCinematics$physicalButtons.computeIfAbsent(physicalCode, ignored -> new HashSet<>()).add(key);
         if (blocked) ci.cancel();
     }

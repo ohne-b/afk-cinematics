@@ -4,10 +4,12 @@
   "plugin": "dev.ohneb.afkcinematics.compat.AmbientSoundsPlugin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "ActivityUseMixin",
     "AmbientSoundsMixin",
     "CameraMixin",
     "DynamicFpsMixin",
     "FrameLimitMixin",
+    "FishingHookAccess",
     "GuiMixin",
     "HandMixin",
     "HudMixin",

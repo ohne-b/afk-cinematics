@@ -55,7 +55,7 @@ public final class ShotSearch {
 
     static List<Shot.Type> stylesFor(Scene scene, CinematicConfig config) {
         var styles = new ArrayList<>(config.shots);
-        styles.removeIf(Shot.Type::travelOnly);
+        styles.removeIf(type -> type.travelOnly() || type.fishingOnly());
         if (config.motion == CinematicConfig.Motion.STILL || config.shots.isEmpty()) {
             styles.clear();
             styles.add(Shot.Type.STILL);
@@ -88,7 +88,7 @@ public final class ShotSearch {
 
     static int playerAttempts(CinematicConfig config) {
         int styles = config.motion == CinematicConfig.Motion.STILL || config.shots.isEmpty() ? 1
-            : (int)config.shots.stream().filter(type -> !type.sceneryOnly() && !type.travelOnly()).count();
+            : (int)config.shots.stream().filter(type -> !type.sceneryOnly() && !type.travelOnly() && !type.fishingOnly()).count();
         return PLAYER_ANGLES.size() * (PLAYER_DISTANCES.size() + 1) * styles;
     }
 

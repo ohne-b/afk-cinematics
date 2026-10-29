@@ -43,6 +43,7 @@ public final class ConfigStore {
             config.boats = bool("boats", true);
             config.flight = bool("flight", true);
             config.travelControls = bool("travelControls", true);
+            config.fishing = bool("fishing", true);
         } catch (IOException | RuntimeException exception) {
             readable = false;
             config.enabled = false;
@@ -123,6 +124,7 @@ public final class ConfigStore {
         updated.addProperty("boats", config.boats);
         updated.addProperty("flight", config.flight);
         updated.addProperty("travelControls", config.travelControls);
+        updated.addProperty("fishing", config.fishing);
         Path temporary = null;
         try {
             Path directory = path.toAbsolutePath().getParent();

@@ -133,6 +133,7 @@ public final class SettingsScreen extends Screen {
             case ACTIVITIES -> {
                 widgets.add(toggle("boats", () -> config.boats, value -> config.boats = value));
                 widgets.add(toggle("flight", () -> config.flight, value -> config.flight = value));
+                widgets.add(toggle("fishing", () -> config.fishing, value -> config.fishing = value));
                 widgets.add(toggle("travelControls", () -> config.travelControls, value -> config.travelControls = value));
             }
             case DISPLAY -> {
