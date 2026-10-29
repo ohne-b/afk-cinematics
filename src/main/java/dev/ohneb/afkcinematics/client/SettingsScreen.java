@@ -17,6 +17,7 @@ import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.BooleanSupplier;
@@ -153,6 +154,14 @@ public final class SettingsScreen extends Screen {
                 widgets.add(toggle("music", () -> config.music, value -> config.music = value));
             }
             case SHOTS -> {
+                widgets.add(Button.builder(text("shots.all"), button -> {
+                    config.shots = EnumSet.allOf(Shot.Type.class);
+                    rebuildWidgets();
+                }).build());
+                widgets.add(Button.builder(text("shots.moving"), button -> {
+                    config.shots = EnumSet.complementOf(EnumSet.of(Shot.Type.PAN, Shot.Type.STILL));
+                    rebuildWidgets();
+                }).build());
                 for (Shot.Type type : Shot.Type.values()) {
                     String key = "shot." + type.name().toLowerCase(Locale.ROOT);
                     Button button = toggle(key, () -> config.shots.contains(type), enabled -> {

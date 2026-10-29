@@ -44,7 +44,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
                 context.takeScreenshot(TestScreenshotOptions.of("camera-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
-                    press(settings, "Shot types: 7 enabled");
+                    press(settings, "Shot types: " + Shot.Type.values().length + " enabled");
                     for (Shot.Type type : Shot.Type.values()) {
                         if (type == Shot.Type.PAN) continue;
                         String label = Component.translatable("ohneb_afk_cinematics.shot." + type.name().toLowerCase(Locale.ROOT)).getString();
