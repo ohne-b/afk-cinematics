@@ -22,16 +22,15 @@ class ConfigTest {
 
     @Test void keepsUnknownFieldsAndValidatesIndividualValues() throws Exception {
         Path path = directory.resolve("settings.json");
-        Files.writeString(path, "{\"future\":{\"value\":1},\"idleSeconds\":9999,\"motion\":null,\"hideHud\":\"yes\"}");
+        Files.writeString(path, "{\"future\":{\"value\":1},\"distance\":\"close\",\"idleSeconds\":9999,\"motion\":null,\"hideHud\":\"yes\"}");
         var store = new ConfigStore(path);
         assertTrue(store.readable());
         assertEquals(600, store.config().idleSeconds);
         assertEquals(CinematicConfig.Motion.GENTLE, store.config().motion);
         assertTrue(store.config().hideHud);
-        store.config().distance = CinematicConfig.Distance.CLOSE;
         assertTrue(store.save());
         assertTrue(Files.readString(path).contains("\"future\""));
-        assertEquals(CinematicConfig.Distance.CLOSE, new ConfigStore(path).config().distance);
+        assertEquals(600, new ConfigStore(path).config().idleSeconds);
     }
 
     @Test void reportsAnUnwritableDestinationWithoutRemovingIt() throws Exception {

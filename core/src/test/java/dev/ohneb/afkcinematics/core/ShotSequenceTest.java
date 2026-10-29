@@ -93,7 +93,7 @@ class ShotSequenceTest {
         config.shots = EnumSet.of(Shot.Type.ARC);
         var session = new CinematicSession(ANCHOR, ENTRY, 0, config, geometry, new Random(4));
         long now = 0;
-        while (!session.settled() && now < 5_000_000_000L) frame(session, now += 50_000_000L);
+        while (!session.settled() && now < 7_000_000_000L) frame(session, now += 50_000_000L);
         assertTrue(session.settled());
         long finish = now + Math.round(first[0].duration() * 1e9);
         while (now < finish - 1_500_000_000L) frame(session, now += 50_000_000L);

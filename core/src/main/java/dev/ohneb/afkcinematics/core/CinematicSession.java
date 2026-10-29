@@ -94,7 +94,7 @@ public final class CinematicSession {
                 Pose target = shot.sample(0);
                 double turn = Math.max(Math.abs(Math.IEEEremainder(target.yaw() - entry.yaw(), 360)),
                     Math.abs(target.pitch() - entry.pitch()));
-                entrySeconds = Math.clamp(Math.max(distance / 1.5, turn / 45), 1.5, 4);
+                entrySeconds = Math.clamp(Math.max(distance / 1.5, turn / 45), 1.5, 6);
             }
         }
         heldForNext = false;

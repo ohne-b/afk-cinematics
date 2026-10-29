@@ -45,7 +45,7 @@ public final class ShotControlsGameTest implements FabricClientGameTest {
                 client.player.getYRot(), client.player.getXRot()));
             start(context);
             context.runOnClient(client -> require(!AfkCinematics.showHint(), "The hint started before camera entry finished"));
-            context.waitFor(client -> AfkCinematics.showHint(), 100);
+            context.waitFor(client -> AfkCinematics.showHint(), 140);
             context.runOnClient(client -> {
                 hide(client, true);
                 require(!AfkCinematics.showHint(), "F1 left the return hint visible");
@@ -66,7 +66,7 @@ public final class ShotControlsGameTest implements FabricClientGameTest {
             context.runOnClient(client -> {
                 require(!AfkCinematics.showHint(), "Advancing repeated the return hint");
                 AfkCinematics.stop();
-                AfkCinematics.config().shots = EnumSet.of(Shot.Type.OVERHEAD);
+                AfkCinematics.config().shots = EnumSet.of(Shot.Type.CRANE);
             });
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();

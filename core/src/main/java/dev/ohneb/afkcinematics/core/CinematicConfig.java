@@ -27,11 +27,6 @@ public final class CinematicConfig {
             this.maximumSeconds = maximumSeconds;
         }
     }
-    public enum Distance {
-        CLOSE(2.5), NORMAL(4.0), WIDE(5.5);
-        public final double blocks;
-        Distance(double blocks) { this.blocks = blocks; }
-    }
 
     public boolean enabled = true;
     public boolean automatic = true;
@@ -40,7 +35,6 @@ public final class CinematicConfig {
     public Subject subject = Subject.MIXED;
     public Pace pace = Pace.RELAXED;
     public EnumSet<Shot.Type> shots = EnumSet.allOf(Shot.Type.class);
-    public Distance distance = Distance.NORMAL;
     public Lens lens = Lens.CINEMATIC;
     public int cinematicFps = 60;
     public boolean hideHud = true;

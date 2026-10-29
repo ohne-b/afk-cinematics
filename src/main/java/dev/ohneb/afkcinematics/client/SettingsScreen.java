@@ -106,10 +106,6 @@ public final class SettingsScreen extends Screen {
                     config.motion = CinematicConfig.Motion.values()[(config.motion.ordinal() + 1) % CinematicConfig.Motion.values().length];
                     button.setMessage(value("motion", config.motion));
                 }).tooltip(Tooltip.create(text("motion.help"))).build());
-                widgets.add(Button.builder(value("distance", config.distance), button -> {
-                    config.distance = CinematicConfig.Distance.values()[(config.distance.ordinal() + 1) % CinematicConfig.Distance.values().length];
-                    button.setMessage(value("distance", config.distance));
-                }).tooltip(Tooltip.create(text("distance.help"))).build());
                 widgets.add(Button.builder(value("pace", config.pace), button -> {
                     config.pace = CinematicConfig.Pace.values()[(config.pace.ordinal() + 1) % CinematicConfig.Pace.values().length];
                     button.setMessage(value("pace", config.pace));

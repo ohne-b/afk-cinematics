@@ -14,7 +14,7 @@ class ShotOptionsTest {
     };
 
     @Test void eachSelectedStyleHasItsOwnCameraMotion() {
-        for (Shot.Type type : Shot.Type.values()) {
+        for (Shot.Type type : EnumSet.complementOf(EnumSet.of(Shot.Type.OVERHEAD))) {
             var config = new CinematicConfig();
             config.shots = EnumSet.of(type);
             Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, null, true, false, new Random(2)).next(OPEN);
@@ -23,11 +23,10 @@ class ShotOptionsTest {
             Pose first = shot.sample(0), last = shot.sample(shot.duration());
             if (type == Shot.Type.PAN) {
                 assertEquals(first.position(), last.position());
-                assertTrue(Math.abs(last.yaw() - first.yaw()) > 10);
+                assertTrue(Math.abs(Math.IEEEremainder(last.yaw() - first.yaw(), 360)) > 2);
             } else if (type == Shot.Type.STILL) assertEquals(first, last);
             else assertTrue(first.position().distance(last.position()) > 0.1, type.name());
             if (type == Shot.Type.CRANE) assertTrue(Math.abs(first.position().y() - last.position().y()) > 1);
-            if (type == Shot.Type.OVERHEAD) assertTrue(first.pitch() > 60 && last.pitch() > 60);
         }
     }
 
@@ -36,7 +35,7 @@ class ShotOptionsTest {
         config.shots = EnumSet.of(Shot.Type.PAN);
         Shot pan = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, null, true, false, new Random(2)).next(OPEN);
         Pose previous = pan.sample(pan.duration());
-        for (Shot.Type type : Shot.Type.values()) {
+        for (Shot.Type type : EnumSet.complementOf(EnumSet.of(Shot.Type.OVERHEAD))) {
             config.shots = EnumSet.of(type);
             Shot next = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), previous, 0, config, pan.type(), false, false, new Random(3)).next(OPEN);
             assertNotNull(next);
@@ -55,11 +54,11 @@ class ShotOptionsTest {
             public boolean visible(Vec from, Vec target, double margin) { return true; }
         };
         var config = new CinematicConfig();
-        config.shots = EnumSet.of(Shot.Type.OVERHEAD, Shot.Type.DRIFT);
+        config.shots = EnumSet.of(Shot.Type.CRANE, Shot.Type.DRIFT);
         Shot shot = find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, null, true, false, new Random(2)), low);
         assertNotNull(shot);
         assertEquals(Shot.Type.DRIFT, shot.type());
-        config.shots = EnumSet.of(Shot.Type.OVERHEAD);
+        config.shots = EnumSet.of(Shot.Type.CRANE);
         assertNull(find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, null, true, false, new Random(2)), low));
     }
 
@@ -84,8 +83,9 @@ class ShotOptionsTest {
         }
     }
 
-    @Test void playerCoverageIncludesFrontBackAndBothSidesBeforeFallbacks() {
+    @Test void playerCoverageUsesWideAngledViewsAroundBothSides() {
         var views = new java.util.HashSet<Integer>();
+        var distances = new java.util.HashSet<Integer>();
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.STILL);
         var random = new Random(4);
@@ -93,27 +93,38 @@ class ShotOptionsTest {
             Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0,
                 config, null, true, true, random).next(OPEN);
             Vec offset = shot.start().subtract(SUBJECT);
-            assertEquals(config.distance.blocks, Math.hypot(offset.x(), offset.z()), 1e-9);
+            double distance = Math.hypot(offset.x(), offset.z());
+            assertTrue(distance >= 6.999 && distance <= 14.001);
+            distances.add((int)Math.round(distance));
             views.add((int)Math.round(Math.toDegrees(Math.atan2(offset.x(), -offset.z()))));
         }
-        assertEquals(java.util.Set.of(0, 90, -90, 180), views);
+        assertEquals(java.util.Set.of(25, -25, 65, -65, 115, -115, 155, -155), views);
+        assertEquals(java.util.Set.of(7, 10, 14), distances);
     }
 
-    @Test void aNarrowCorridorRetainsCloseSideViews() {
-        Geometry corridor = new Geometry() {
+    @Test void limitedSpaceFallsBackToFiveAndAHalfBlocks() {
+        Geometry limited = new Geometry() {
             public boolean clear(Vec from, Vec to, double margin) {
-                return Math.max(Math.abs(from.x()), Math.abs(to.x())) + margin < 2.3
-                    && Math.max(Math.abs(from.z()), Math.abs(to.z())) + margin < 0.3;
+                return Math.max(from.distance(SUBJECT), to.distance(SUBJECT)) + margin < 6;
             }
             public boolean visible(Vec from, Vec to, double margin) { return true; }
         };
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.STILL);
         Shot shot = find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0,
-            config, null, true, false, new Random(4)), corridor);
-        assertNotNull(shot, "No close cardinal fallback remained in the corridor");
-        assertEquals(2, Math.abs(shot.start().x()), 1e-9);
-        assertEquals(0, shot.start().z(), 1e-9);
+            config, null, true, false, new Random(4)), limited);
+        assertNotNull(shot, "The previous wide distance must remain available when farther views are blocked");
+        Vec offset = shot.start().subtract(SUBJECT);
+        assertEquals(5.5, Math.hypot(offset.x(), offset.z()), 1e-9);
+    }
+
+    @Test void overheadIsAvailableForSceneryButNeverForThePlayer() {
+        var config = new CinematicConfig();
+        config.shots = EnumSet.of(Shot.Type.OVERHEAD);
+        assertTrue(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0,
+            config, null, true, true, new Random(1)).exhausted());
+        var scene = new Scene(SUBJECT, SUBJECT.add(new Vec(0, 4, -8)), Scene.Kind.LANDSCAPE, 1);
+        assertNotNull(find(new ShotSearch(scene, ENTRY, 0, config, null, true, true, new Random(1)), OPEN));
     }
 
     private static Shot find(ShotSearch search, Geometry geometry) {

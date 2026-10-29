@@ -27,7 +27,7 @@ public final class LensGameTest implements FabricClientGameTest {
             });
             double hand = context.computeOnClient(client -> fieldOfView(client, false));
             start(context);
-            context.waitTicks(100);
+            context.waitTicks(140);
             context.runOnClient(client -> {
                 require(AfkCinematics.showing(), "Cinematic stopped during lens entry");
                 require(Math.abs(fieldOfView(client, true) - 62) < 0.001, "World projection did not use the cinematic lens");

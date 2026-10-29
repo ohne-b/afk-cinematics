@@ -71,7 +71,6 @@ class CameraTest {
             public boolean visible(Vec from, Vec target, double margin) { return Math.min(from.y(), target.y()) - margin > 0; }
         };
         var config = playerConfig();
-        config.distance = CinematicConfig.Distance.WIDE;
         config.shots = EnumSet.of(Shot.Type.STILL);
         var session = new CinematicSession(SUBJECT, new Pose(ENTRY.position(), 0, 90), 0, config, ground, new Random(2));
         session.tick(0);
@@ -87,7 +86,7 @@ class CameraTest {
             public boolean visible(Vec from, Vec target, double margin) { return false; }
         };
         var session = new CinematicSession(SUBJECT, ENTRY, 0, playerConfig(), closed, new Random(1));
-        for (int i = 0; i < 100; i++) session.tick(i * 50_000_000L);
+        for (int i = 0; i < 240; i++) session.tick(i * 50_000_000L);
         assertTrue(session.ended());
         assertFalse(session.showing());
         var open = new CinematicSession(SUBJECT, ENTRY, 0, playerConfig(), OPEN, new Random(1));
@@ -105,9 +104,25 @@ class CameraTest {
         assertEquals(shot.sample(0), shot.sample(shot.duration()));
     }
 
+    @Test void widerEntryKeepsASmoothTravelSpeedAtTwentyFramesPerSecond() {
+        var config = playerConfig();
+        config.shots = EnumSet.of(Shot.Type.STILL);
+        for (int seed = 0; seed < 16; seed++) {
+            var session = new CinematicSession(SUBJECT, ENTRY, 0, config, OPEN, new Random(seed));
+            session.tick(0);
+            Pose previous = ENTRY;
+            for (int frame = 0; frame <= 140; frame++) {
+                Pose next = session.frame(frame * 50_000_000L);
+                assertNotNull(next);
+                assertTrue(previous.position().distance(next.position()) < 0.3, "Wide entry moved too abruptly");
+                previous = next;
+            }
+            assertTrue(session.settled());
+        }
+    }
+
     @Test void successiveShotsStayWithinTheLocalCameraRange() {
         var config = playerConfig();
-        config.distance = CinematicConfig.Distance.WIDE;
         for (int seed = 0; seed < 3; seed++) {
             var session = new CinematicSession(SUBJECT, ENTRY, 0, config, OPEN, new Random(seed));
             for (int tick = 0; tick < 12000; tick++) {
@@ -117,7 +132,7 @@ class CameraTest {
                 session.coveredFrame();
                 assertNotNull(pose);
                 Vec offset = pose.position().subtract(SUBJECT);
-                assertTrue(Math.hypot(offset.x(), offset.z()) <= 6.000001, "Successive shots drifted beyond six blocks");
+                assertTrue(Math.hypot(offset.x(), offset.z()) <= 14.000001, "Successive shots drifted beyond fourteen blocks");
                 assertTrue(offset.y() >= -0.650001 && offset.y() <= 5.500001, "Successive shots drifted vertically");
             }
         }
