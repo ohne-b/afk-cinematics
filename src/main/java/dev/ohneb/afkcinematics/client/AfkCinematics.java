@@ -189,6 +189,7 @@ public final class AfkCinematics {
         }
         if (screenshot && !INPUT.suppressed(token)) return false;
         if (screen() == null && (matches(TOGGLE, key) || matches(SETTINGS, key))) {
+            INPUT.suppress(token);
             if (action == InputConstants.PRESS) {
                 if (matches(SETTINGS, key)) openSettings();
                 else if (ownsCamera() || manualWait > 0) stop();

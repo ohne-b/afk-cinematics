@@ -7,6 +7,7 @@
   "mixins": ["ohneb_afk_cinematics_tests.mixins.json"],
   "entrypoints": {
     "fabric-client-gametest": [
+      "dev.ohneb.afkcinematics.client.ControlBindingsGameTest",
       "dev.ohneb.afkcinematics.client.CameraGameTest",
       "dev.ohneb.afkcinematics.client.InputSafetyGameTest",
       "dev.ohneb.afkcinematics.client.WorldGeometryGameTest",
