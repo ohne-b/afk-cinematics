@@ -185,6 +185,20 @@ side = "CLIENT"
                 else:
                     self.assertEqual(target["neoforge_range"], "[21.0.167,21.1.0-alpha),[21.1.265,21.2.0-alpha)")
 
+    def test_duplicate_entry_fails_before_bundle_is_written(self):
+        release.prepare(self.root, "0.1.0")
+        (self.root / "LICENSE.md").write_text("SPDX-License-Identifier: GPL-3.0-only\n")
+        first = self.target("fabric", "1.21")
+        second = self.target("fabric", "1.21.1")
+        path = self.write_group_member(first, {"Camera.class": b"different first entry"})
+        with ZipFile(path, "a") as jar, self.assertWarns(UserWarning):
+            jar.writestr("Camera.class", b"same compiled code")
+        self.write_group_member(second)
+        output = self.root / "bundle"
+        with patch("release.subprocess.run"), self.assertRaisesRegex(ValueError, "Duplicate"):
+            release.bundle(self.root, "0.1.0", "a" * 40, self.root / "download", output)
+        self.assertFalse(output.exists())
+
     def test_grouping_rejects_changed_code_resources_and_manifest_contracts(self):
         first = self.target("fabric", "1.21")
         second = self.target("fabric", "1.21.1")

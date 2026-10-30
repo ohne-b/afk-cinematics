@@ -99,9 +99,11 @@ def validate_run(run, sha):
 
 def validate_jar(path, target, version, license_text):
     with ZipFile(path) as jar:
+        names = jar.namelist()
+        if len(names) != len(set(names)):
+            raise ValueError(f"Duplicate ZIP entry in {path.name}")
         if jar.testzip() is not None:
             raise ValueError(f"Corrupt jar: {path.name}")
-        names = jar.namelist()
         if any("gametest" in name.lower() or "/smoke/" in name.lower() for name in names):
             raise ValueError(f"Test fixtures in {path.name}")
         if jar.read("LICENSE.md").decode().replace("\r\n", "\n") != license_text:
