@@ -223,9 +223,9 @@ public final class AfkCinematics {
             else if (manualWait == 0) message("unavailable");
         } else if (activityKind() == Scene.Kind.FISHING) {
             // A cast starts once its bobber reaches water; waking never restarts the same cast.
-            if (eligible && config().automatic && FishingActivity.hook(player, world) != lastFishingStart) start(false);
+            if (eligible && config().automatic(Scene.Kind.FISHING) && FishingActivity.hook(player, world) != lastFishingStart) start(false);
             IDLE.reset(now);
-        } else if (IDLE.ready(now, config().idleSeconds, eligible && config().automatic)) start(false);
+        } else if (IDLE.ready(now, config().idleSeconds, eligible && config().automatic(activityKind()))) start(false);
         CinematicMusic.tick();
     }
 
@@ -492,11 +492,11 @@ public final class AfkCinematics {
 
     private static Scene.Kind activityKind() {
         if (player == null || store == null) return Scene.Kind.PLAYER;
-        if (config().fishing && !player.isFallFlying() && !player.getAbilities().flying
+        if (config().fishing != CinematicConfig.StartMode.OFF && !player.isFallFlying() && !player.getAbilities().flying
             && FishingActivity.hook(player, world) != null) return Scene.Kind.FISHING;
-        if (config().boats && boat(player.getVehicle())) return Scene.Kind.BOAT;
-        if (config().minecarts && player.getVehicle() instanceof AbstractMinecart) return Scene.Kind.MINECART;
-        if (config().flight && !player.isPassenger() && (player.isFallFlying() || player.getAbilities().flying)) return Scene.Kind.FLIGHT;
+        if (config().boats != CinematicConfig.StartMode.OFF && boat(player.getVehicle())) return Scene.Kind.BOAT;
+        if (config().minecarts != CinematicConfig.StartMode.OFF && player.getVehicle() instanceof AbstractMinecart) return Scene.Kind.MINECART;
+        if (config().flight != CinematicConfig.StartMode.OFF && !player.isPassenger() && (player.isFallFlying() || player.getAbilities().flying)) return Scene.Kind.FLIGHT;
         return Scene.Kind.PLAYER;
     }
 

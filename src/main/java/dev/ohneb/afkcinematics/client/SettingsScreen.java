@@ -9,6 +9,7 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 //? if >=1.21.9 {
 import net.minecraft.client.input.KeyEvent;
 //?}
@@ -22,9 +23,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public final class SettingsScreen extends Screen {
-    private enum Page { GENERAL, CAMERA, DISPLAY, SHOTS, ACTIVITIES }
+    private enum Page { HOME, GENERAL, ACTIVITIES, CAMERA, DISPLAY, SOUND, CONTROLS, SHOTS }
     private enum ShotSet {
         SCENERY, TRAVEL, FISHING;
 
@@ -38,7 +40,7 @@ public final class SettingsScreen extends Screen {
     }
     private final Screen parent;
     private final EnumMap<Shot.Type, Button> shotButtons = new EnumMap<>(Shot.Type.class);
-    private Page page = Page.GENERAL;
+    private Page page = Page.HOME;
     private ShotSet shotSet = ShotSet.SCENERY;
     private Button shotSetControl;
     private int offset;
@@ -59,20 +61,12 @@ public final class SettingsScreen extends Screen {
         int contentWidth = Math.min(width - 24, 320);
         int buttonWidth = (contentWidth - (columns - 1) * 6) / columns;
         int x = (width - contentWidth) / 2;
-        int tabWidth = (contentWidth - 8) / 3;
-        for (int index = 0; index < 3; index++) {
-            Page tab = Page.values()[index];
-            var button = Button.builder(text("page." + tab.name().toLowerCase(Locale.ROOT)), ignored -> {
-                page = tab;
-                offset = 0;
-                rebuildWidgets();
-            }).bounds(x + index * (tabWidth + 4), 28, index == 2 ? contentWidth - 2 * (tabWidth + 4) : tabWidth, 20).build();
-            button.active = page != tab;
-            addRenderableWidget(button);
-        }
+        if (page != Page.HOME) addRenderableWidget(Button.builder(text("back"), ignored -> back())
+            .bounds(x, 28, contentWidth, 20).build());
         shotButtons.clear();
         List<AbstractWidget> widgets = controls(config, buttonWidth);
-        int visibleRows = Math.max(1, (height - 108) / 22);
+        int top = page == Page.HOME ? 32 : 54;
+        int visibleRows = Math.max(1, (height - top - 54) / 22);
         maxOffset = Math.max(0, (widgets.size() + columns - 1) / columns - visibleRows);
         offset = Math.clamp(offset, 0, maxOffset);
         for (int index = 0; index < widgets.size(); index++) {
@@ -80,9 +74,9 @@ public final class SettingsScreen extends Screen {
             if (row < 0 || row >= visibleRows) continue;
             AbstractWidget widget = widgets.get(index);
             widget.setX(x + (index % columns) * (buttonWidth + 6));
-            widget.setY(54 + row * 22);
+            widget.setY(top + row * 22);
             widget.setWidth(buttonWidth);
-            widget.active &= AfkCinematics.store().readable();
+            widget.active &= AfkCinematics.store().readable() || page == Page.HOME;
             addRenderableWidget(widget);
         }
         int half = (contentWidth - 6) / 2;
@@ -99,26 +93,27 @@ public final class SettingsScreen extends Screen {
     private List<AbstractWidget> controls(CinematicConfig config, int buttonWidth) {
         List<AbstractWidget> widgets = new ArrayList<>();
         switch (page) {
+            case HOME -> {
+                for (Page destination : new Page[]{Page.GENERAL, Page.ACTIVITIES, Page.CAMERA, Page.DISPLAY, Page.SOUND, Page.CONTROLS})
+                    widgets.add(navigate(destination));
+            }
             case GENERAL -> {
                 widgets.add(toggle("enabled", () -> config.enabled, value -> config.enabled = value));
                 widgets.add(toggle("automatic", () -> config.automatic, value -> config.automatic = value));
-                widgets.add(new AbstractSliderButton(0, 0, buttonWidth, 20, Component.empty(), (config.idleSeconds - 10) / 590.0) {
-                    { updateMessage(); }
-                    @Override protected void updateMessage() { setMessage(text("delay", (int)Math.round(value * 590) + 10)); }
-                    @Override protected void applyValue() { config.idleSeconds = (int)Math.round(value * 590) + 10; }
-                });
-                widgets.getLast().setTooltip(Tooltip.create(text("delay.help")));
+                widgets.add(slider("delay", buttonWidth, 10, 600, config.idleSeconds, value -> config.idleSeconds = value));
                 widgets.add(toggle("unfocused", () -> config.unfocused, value -> config.unfocused = value));
             }
             case CAMERA -> {
                 widgets.add(Button.builder(value("subject", config.subject), button -> {
                     config.subject = CinematicConfig.Subject.values()[(config.subject.ordinal() + 1) % CinematicConfig.Subject.values().length];
                     button.setMessage(value("subject", config.subject));
+                    refreshControls();
                 }).tooltip(Tooltip.create(text("subject.help"))).build());
                 widgets.add(Button.builder(text("playerShare", config.playerShare), button -> {
                     config.playerShare = (config.playerShare / 25 + 1) % 5 * 25;
                     button.setMessage(text("playerShare", config.playerShare));
                 }).tooltip(Tooltip.create(text("playerShare.help"))).build());
+                widgets.getLast().active = config.subject == CinematicConfig.Subject.MIXED;
                 widgets.add(Button.builder(value("motion", config.motion), button -> {
                     config.motion = CinematicConfig.Motion.values()[(config.motion.ordinal() + 1) % CinematicConfig.Motion.values().length];
                     button.setMessage(value("motion", config.motion));
@@ -137,48 +132,25 @@ public final class SettingsScreen extends Screen {
                     offset = 0;
                     rebuildWidgets();
                 }).tooltip(Tooltip.create(text("shots.help"))).build());
-                widgets.add(Button.builder(text("activities"), button -> {
-                    page = Page.ACTIVITIES;
-                    offset = 0;
-                    rebuildWidgets();
-                }).build());
             }
             case ACTIVITIES -> {
-                widgets.add(toggle("boats", () -> config.boats, value -> config.boats = value));
-                widgets.add(toggle("minecarts", () -> config.minecarts, value -> config.minecarts = value));
-                widgets.add(toggle("flight", () -> config.flight, value -> config.flight = value));
-                widgets.add(toggle("fishing", () -> config.fishing, value -> config.fishing = value));
+                widgets.add(activity("boats", () -> config.boats, value -> config.boats = value));
+                widgets.add(activity("minecarts", () -> config.minecarts, value -> config.minecarts = value));
+                widgets.add(activity("flight", () -> config.flight, value -> config.flight = value));
+                widgets.add(activity("fishing", () -> config.fishing, value -> config.fishing = value));
+            }
+            case SOUND -> widgets.add(toggle("music", () -> config.music, value -> config.music = value));
+            case CONTROLS -> {
+                widgets.add(Button.builder(text("bindings"), button -> {
+                    if (save()) AfkCinematics.showScreen(new KeyBindsScreen(this, minecraft.options));
+                }).tooltip(Tooltip.create(text("bindings.help"))).build());
                 widgets.add(toggle("travelControls", () -> config.travelControls, value -> config.travelControls = value));
             }
             case DISPLAY -> {
-                widgets.add(new AbstractSliderButton(0, 0, buttonWidth, 20, Component.empty(), (config.cinematicFps - 20) / 220.0) {
-                    { updateMessage(); setTooltip(Tooltip.create(text("fps.help"))); }
-                    @Override protected void updateMessage() { setMessage(text("fps", (int)Math.round(value * 220) + 20)); }
-                    @Override protected void applyValue() { config.cinematicFps = (int)Math.round(value * 220) + 20; }
-                    //? if >=1.21.9 {
-                    @Override public boolean keyPressed(KeyEvent event) {
-                        int key = event.key();
-                    //?} else {
-                    /*@Override public boolean keyPressed(int key, int scan, int modifiers) {
-                    *///?}
-                        int previous = config.cinematicFps;
-                        //? if >=1.21.9 {
-                        boolean handled = super.keyPressed(event);
-                        //?} else {
-                        /*boolean handled = super.keyPressed(key, scan, modifiers);
-                        *///?}
-                        if (handled && (key == InputConstants.KEY_LEFT || key == InputConstants.KEY_RIGHT)) {
-                            config.cinematicFps = Math.clamp(previous + (key == InputConstants.KEY_RIGHT ? 1 : -1), 20, 240);
-                            value = (config.cinematicFps - 20) / 220.0;
-                            updateMessage();
-                        }
-                        return handled;
-                    }
-                });
+                widgets.add(slider("fps", buttonWidth, 20, 240, config.cinematicFps, value -> config.cinematicFps = value));
                 widgets.add(toggle("hideHud", () -> config.hideHud, value -> config.hideHud = value));
                 widgets.add(toggle("hidePlayerNames", () -> config.hidePlayerNames, value -> config.hidePlayerNames = value));
                 widgets.add(toggle("letterbox", () -> config.letterbox, value -> config.letterbox = value));
-                widgets.add(toggle("music", () -> config.music, value -> config.music = value));
             }
             case SHOTS -> {
                 var types = EnumSet.noneOf(Shot.Type.class);
@@ -193,7 +165,7 @@ public final class SettingsScreen extends Screen {
                 widgets.add(shotSetControl);
                 widgets.add(Button.builder(text("shots.all"), button -> {
                     config.shots.addAll(types);
-                    rebuildWidgets();
+                    refreshControls();
                 }).build());
                 for (Shot.Type type : types) {
                     String key = "shot." + type.name().toLowerCase(Locale.ROOT);
@@ -209,12 +181,76 @@ public final class SettingsScreen extends Screen {
                     config.shots.addAll(types);
                     config.shots.remove(Shot.Type.PAN);
                     config.shots.remove(Shot.Type.STILL);
-                    rebuildWidgets();
+                    refreshControls();
                 }).build());
                 refreshShots(config);
             }
         }
         return widgets;
+    }
+
+    private AbstractSliderButton slider(String label, int width, int min, int max, int initial, java.util.function.IntConsumer set) {
+        return new AbstractSliderButton(0, 0, width, 20, Component.empty(), (double)(initial - min) / (max - min)) {
+            { updateMessage(); setTooltip(Tooltip.create(text(label + ".help"))); }
+            @Override protected void updateMessage() { setMessage(text(label, number())); }
+            private int number() { return (int)Math.round(value * (max - min)) + min; }
+            @Override protected void applyValue() { set.accept(number()); }
+            //? if >=1.21.9 {
+            @Override public boolean keyPressed(KeyEvent event) {
+                int key = event.key();
+            //?} else {
+            /*@Override public boolean keyPressed(int key, int scan, int modifiers) {
+            *///?}
+                int previous = number();
+                //? if >=1.21.9 {
+                boolean handled = super.keyPressed(event);
+                //?} else {
+                /*boolean handled = super.keyPressed(key, scan, modifiers);
+                *///?}
+                if (handled && (key == InputConstants.KEY_LEFT || key == InputConstants.KEY_RIGHT)) {
+                    int number = Math.clamp(previous + (key == InputConstants.KEY_RIGHT ? 1 : -1), min, max);
+                    value = (double)(number - min) / (max - min);
+                    set.accept(number);
+                    updateMessage();
+                }
+                return handled;
+            }
+        };
+    }
+
+    private void open(Page destination) {
+        page = destination;
+        offset = 0;
+        rebuildWidgets();
+    }
+
+    private void refreshControls() {
+        String focused = getFocused() instanceof AbstractWidget widget ? widget.getMessage().getString() : "";
+        rebuildWidgets();
+        for (var child : children()) if (child instanceof AbstractWidget widget && widget.active && widget.getMessage().getString().equals(focused)) {
+            setFocused(widget);
+            widget.setFocused(true);
+            break;
+        }
+    }
+
+    private void back() { open(page == Page.SHOTS ? Page.CAMERA : Page.HOME); }
+
+    private Button navigate(Page destination) {
+        String key = "page." + destination.name().toLowerCase(Locale.ROOT);
+        return Button.builder(text(key), button -> open(destination)).tooltip(Tooltip.create(text(key + ".help"))).build();
+    }
+
+    private Button activity(String key, Supplier<CinematicConfig.StartMode> get, Consumer<CinematicConfig.StartMode> set) {
+        return Button.builder(label(key, startLabel(key, get.get())), button -> {
+            var modes = CinematicConfig.StartMode.values();
+            set.accept(modes[(get.get().ordinal() + 1) % modes.length]);
+            button.setMessage(label(key, startLabel(key, get.get())));
+        }).tooltip(Tooltip.create(text(key + ".help"))).build();
+    }
+
+    private static Component startLabel(String key, CinematicConfig.StartMode mode) {
+        return text("start." + (mode == CinematicConfig.StartMode.AUTOMATIC ? key.equals("fishing") ? "cast" : "idle" : mode.name().toLowerCase(Locale.ROOT)));
     }
 
     private static Tooltip paceHelp(CinematicConfig config) {
@@ -271,6 +307,7 @@ public final class SettingsScreen extends Screen {
             rebuildWidgets();
             return true;
         }
+        if (key == InputConstants.KEY_ESCAPE && page != Page.HOME) { back(); return true; }
         //? if >=1.21.9 {
         return super.keyPressed(event);
         //?} else {
@@ -281,7 +318,7 @@ public final class SettingsScreen extends Screen {
     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         super.render(graphics, mouseX, mouseY, delta);
         graphics.drawCenteredString(font, page == Page.SHOTS
-            ? text("shots.title", text("shots.set." + shotSet.name().toLowerCase(Locale.ROOT))) : title, width / 2, 10, 0xFFFFFFFF);
+            ? text("shots.title", text("shots.set." + shotSet.name().toLowerCase(Locale.ROOT))) : page == Page.HOME ? title : text("page." + page.name().toLowerCase(Locale.ROOT)), width / 2, 10, 0xFFFFFFFF);
         Component status = error;
         if (!AfkCinematics.store().readable()) status = text("read_error");
         else if (!AfkCinematics.conflict().isEmpty()) status = text("conflict", AfkCinematics.conflict());

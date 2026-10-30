@@ -30,21 +30,37 @@ class ConfigTest {
         assertTrue(store.config().hideHud);
         assertTrue(store.config().hidePlayerNames);
         store.config().hidePlayerNames = false;
-        store.config().boats = false;
-        assertTrue(store.config().minecarts);
-        store.config().minecarts = false;
+        store.config().boats = CinematicConfig.StartMode.OFF;
+        assertEquals(CinematicConfig.StartMode.AUTOMATIC, store.config().minecarts);
+        store.config().minecarts = CinematicConfig.StartMode.OFF;
         store.config().travelControls = false;
-        assertTrue(store.config().fishing);
-        store.config().fishing = false;
+        assertEquals(CinematicConfig.StartMode.AUTOMATIC, store.config().fishing);
+        store.config().fishing = CinematicConfig.StartMode.OFF;
         assertTrue(store.save());
         assertFalse(new ConfigStore(path).config().hidePlayerNames);
-        assertFalse(new ConfigStore(path).config().boats);
-        assertFalse(new ConfigStore(path).config().minecarts);
+        assertEquals(CinematicConfig.StartMode.OFF, new ConfigStore(path).config().boats);
+        assertEquals(CinematicConfig.StartMode.OFF, new ConfigStore(path).config().minecarts);
         assertFalse(new ConfigStore(path).config().travelControls);
-        assertFalse(new ConfigStore(path).config().fishing);
-        assertTrue(new ConfigStore(path).config().flight);
+        assertEquals(CinematicConfig.StartMode.OFF, new ConfigStore(path).config().fishing);
+        assertEquals(CinematicConfig.StartMode.AUTOMATIC, new ConfigStore(path).config().flight);
         assertTrue(Files.readString(path).contains("\"future\""));
         assertEquals(600, new ConfigStore(path).config().idleSeconds);
+    }
+
+    @Test void activityChoicesPersistIndependentlyOfAfkStart() throws Exception {
+        Path path = directory.resolve("activities.json");
+        Files.writeString(path, "{\"automatic\":false,\"boats\":\"manual\",\"flight\":\"off\"}");
+        var store = new ConfigStore(path);
+        assertEquals(CinematicConfig.StartMode.MANUAL, store.config().boats);
+        assertEquals(CinematicConfig.StartMode.AUTOMATIC, store.config().fishing);
+        assertEquals(CinematicConfig.StartMode.OFF, store.config().flight);
+        store.config().fishing = CinematicConfig.StartMode.AUTOMATIC;
+        assertTrue(store.save());
+        var restored = new ConfigStore(path).config();
+        assertFalse(restored.automatic(Scene.Kind.PLAYER));
+        assertFalse(restored.automatic(Scene.Kind.BOAT));
+        assertTrue(restored.automatic(Scene.Kind.FISHING));
+        assertEquals(CinematicConfig.StartMode.OFF, restored.flight);
     }
 
     @Test void reportsAnUnwritableDestinationWithoutRemovingIt() throws Exception {
@@ -56,15 +72,13 @@ class ConfigTest {
         assertTrue(Files.isDirectory(path));
     }
 
-    @Test void shotOptionsRemainCompatibleWithExistingSettings() throws Exception {
+    @Test void shotOptionsPersistAndNewShotsAreEnabled() throws Exception {
         Path path = directory.resolve("settings.json");
         Files.writeString(path, "{\"music\":true,\"shots\":[\"pan\",null,\"future_shot\",\"crane\"],\"pace\":\"long\"}");
         var store = new ConfigStore(path);
         assertTrue(store.readable());
         assertTrue(store.config().music);
-        assertEquals(EnumSet.complementOf(EnumSet.of(Shot.Type.ARC, Shot.Type.DOLLY, Shot.Type.DRIFT,
-            Shot.Type.OVERHEAD, Shot.Type.FLYOVER, Shot.Type.LOW_PASS, Shot.Type.REVEAL,
-            Shot.Type.FLY_THROUGH, Shot.Type.TRAVERSE, Shot.Type.STILL)), store.config().shots);
+        assertEquals(EnumSet.of(Shot.Type.PAN, Shot.Type.CRANE), store.config().shots);
         assertEquals(CinematicConfig.Pace.LONG, store.config().pace);
         assertEquals(CinematicConfig.Subject.MIXED, store.config().subject);
         assertEquals(CinematicConfig.Lens.CINEMATIC, store.config().lens);

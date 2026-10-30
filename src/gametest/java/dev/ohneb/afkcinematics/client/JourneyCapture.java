@@ -93,7 +93,8 @@ final class JourneyCapture {
                 context.waitTicks(60);
                 context.runOnClient(client -> {
                     var config = AfkCinematics.config();
-                    config.boats = config.flight = config.travelControls = true;
+                    config.boats = config.flight = CinematicConfig.StartMode.MANUAL;
+                    config.travelControls = true;
                     config.cinematicFps = 60;
                     config.letterbox = true;
                     config.pace = CinematicConfig.Pace.SHORT;

@@ -1,5 +1,7 @@
 package dev.ohneb.afkcinematics.client;
 
+import dev.ohneb.afkcinematics.core.CinematicConfig;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.ohneb.afkcinematics.core.Shot;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -34,7 +36,8 @@ public final class TravelGameTest implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
         configure(context);
         context.runOnClient(client -> {
-            AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = AfkCinematics.config().travelControls = true;
+            AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.MANUAL;
+            AfkCinematics.config().travelControls = true;
             AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL);
         });
         try (var world = context.worldBuilder().create()) {
@@ -86,14 +89,14 @@ public final class TravelGameTest implements FabricClientGameTest {
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst()
                 .getInventory().countItem(Items.EMERALD) == 32, "Travel wake dropped an item"));
             context.runOnClient(client -> {
-                AfkCinematics.config().automatic = true;
+                AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.AUTOMATIC;
                 AfkCinematics.config().idleSeconds = 10;
             });
             context.waitFor(client -> AfkCinematics.showing(), 400);
             key(context, InputConstants.KEY_W, InputConstants.PRESS);
             context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Automatic boat view accepted steering"));
             key(context, InputConstants.KEY_W, InputConstants.RELEASE);
-            context.runOnClient(client -> AfkCinematics.config().automatic = false);
+            context.runOnClient(client -> AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.MANUAL);
 
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
@@ -120,7 +123,7 @@ public final class TravelGameTest implements FabricClientGameTest {
                 driverFirst(client.player.getVehicle());
                 require(client.player.getVehicle().getControllingPassenger() != client.player, "Fixture retained local steering");
             });
-            context.runOnClient(client -> AfkCinematics.config().automatic = true);
+            context.runOnClient(client -> AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.AUTOMATIC);
             context.waitFor(client -> AfkCinematics.showing(), 400);
             context.waitTicks(20);
             for (int step = 0; step < 12; step++) {
@@ -143,7 +146,7 @@ public final class TravelGameTest implements FabricClientGameTest {
                 client.player.setYRot(client.player.getYRot() + 15);
             });
             context.waitFor(client -> !AfkCinematics.ownsCamera(), 5);
-            context.runOnClient(client -> AfkCinematics.config().automatic = false);
+            context.runOnClient(client -> AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.MANUAL);
 
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
@@ -181,7 +184,7 @@ public final class TravelGameTest implements FabricClientGameTest {
                 == EntityType.MINECART);
                 //?}
             context.waitTicks(30);
-            context.runOnClient(client -> AfkCinematics.config().automatic = true);
+            context.runOnClient(client -> AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.AUTOMATIC);
             context.waitFor(client -> AfkCinematics.showing(), 400);
             context.waitTicks(15);
             Vec3 cartBefore = context.computeOnClient(client -> client.player.getVehicle().position());
@@ -192,15 +195,15 @@ public final class TravelGameTest implements FabricClientGameTest {
                 require(client.player.getVehicle().position().distanceTo(cartBefore) > 2, "Minecart did not travel on the rails");
                 require(camera(client).position().distanceTo(cartCameraBefore) > 2, "Camera did not follow the minecart");
                 require(AfkCinematics.frameLimit() == 0, "Minecart view overrode normal FPS");
-                AfkCinematics.config().minecarts = false;
-                AfkCinematics.config().automatic = false;
+                AfkCinematics.config().minecarts = dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.OFF;
+                AfkCinematics.config().boats = AfkCinematics.config().flight = CinematicConfig.StartMode.MANUAL;
             });
             context.waitFor(client -> !AfkCinematics.ownsCamera(), 5);
             context.runOnClient(client -> AfkCinematics.requestStart());
             context.waitTicks(25);
             context.runOnClient(client -> {
                 require(!AfkCinematics.ownsCamera(), "Disabled minecart cinematics still started");
-                AfkCinematics.config().minecarts = true;
+                AfkCinematics.config().minecarts = dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.MANUAL;
             });
             start(context);
             context.runOnClient(client -> AfkCinematics.mouseMoved(2, 1));
@@ -300,7 +303,7 @@ public final class TravelGameTest implements FabricClientGameTest {
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
-                AfkCinematics.config().automatic = false;
+                AfkCinematics.config().boats = AfkCinematics.config().flight = CinematicConfig.StartMode.MANUAL;
                 AfkCinematics.config().travelControls = true;
                 focused = null;
             });
