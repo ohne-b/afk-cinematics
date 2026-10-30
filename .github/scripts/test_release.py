@@ -189,8 +189,12 @@ side = "CLIENT"
         first = self.target("fabric", "1.21")
         second = self.target("fabric", "1.21.1")
         first_path = self.write_group_member(first)
+        with ZipFile(self.write_group_member(second)) as jar:
+            changed_meta = json.loads(jar.read("fabric.mod.json"))
+        changed_meta["depends"]["java"] = ">=25"
         cases = ({"Camera.class": b"different code"}, {"assets/logo.png": b"different resource"},
-                 {"META-INF/MANIFEST.MF": b"Manifest-Version: 1.0\r\nFabric-Mapping-Namespace: official\r\n"})
+                 {"META-INF/MANIFEST.MF": b"Manifest-Version: 1.0\r\nFabric-Mapping-Namespace: official\r\n"},
+                 {"fabric.mod.json": json.dumps(changed_meta).encode()})
         for change in cases:
             with self.subTest(change=change), self.assertRaisesRegex(ValueError, "payload differs"):
                 release.grouped_jars([first, second], [first_path, self.write_group_member(second, change)], "0.1.0")

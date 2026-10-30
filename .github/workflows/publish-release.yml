@@ -153,7 +153,7 @@ jobs:
           changelog-file: release/release-notes.md
           loaders: ${{ matrix.loader }}
           environment: client
-          game-versions: ${{ matrix.game_versions }}
+          game-versions: ${{ matrix.game_versions || matrix.minecraft }}
           game-version-filter: none
           java: ${{ matrix.java }}
           dependencies: ${{ matrix.dependencies }}
