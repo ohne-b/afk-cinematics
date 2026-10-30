@@ -174,6 +174,41 @@ public final class CameraGameTest implements FabricClientGameTest {
             });
             start(context);
             context.waitFor(client -> CinematicMusic.manages(), 80);
+            context.runOnClient(client -> {
+                AfkCinematics.config().soundtrack = CinematicConfig.Soundtrack.CREATIVE;
+                AfkCinematics.config().musicVolume = 35;
+            });
+            context.waitFor(client -> CinematicMusic.manages() && ((MusicManagerAccess)client.getMusicManager()).afkCinematics$current()
+                .getIdentifier().toString().equals("minecraft:music.creative"), 100);
+            context.waitTicks(30);
+            var beforeSkip = context.computeOnClient(client -> ((MusicManagerAccess)client.getMusicManager()).afkCinematics$current());
+            context.runOnClient(client -> {
+                require(beforeSkip.getVolume() <= .351F, "Cinematic music ignored its volume setting");
+                CinematicMusic.next();
+            });
+            context.waitFor(client -> CinematicMusic.manages() && ((MusicManagerAccess)client.getMusicManager()).afkCinematics$current() != beforeSkip, 100);
+            context.runOnClient(client -> {
+                AfkCinematics.config().soundtrack = CinematicConfig.Soundtrack.CUSTOM;
+                AfkCinematics.config().customMusic = "missing:cinematic_test";
+            });
+            context.waitFor(client -> !CinematicMusic.manages(), 100);
+            context.runOnClient(client -> {
+                require(!CinematicMusic.customAvailable("missing:cinematic_test"), "Missing custom music was accepted");
+                var empty = client.getSoundManager().getSoundEvent(net.minecraft.resources.Identifier.parse("afk_cinematics_test:empty"));
+                require(empty != null && empty.getWeight() == 0, "Empty resource-pack event was not registered");
+                require(!CinematicMusic.customAvailable("afk_cinematics_test:empty"), "An empty registered sound was accepted");
+                AfkCinematics.config().customMusic = "afk_cinematics_test:empty";
+                CinematicMusic.tick();
+                require(!CinematicMusic.manages(), "An unplayable event claimed the normal music slot");
+                AfkCinematics.config().customMusic = "minecraft:music_disc.cat";
+            });
+            context.waitFor(client -> CinematicMusic.manages() && ((MusicManagerAccess)client.getMusicManager()).afkCinematics$current()
+                .getIdentifier().toString().equals("minecraft:music_disc.cat"), 100);
+            context.runOnClient(client -> {
+                require(Math.abs(client.options.getSoundSourceVolume(SoundSource.MUSIC) - .1) < .001
+                    && Math.abs(client.options.getSoundSourceVolume(SoundSource.MASTER) - .1) < .001, "Music changed vanilla volume options");
+                require(AfkCinematics.showing(), "Music controls ended the cinematic");
+            });
             context.runOnClient(client -> AfkCinematics.showScreen(new PauseScreen(true)));
             context.waitFor(client -> client.isPaused(), 40);
             context.waitFor(client -> !CinematicMusic.manages(), 80);
@@ -182,6 +217,8 @@ public final class CameraGameTest implements FabricClientGameTest {
                     "Paused cinematic retained its music instance");
                 AfkCinematics.showScreen(null);
                 AfkCinematics.config().music = false;
+                AfkCinematics.config().soundtrack = CinematicConfig.Soundtrack.GAME;
+                AfkCinematics.config().musicVolume = 100;
             });
         }
         context.runOnClient(client -> {

@@ -39,6 +39,11 @@ public final class ConfigStore {
             config.hidePlayerNames = bool("hidePlayerNames", true);
             config.letterbox = bool("letterbox", false);
             config.music = bool("music", false);
+            config.soundtrack = enumeration("soundtrack", CinematicConfig.Soundtrack.GAME);
+            config.musicVolume = Math.clamp(integer("musicVolume", 100), 0, 100);
+            var custom = document.get("customMusic");
+            if (custom != null && custom.isJsonPrimitive() && custom.getAsJsonPrimitive().isString()
+                && custom.getAsString().length() <= 256) config.customMusic = custom.getAsString();
             config.unfocused = bool("unfocused", false);
             config.boats = enumeration("boats", CinematicConfig.StartMode.AUTOMATIC);
             config.minecarts = enumeration("minecarts", CinematicConfig.StartMode.AUTOMATIC);
@@ -120,6 +125,9 @@ public final class ConfigStore {
         updated.addProperty("hidePlayerNames", config.hidePlayerNames);
         updated.addProperty("letterbox", config.letterbox);
         updated.addProperty("music", config.music);
+        updated.addProperty("soundtrack", config.soundtrack.name().toLowerCase(Locale.ROOT));
+        updated.addProperty("musicVolume", Math.clamp(config.musicVolume, 0, 100));
+        updated.addProperty("customMusic", config.customMusic);
         updated.addProperty("unfocused", config.unfocused);
         updated.addProperty("boats", config.boats.name().toLowerCase(Locale.ROOT));
         updated.addProperty("minecarts", config.minecarts.name().toLowerCase(Locale.ROOT));

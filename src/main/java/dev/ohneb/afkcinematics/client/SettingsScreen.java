@@ -7,6 +7,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
@@ -139,7 +140,29 @@ public final class SettingsScreen extends Screen {
                 widgets.add(activity("flight", () -> config.flight, value -> config.flight = value));
                 widgets.add(activity("fishing", () -> config.fishing, value -> config.fishing = value));
             }
-            case SOUND -> widgets.add(toggle("music", () -> config.music, value -> config.music = value));
+            case SOUND -> {
+                widgets.add(toggle("music", () -> config.music, value -> config.music = value));
+                widgets.add(Button.builder(label("soundtrack", text("soundtrack." + config.soundtrack.name().toLowerCase(Locale.ROOT))), button -> {
+                    var choices = CinematicConfig.Soundtrack.values();
+                    config.soundtrack = choices[(config.soundtrack.ordinal() + 1) % choices.length];
+                    button.setMessage(label("soundtrack", text("soundtrack." + config.soundtrack.name().toLowerCase(Locale.ROOT))));
+                    refreshControls();
+                }).tooltip(Tooltip.create(text("soundtrack.help"))).build());
+                widgets.add(slider("musicVolume", buttonWidth, 0, 100, config.musicVolume, value -> config.musicVolume = value));
+                if (config.soundtrack == CinematicConfig.Soundtrack.CUSTOM) {
+                    var input = new EditBox(font, buttonWidth, 20, text("customMusic"));
+                    input.setMaxLength(256);
+                    input.setValue(config.customMusic);
+                    input.setHint(text("customMusic.hint"));
+                    input.setTooltip(Tooltip.create(text("customMusic.help")));
+                    input.setTextColor(CinematicMusic.customAvailable(config.customMusic) ? 0xFFFFFFFF : 0xFFFF7777);
+                    input.setResponder(value -> {
+                        config.customMusic = value.strip();
+                        input.setTextColor(CinematicMusic.customAvailable(config.customMusic) ? 0xFFFFFFFF : 0xFFFF7777);
+                    });
+                    widgets.add(input);
+                }
+            }
             case CONTROLS -> {
                 widgets.add(Button.builder(text("bindings"), button -> {
                     if (save()) AfkCinematics.showScreen(new KeyBindsScreen(this, minecraft.options));
@@ -324,6 +347,8 @@ public final class SettingsScreen extends Screen {
         Component status = error;
         if (!AfkCinematics.store().readable()) status = text("read_error");
         else if (!AfkCinematics.conflict().isEmpty()) status = text("conflict", AfkCinematics.conflict());
+        else if (status.getString().isEmpty() && page == Page.SOUND && AfkCinematics.config().soundtrack == CinematicConfig.Soundtrack.CUSTOM
+            && !CinematicMusic.customAvailable(AfkCinematics.config().customMusic)) status = text("customMusic.missing");
         else if (status.getString().isEmpty() && maxOffset > 0) status = text("scroll");
         if (!status.getString().isEmpty()) {
             var lines = font.split(status, width - 24);
