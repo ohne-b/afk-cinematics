@@ -34,6 +34,9 @@ class ConfigTest {
         assertEquals(CinematicConfig.StartMode.AUTOMATIC, store.config().minecarts);
         store.config().minecarts = CinematicConfig.StartMode.OFF;
         store.config().travelControls = false;
+        assertTrue(store.config().keepChat);
+        store.config().keepChat = false;
+        store.config().manualLook = true;
         assertEquals(CinematicConfig.StartMode.AUTOMATIC, store.config().fishing);
         store.config().fishing = CinematicConfig.StartMode.OFF;
         assertTrue(store.save());
@@ -41,6 +44,8 @@ class ConfigTest {
         assertEquals(CinematicConfig.StartMode.OFF, new ConfigStore(path).config().boats);
         assertEquals(CinematicConfig.StartMode.OFF, new ConfigStore(path).config().minecarts);
         assertFalse(new ConfigStore(path).config().travelControls);
+        assertFalse(new ConfigStore(path).config().keepChat);
+        assertTrue(new ConfigStore(path).config().manualLook);
         assertEquals(CinematicConfig.StartMode.OFF, new ConfigStore(path).config().fishing);
         assertEquals(CinematicConfig.StartMode.AUTOMATIC, new ConfigStore(path).config().flight);
         assertTrue(Files.readString(path).contains("\"future\""));

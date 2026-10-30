@@ -44,6 +44,8 @@ public final class ConfigStore {
             config.minecarts = enumeration("minecarts", CinematicConfig.StartMode.AUTOMATIC);
             config.flight = enumeration("flight", CinematicConfig.StartMode.AUTOMATIC);
             config.travelControls = bool("travelControls", true);
+            config.keepChat = bool("keepChat", true);
+            config.manualLook = bool("manualLook", false);
             config.fishing = enumeration("fishing", CinematicConfig.StartMode.AUTOMATIC);
         } catch (IOException | RuntimeException exception) {
             readable = false;
@@ -123,6 +125,8 @@ public final class ConfigStore {
         updated.addProperty("minecarts", config.minecarts.name().toLowerCase(Locale.ROOT));
         updated.addProperty("flight", config.flight.name().toLowerCase(Locale.ROOT));
         updated.addProperty("travelControls", config.travelControls);
+        updated.addProperty("keepChat", config.keepChat);
+        updated.addProperty("manualLook", config.manualLook);
         updated.addProperty("fishing", config.fishing.name().toLowerCase(Locale.ROOT));
         Path temporary = null;
         try {

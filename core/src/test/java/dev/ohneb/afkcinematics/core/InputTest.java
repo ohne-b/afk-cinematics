@@ -4,6 +4,21 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class InputTest {
+    @Test void screenInputsStaySuppressedWithoutBecomingHeldGameplay() {
+        var input = new InputState();
+        input.press(17, false);
+        input.consumeHeld();
+        input.consume(18);
+        assertFalse(input.held());
+        input.resetHeld();
+        assertTrue(input.consumed(17));
+        assertTrue(input.suppressed(18));
+        assertTrue(input.release(17));
+        assertFalse(input.consumed(17));
+        assertTrue(input.release(18));
+        assertFalse(input.suppressed(18));
+    }
+
     @Test void lifecycleResetRetainsSuppressionUntilRelease() {
         var input = new InputState();
         input.press(17, true);

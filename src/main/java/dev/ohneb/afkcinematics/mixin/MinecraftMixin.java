@@ -48,7 +48,7 @@ public abstract class MinecraftMixin {
     //? if <26.2 {
     @Inject(method = "setScreen", at = @At("HEAD"))
     private void afkCinematics$screen(net.minecraft.client.gui.screens.Screen screen, CallbackInfo ci) {
-        if (screen != null) AfkCinematics.stop();
+        AfkCinematics.screenChanged(screen);
     }
     //?}
 }

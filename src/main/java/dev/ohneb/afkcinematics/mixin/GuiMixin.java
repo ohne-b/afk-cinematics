@@ -13,7 +13,7 @@ public abstract class GuiMixin {
     //? if >=26.2 {
     /*@Inject(method = "setScreen", at = @At("HEAD"))
     private void afkCinematics$screen(Screen screen, CallbackInfo ci) {
-        if (screen != null) AfkCinematics.stop();
+        AfkCinematics.screenChanged(screen);
     }
     *///?}
 }

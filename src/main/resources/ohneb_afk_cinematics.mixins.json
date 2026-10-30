@@ -8,6 +8,7 @@
     "AmbientSoundsMixin",
     "BoatMixin",
     "CameraMixin",
+    "ChatAccess",
     "DynamicFpsMixin",
     "FrameLimitMixin",
     "GuiMixin",

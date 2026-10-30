@@ -7,6 +7,12 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import dev.ohneb.afkcinematics.testmixin.KeyboardInvoker;
+import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Difficulty;
@@ -38,6 +44,7 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
             });
             context.waitFor(client -> client.player.onGround() && client.player.getInventory().countItem(Items.SNOWBALL) == 16);
             context.waitTicks(10);
+            chat(context);
             for (KeyMapping control : new KeyMapping[]{AfkCinematics.SETTINGS, AfkCinematics.TOGGLE, AfkCinematics.NEXT}) {
                 var oldUse = new AtomicReference<InputConstants.Key>();
                 var oldControl = new AtomicReference<InputConstants.Key>();
@@ -177,6 +184,119 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
 
     private static void quietUse(Minecraft client, String message) {
         require(!client.options.keyUse.isDown() && !client.options.keyUse.consumeClick(), message);
+    }
+
+    private static void chat(ClientGameTestContext context) {
+        var oldChat = context.computeOnClient(client -> ((KeyMappingAccess)client.options.keyChat).afkCinematics$key());
+        var oldUse = context.computeOnClient(client -> ((KeyMappingAccess)client.options.keyUse).afkCinematics$key());
+        var oldCommand = context.computeOnClient(client -> ((KeyMappingAccess)client.options.keyCommand).afkCinematics$key());
+        context.runOnClient(client -> {
+            AfkCinematics.config().keepChat = true;
+            client.options.keyChat.setKey(keyboardKey(InputConstants.KEY_U));
+            client.options.keyUse.setKey(keyboardKey(InputConstants.KEY_U));
+            client.options.keyCommand.setKey(keyboardKey(InputConstants.KEY_SLASH));
+            KeyMapping.resetMapping();
+        });
+        try {
+            start(context);
+            openingCharacter(context, InputConstants.KEY_U, 'u');
+            context.waitFor(client -> AfkCinematics.screen() instanceof ChatScreen, 10);
+            context.runOnClient(client -> {
+                require(chatText().isEmpty(), "The chat opener was typed into its own field");
+                quietUse(client, "Opening chat queued its shared Use binding");
+                AfkCinematics.mouseMoved(10, 10);
+                AfkCinematics.mouseScrolled();
+            });
+            key(context, InputConstants.KEY_U, InputConstants.RELEASE);
+            key(context, InputConstants.KEY_K, InputConstants.PRESS);
+            context.runOnClient(client -> character(client, 'k'));
+            key(context, InputConstants.KEY_K, InputConstants.RELEASE);
+            context.runOnClient(client -> heldKey = InputConstants.KEY_W);
+            key(context, InputConstants.KEY_W, InputConstants.PRESS);
+            context.runOnClient(client -> {
+                require(chatText().equals("k"), "A cinematic key could not be typed in chat");
+                require(AfkCinematics.showing(), "Chat input ended the view");
+            });
+            key(context, InputConstants.KEY_ESCAPE, InputConstants.PRESS);
+            key(context, InputConstants.KEY_ESCAPE, InputConstants.RELEASE);
+            key(context, InputConstants.KEY_W, InputConstants.REPEAT);
+            context.runOnClient(client -> {
+                KeyMapping.setAll();
+                KeyMapping.click(keyboardKey(InputConstants.KEY_W));
+                require(AfkCinematics.screen() == null && AfkCinematics.showing(), "Chat close or a held repeat ended the view");
+                require(!client.options.keyUp.isDown() && !client.options.keyUp.consumeClick(), "Chat close restored a held movement key");
+                heldKey = -1;
+            });
+            key(context, InputConstants.KEY_W, InputConstants.RELEASE);
+            openingCharacter(context, InputConstants.KEY_SLASH, '/');
+            context.waitFor(client -> AfkCinematics.screen() instanceof ChatScreen, 10);
+            context.runOnClient(client -> {
+                require(chatText().equals("/"), "Command chat lost or duplicated its slash");
+                hide(client, true);
+            });
+            context.takeScreenshot(TestScreenshotOptions.of("cinematic-chat-f1").withDestinationDir(
+                java.nio.file.Path.of(System.getProperty("afkcinematics.test.artifacts"))));
+            key(context, InputConstants.KEY_SLASH, InputConstants.RELEASE);
+            context.runOnClient(client -> AfkCinematics.showScreen(new InventoryScreen(client.player)));
+            context.runOnClient(client -> {
+                require(!AfkCinematics.ownsCamera(), "Chat permission leaked into an inventory screen");
+                AfkCinematics.showScreen(null);
+                hide(client, false);
+            });
+            start(context);
+            context.runOnClient(client -> {
+                AfkCinematics.config().manualLook = true;
+                client.player.setYRot(client.player.getYRot() + 10);
+                AfkCinematics.mouseMoved(2, 1);
+            });
+            context.waitTicks(3);
+            context.runOnClient(client -> {
+                require(AfkCinematics.showing(), "Manual look permission did not survive tick-based rotation checks");
+                AfkCinematics.config().manualLook = false;
+                AfkCinematics.mouseMoved(2, 1);
+                require(!AfkCinematics.ownsCamera(), "Disabled manual look retained the camera");
+            });
+            start(context);
+            context.runOnClient(client -> {
+                AfkCinematics.input(keyboardKey(InputConstants.KEY_U), InputConstants.PRESS, false);
+                AfkCinematics.stop();
+            });
+            context.waitTicks(2);
+            context.runOnClient(client -> require(AfkCinematics.screen() == null, "A stale session opened chat"));
+            key(context, InputConstants.KEY_U, InputConstants.RELEASE);
+        } finally {
+            context.runOnClient(client -> {
+                heldKey = -1;
+                AfkCinematics.stop();
+                AfkCinematics.showScreen(null);
+                AfkCinematics.config().manualLook = false;
+                client.options.keyChat.setKey(oldChat);
+                client.options.keyUse.setKey(oldUse);
+                client.options.keyCommand.setKey(oldCommand);
+                KeyMapping.resetMapping();
+            });
+        }
+    }
+
+    private static String chatText() {
+        return AfkCinematics.screen().children().stream().filter(EditBox.class::isInstance).map(EditBox.class::cast)
+            .findFirst().orElseThrow().getValue();
+    }
+
+    private static void openingCharacter(ClientGameTestContext context, int key, int character) {
+        context.runOnClient(client -> {
+            ((KeyboardInvoker)client.keyboardHandler).press(AfkCinematics.window(), InputConstants.PRESS, new KeyEvent(key, 0, 0));
+            character(client, character);
+        });
+    }
+
+    private static void character(Minecraft client, int character) {
+        //? if >=26.3 {
+        /*var event = new CharacterEvent(character);
+        *///?} else {
+        var event = new CharacterEvent(character, 0);
+        //?}
+        ((KeyboardInvoker)client.keyboardHandler).character(AfkCinematics.window(), event);
     }
 
     private static void supply(ServerPlayer player) {

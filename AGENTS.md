@@ -14,6 +14,8 @@ game options to produce a cinematic. Restore control before processing wake inpu
 An attack, use or drop action that wakes the camera must stay suppressed until release.
 Keep suppression across world/player replacement and vanilla key-state restoration.
 Consumed cinematic controls retain suppression through screens until physical release.
+Chat may retain an existing session; screen-consumed keys cannot become gameplay on close.
+Only explicit manual look permission may relax ordinary view rotation wake.
 Activity start choices are independent of AFK auto-start.
 Only manually started travel views may retain steering. Follow the rendered subject
 without changing its pose; validate movement from the last applied world-camera position.
