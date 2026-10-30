@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Pull travel cameras closer around obstacles, retain usable takes when replacement shots fail, and use F6 as the default start key. (#52)
 - Keep minecart views through passive rider rotation and aim close tunnel views at the rider. (#51)
 - Keep fishing music between quick casts and keep minecart takes through ordinary bends. (#50)
 - Hide third-party HUDs that respect F1, including direct visibility reads during rendering. (#49)

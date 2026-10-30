@@ -83,6 +83,7 @@ public final class CinematicSession {
                 break;
             }
             if (planner != null && planner.exhausted()) {
+                if (adaptiveTravel() && shot != null) { keepTravel(now); return; }
                 if (shot == null || manualAdvance || now >= handoff) ended = true;
                 return;
             }
@@ -100,7 +101,11 @@ public final class CinematicSession {
             currentFocus = focus;
         }
         var plan = pending;
-        if (!geometry.forScene(plan.scene()).valid(aimed(plan.shot(), plan.scene()), plan.cut() ? plan.shot().start() : current.position())) { end(); return; }
+        if (!geometry.forScene(plan.scene()).valid(aimed(plan.shot(), plan.scene()), plan.cut() ? plan.shot().start() : current.position())) {
+            if (adaptiveTravel() && shot != null) keepTravel(now);
+            else end();
+            return;
+        }
         if (plan.cut()) {
             outgoingStarted = started;
             phase = Phase.FADE_OUT;
@@ -125,9 +130,9 @@ public final class CinematicSession {
     public Pose frame(long now) {
         if (ended || shot == null && pending == null) return null;
         if (captures > 0) {
-            boolean safe = currentFocus == null
+            boolean safe = adaptiveTravel() || (currentFocus == null
                 ? geometry.forScene(scene).clear(current.position(), current.position())
-                : valid(current, currentFocus, current.position(), scene);
+                : valid(current, currentFocus, current.position(), scene));
             return safe ? current : end();
         }
         now = timeline(now);
@@ -142,7 +147,7 @@ public final class CinematicSession {
                 next = outgoing.sample(seconds);
                 focus = outgoing.focus(seconds);
             }
-            if (focus == null ? !geometry.forScene(scene).clear(current.position(), next.position())
+            if (focus == null ? !adaptiveTravel() && !geometry.forScene(scene).clear(current.position(), next.position())
                 : !valid(next, focus, current.position(), scene)) return end();
             current = next;
             currentFocus = focus;
@@ -152,7 +157,7 @@ public final class CinematicSession {
             return current;
         }
         if (phase == Phase.CUT) {
-            if (!covered) return geometry.forScene(scene).clear(current.position(), current.position()) ? current : end();
+            if (!covered) return adaptiveTravel() || geometry.forScene(scene).clear(current.position(), current.position()) ? current : end();
             Shot destination = aimed(pending.shot(), pending.scene());
             Pose next = destination.sample(0);
             if (!valid(next, destination.focus(0), next.position(), pending.scene())) return end();
@@ -192,9 +197,23 @@ public final class CinematicSession {
     }
 
     private boolean valid(Pose pose, Vec focus, Vec previous, Scene view) {
+        // MovingGeometry resolves travel framing and validates the applied world-space sweep afterward.
+        if (adaptiveTravel()) return Scene.inRange(pose.position(), subject);
         Geometry environment = geometry.forScene(view);
         return Scene.inRange(pose.position(), subject) && environment.clear(previous, pose.position())
             && environment.visible(pose.position(), focus);
+    }
+
+    private boolean adaptiveTravel() {
+        return activity.travel() && geometry instanceof MovingGeometry moving && moving.adaptsTravel();
+    }
+
+    private void keepTravel(long now) {
+        planner = null;
+        pending = null;
+        manualAdvance = false;
+        advanceRequested = false;
+        started = now;
     }
 
     private Shot aimed(Shot candidate, Scene view) {

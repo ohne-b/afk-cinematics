@@ -53,7 +53,7 @@ public final class AfkCinematics {
     //?} else {
     /*private static final String CATEGORY = "key.categories.ohneb_afk_cinematics";
     *///?}
-    public static final KeyMapping TOGGLE = new KeyMapping("key.ohneb_afk_cinematics.toggle", InputConstants.KEY_K, CATEGORY);
+    public static final KeyMapping TOGGLE = new KeyMapping("key.ohneb_afk_cinematics.toggle", InputConstants.KEY_F6, CATEGORY);
     public static final KeyMapping SETTINGS = new KeyMapping("key.ohneb_afk_cinematics.settings", InputConstants.UNKNOWN.getValue(), CATEGORY);
     public static final KeyMapping NEXT = new KeyMapping("key.ohneb_afk_cinematics.next", InputConstants.UNKNOWN.getValue(), CATEGORY);
     private static final IdleTimer IDLE = new IdleTimer();
@@ -113,7 +113,7 @@ public final class AfkCinematics {
     public static boolean showing() { return session != null && session.showing(); }
     public static boolean hideHud() { return showing() && config().hideHud; }
     public static boolean hidePlayerNames() { return showing() && config().hidePlayerNames; }
-    public static double fade() { return session == null ? 0 : session.fade(); }
+    public static double fade() { return session == null ? 0 : Math.max(session.fade(), movingGeometry == null ? 0 : movingGeometry.fade()); }
     public static boolean scenery() { return session != null && session.scenery(); }
     public static boolean underwater() { return session != null && session.underwater(); }
     public static void cameraApplied(Camera camera) {
@@ -166,7 +166,10 @@ public final class AfkCinematics {
         var window = Minecraft.getInstance().getWindow();
         return config().lens.blend(normal, (double)window.getWidth() / Math.max(1, window.getHeight()), session.lensStrength());
     }
-    public static void coveredFrame() { if (session != null) session.coveredFrame(); }
+    public static void coveredFrame() {
+        if (session != null) session.coveredFrame();
+        if (movingGeometry != null) movingGeometry.coveredFrame();
+    }
 
     public static void tick() {
         if (store == null) return;
