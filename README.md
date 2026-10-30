@@ -1,4 +1,4 @@
-![AFK Cinematics ? cinematic flight over a mountain forest](https://raw.githubusercontent.com/ohne-b/afk-cinematics/main/assets/banner.webp)
+![AFK Cinematics - cinematic flight over a mountain forest](https://raw.githubusercontent.com/ohne-b/afk-cinematics/main/assets/banner.webp)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/ohne-b/afk-cinematics/main/assets/logo.svg" width="128" alt="AFK Cinematics logo">
@@ -15,7 +15,7 @@
 **Fabric & NeoForge | Minecraft 1.21–26.3 | Client-side**
 
 Wide aerial passes, low ground shots, underwater views and angled player shots.
-Choose your shots, pacing and cinematic FPS in settings.
+Film your fishing casts, boat rides, minecart trips and flights too.
 
 ## Get started
 
@@ -24,7 +24,9 @@ Download from [Modrinth](https://modrinth.com/project/afkcinematics) or
 Put the jar for your Minecraft version and loader in `mods`.
 Fabric also needs [Fabric API](https://modrinth.com/mod/fabric-api). No server installation needed.
 
-Stay still for 30 seconds to start. Move or open a menu to return to normal.
+Press **K** to start or stop, or stay still for 30 seconds for an AFK view.
+Change the key in **Options > Controls > Key Binds > AFK Cinematics**.
+Move or open a menu to leave an AFK view.
 F2 and supported Fabrishot versions capture the cinematic without ending it.
 
 | Command | Action |
@@ -33,7 +35,7 @@ F2 and supported Fabrishot versions capture the cinematic without ending it.
 | `/afkcinematics start` | Start a cinematic now |
 | `/afkcinematics stop` | Stop the cinematic |
 
-Optional Toggle, Next shot and Settings keys are in Minecraft's Controls menu.
+Next shot and Settings can also be bound in Controls.
 
 Early alpha. The camera uses nearby loaded terrain; it does not prevent AFK kicks.
 

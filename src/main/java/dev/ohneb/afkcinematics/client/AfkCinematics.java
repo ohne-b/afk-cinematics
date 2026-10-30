@@ -49,7 +49,7 @@ public final class AfkCinematics {
     //?} else {
     /*private static final String CATEGORY = "key.categories.ohneb_afk_cinematics";
     *///?}
-    public static final KeyMapping TOGGLE = new KeyMapping("key.ohneb_afk_cinematics.toggle", InputConstants.UNKNOWN.getValue(), CATEGORY);
+    public static final KeyMapping TOGGLE = new KeyMapping("key.ohneb_afk_cinematics.toggle", InputConstants.KEY_K, CATEGORY);
     public static final KeyMapping SETTINGS = new KeyMapping("key.ohneb_afk_cinematics.settings", InputConstants.UNKNOWN.getValue(), CATEGORY);
     public static final KeyMapping NEXT = new KeyMapping("key.ohneb_afk_cinematics.next", InputConstants.UNKNOWN.getValue(), CATEGORY);
     private static final IdleTimer IDLE = new IdleTimer();
