@@ -26,6 +26,8 @@ import static dev.ohneb.afkcinematics.client.TestSupport.*;
 public final class FishingGameTest implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
         configure(context);
+        double masterVolume = context.computeOnClient(client -> client.options.getSoundSourceVolume(net.minecraft.sounds.SoundSource.MASTER));
+        double musicVolume = context.computeOnClient(client -> client.options.getSoundSourceVolume(net.minecraft.sounds.SoundSource.MUSIC));
         context.runOnClient(client -> {
             AfkCinematics.config().fishing = dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.MANUAL;
             AfkCinematics.config().fishing = CinematicConfig.StartMode.AUTOMATIC;
@@ -89,6 +91,14 @@ public final class FishingGameTest implements FabricClientGameTest {
             world.getServer().runOnServer(server -> server.overworld().setBlockAndUpdate(obstruction, Blocks.AIR.defaultBlockState()));
             context.waitFor(client -> client.level.getBlockState(obstruction).isAir());
             start(context);
+            context.runOnClient(client -> {
+                client.options.getSoundSourceOptionInstance(net.minecraft.sounds.SoundSource.MASTER).set(.1);
+                client.options.getSoundSourceOptionInstance(net.minecraft.sounds.SoundSource.MUSIC).set(.1);
+                client.getMusicManager().stopPlaying();
+                ((dev.ohneb.afkcinematics.mixin.MusicManagerAccess)client.getMusicManager()).afkCinematics$delay(12000);
+                AfkCinematics.config().music = true;
+            });
+            context.waitFor(client -> CinematicMusic.manages(), 80);
             context.waitFor(client -> AfkCinematics.fade() == 0 && AfkCinematics.showing(), 60);
             Shot waitingTake = context.computeOnClient(client -> revealedShot);
             world.getServer().runOnServer(server -> {
@@ -106,15 +116,22 @@ public final class FishingGameTest implements FabricClientGameTest {
             screenshot(context, "fishing-bite");
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst().fishing != null,
                 "A bite triggered automatic reeling"));
+            var track = context.computeOnClient(client -> ((dev.ohneb.afkcinematics.mixin.MusicManagerAccess)client.getMusicManager()).afkCinematics$current());
+            float trackVolume = context.computeOnClient(client -> track.getVolume());
             click(context);
             context.waitFor(client -> client.player.fishing == null && !AfkCinematics.ownsCamera(), 40);
-            context.waitTicks(4);
+            context.waitTicks(30);
+            context.runOnClient(client -> require(CinematicMusic.manages()
+                && ((dev.ohneb.afkcinematics.mixin.MusicManagerAccess)client.getMusicManager()).afkCinematics$current() == track
+                && track.getVolume() + .001F >= trackVolume, "Reeling faded or restarted the track before another cast"));
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst().fishing == null,
                 "The real reel action did not reach the server"));
 
             click(context);
             context.waitFor(client -> FishingActivity.hook(client.player, client.level) != null, 100);
-            start(context);
+            context.waitFor(client -> AfkCinematics.showing(), 100);
+            context.runOnClient(client -> require(((dev.ohneb.afkcinematics.mixin.MusicManagerAccess)client.getMusicManager()).afkCinematics$current() == track,
+                "Recasting restarted the fishing soundtrack"));
             context.waitTicks(20);
             var use = context.computeOnClient(client -> ((dev.ohneb.afkcinematics.mixin.KeyMappingAccess)client.options.keyUse).afkCinematics$key());
             try {
@@ -178,10 +195,24 @@ public final class FishingGameTest implements FabricClientGameTest {
                 var player = server.getPlayerList().getPlayers().getFirst();
                 require(player.getInventory().countItem(Items.APPLE) == 16 && player.fishing != null,
                     "An offhand rod authorized eating or reeling with the waking press");
+                player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.FISHING_ROD));
+                player.inventoryMenu.broadcastFullState();
             });
+            context.waitFor(client -> client.player.getMainHandItem().is(Items.FISHING_ROD));
+            start(context);
+            context.waitFor(client -> CinematicMusic.manages(), 80);
+            click(context);
+            context.waitFor(client -> client.player.fishing == null && !AfkCinematics.ownsCamera(), 40);
+            context.waitFor(client -> !CinematicMusic.manages(), 180);
+            context.runOnClient(client -> require(((dev.ohneb.afkcinematics.mixin.MusicManagerAccess)client.getMusicManager()).afkCinematics$current() == null,
+                "Fishing music did not release its slot after the recast window"));
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
+                CinematicMusic.clear();
+                AfkCinematics.config().music = false;
+                client.options.getSoundSourceOptionInstance(net.minecraft.sounds.SoundSource.MASTER).set(masterVolume);
+                client.options.getSoundSourceOptionInstance(net.minecraft.sounds.SoundSource.MUSIC).set(musicVolume);
                 AfkCinematics.config().fishing = CinematicConfig.StartMode.MANUAL;
                 sceneryFrames = null;
                 revealedShot = null;
