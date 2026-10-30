@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.InputType;
@@ -104,6 +105,21 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     require(!fixture.config().hidePlayerNames, "Player-name control did not change its setting");
                 });
                 context.takeScreenshot(TestScreenshotOptions.of("display-settings").withDestinationDir(artifacts));
+                context.runOnClient(client -> {
+                    var settings = (SettingsScreen)AfkCinematics.screen();
+                    go(settings, "Sound");
+                    press(settings, "Playlist: Game music");
+                    press(settings, "Playlist: Creative music");
+                    press(settings, "Playlist: Music discs");
+                    var custom = settings.children().stream().filter(EditBox.class::isInstance).map(EditBox.class::cast).findFirst().orElseThrow();
+                    custom.setValue("minecraft:music_disc.cat");
+                    require(fixture.config().customMusic.equals("minecraft:music_disc.cat"), "Custom sound edit did not reach settings");
+                    go(settings, "Camera");
+                    go(settings, "Sound");
+                    var restored = settings.children().stream().filter(EditBox.class::isInstance).map(EditBox.class::cast).findFirst().orElseThrow();
+                    require(restored.getValue().equals("minecraft:music_disc.cat"), "Changing pages lost the custom sound");
+                });
+                context.takeScreenshot(TestScreenshotOptions.of("sound-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
                     settings.resize(220, 140);
