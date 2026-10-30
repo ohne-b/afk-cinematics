@@ -215,6 +215,40 @@ public final class TravelGameTest implements FabricClientGameTest {
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst()
                 .getInventory().countItem(Items.EMERALD) == 32, "Minecart view changed inventory"));
 
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                BlockPos base = BlockPos.containing(center.get());
+                for (BlockPos block : BlockPos.betweenClosed(base.offset(-1, -1, -24), base.offset(1, 3, 24))) {
+                    boolean wall = block.getX() != base.getX() || block.getY() == base.getY() + 3;
+                    var material = block.getY() < base.getY() ? Blocks.REDSTONE_BLOCK : wall ? Blocks.STONE : Blocks.AIR;
+                    player.level().setBlock(block, material.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                }
+                for (int z = -24; z <= 24; z++) player.level().setBlock(base.offset(0, 0, z),
+                    Blocks.POWERED_RAIL.defaultBlockState().setValue(PoweredRailBlock.SHAPE, RailShape.NORTH_SOUTH)
+                        .setValue(PoweredRailBlock.POWERED, true), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                //? if >=26.2 {
+                /*var cart = EntityTypes.MINECART.create(player.level(), EntitySpawnReason.COMMAND);
+                *///?} else {
+                var cart = EntityType.MINECART.create(player.level(), EntitySpawnReason.COMMAND);
+                //?}
+                require(cart != null, "Missing tunnel minecart");
+                cart.snapTo(base.getX() + .5, base.getY() + .0625, base.getZ() - 13.5, 0, 0);
+                player.level().addFreshEntity(cart);
+                require(player.startRiding(cart), "Could not board tunnel minecart");
+                cart.setDeltaMovement(0, 0, .2);
+            });
+            context.waitFor(client -> client.player.isPassenger());
+            context.waitTicks(20);
+            start(context);
+            Vec3 tunnelBefore = context.computeOnClient(client -> client.player.position());
+            context.waitTicks(15);
+            context.runOnClient(client -> {
+                require(AfkCinematics.showing(), "A straight rail tunnel had no trailing camera view");
+                require(client.player.position().distanceTo(tunnelBefore) > 2, "Tunnel minecart did not move");
+                require(Math.abs(camera(client).position().x() - center.get().x()) < .25, "Tunnel camera left the rail center");
+                AfkCinematics.stop();
+            });
+
             var air = new AtomicReference<Vec3>();
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
