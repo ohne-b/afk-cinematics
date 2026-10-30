@@ -146,5 +146,9 @@
   "ohneb_afk_cinematics.start.off": "Off",
   "ohneb_afk_cinematics.start.manual": "Manual",
   "ohneb_afk_cinematics.start.idle": "When idle",
-  "ohneb_afk_cinematics.start.cast": "On cast"
+  "ohneb_afk_cinematics.start.cast": "On cast",
+  "ohneb_afk_cinematics.keepChat": "Keep view in chat",
+  "ohneb_afk_cinematics.keepChat.help": "Type, scroll and use commands while the camera keeps running. Other menus still end the view.",
+  "ohneb_afk_cinematics.manualLook": "Keep view while looking",
+  "ohneb_afk_cinematics.manualLook.help": "After starting an AFK view manually, mouse or controller look changes your player aim without ending the shot. Movement still exits."
 }

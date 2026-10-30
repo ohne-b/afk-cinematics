@@ -112,6 +112,6 @@ public abstract class MouseMixin {
 
     @Inject(method = "onScroll", at = @At("HEAD"))
     private void afkCinematics$scroll(long window, double x, double y, CallbackInfo ci) {
-        if (window == AfkCinematics.window() && (x != 0 || y != 0)) AfkCinematics.stop();
+        if (window == AfkCinematics.window() && (x != 0 || y != 0)) AfkCinematics.mouseScrolled();
     }
 }

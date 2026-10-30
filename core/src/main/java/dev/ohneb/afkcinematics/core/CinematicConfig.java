@@ -48,6 +48,8 @@ public final class CinematicConfig {
     public StartMode minecarts = StartMode.AUTOMATIC;
     public StartMode flight = StartMode.AUTOMATIC;
     public boolean travelControls = true;
+    public boolean keepChat = true;
+    public boolean manualLook = false;
     public StartMode fishing = StartMode.AUTOMATIC;
 
     public boolean automatic(Scene.Kind activity) {

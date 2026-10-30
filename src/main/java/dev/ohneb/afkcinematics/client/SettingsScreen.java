@@ -145,6 +145,8 @@ public final class SettingsScreen extends Screen {
                     if (save()) AfkCinematics.showScreen(new KeyBindsScreen(this, minecraft.options));
                 }).tooltip(Tooltip.create(text("bindings.help"))).build());
                 widgets.add(toggle("travelControls", () -> config.travelControls, value -> config.travelControls = value));
+                widgets.add(toggle("keepChat", () -> config.keepChat, value -> config.keepChat = value));
+                widgets.add(toggle("manualLook", () -> config.manualLook, value -> config.manualLook = value));
             }
             case DISPLAY -> {
                 widgets.add(slider("fps", buttonWidth, 20, 240, config.cinematicFps, value -> config.cinematicFps = value));

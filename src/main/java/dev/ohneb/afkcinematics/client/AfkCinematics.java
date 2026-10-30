@@ -7,6 +7,10 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.ChatScreen;
+//? if >=1.21.9 {
+import net.minecraft.client.gui.components.ChatComponent;
+//?}
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
@@ -66,6 +70,9 @@ public final class AfkCinematics {
     private static Vec3 observedMotion = Vec3.ZERO;
     private static double course;
     private static boolean manualTravel;
+    private static boolean manualSession;
+    private static CinematicSession pendingChat;
+    private static boolean commandChat;
     private static FishingHook fishingHook;
     private static FishingHook lastFishingStart;
     private static InputConstants.Key activityUse;
@@ -142,7 +149,7 @@ public final class AfkCinematics {
         return source == player && cameraAudioActive(player) ? audioSubmerged && audioFluid.is(tag) : source.isEyeInFluid(tag);
     }
     public static int frameLimit() {
-        if (activity != Scene.Kind.PLAYER || !showing() || !eligible()) return 0;
+        if (activity != Scene.Kind.PLAYER || chatting() || !showing() || !eligible()) return 0;
         var client = Minecraft.getInstance();
         //? if >=1.21.5 {
         if (client.getFramerateLimitTracker().getThrottleReason()
@@ -184,9 +191,24 @@ public final class AfkCinematics {
         }
         boolean focus = client.isWindowActive();
         if (focus != focused) {
+            pendingChat = null;
             INPUT.resetHeld();
             if (focus || !config().unfocused) stop();
             focused = focus;
+        }
+        if (pendingChat != null) {
+            boolean open = pendingChat == session && focus && screen() == null && eligible();
+            pendingChat = null;
+            if (open) {
+                // Defer past charTyped so the opening key does not enter the new chat field.
+                //? if >=26.2 {
+                /*client.gui.openChatScreen(commandChat ? ChatComponent.ChatMethod.COMMAND : ChatComponent.ChatMethod.MESSAGE);
+                *///?} else if >=1.21.9 {
+                client.openChatScreen(commandChat ? ChatComponent.ChatMethod.COMMAND : ChatComponent.ChatMethod.MESSAGE);
+                //?} else {
+                /*((dev.ohneb.afkcinematics.mixin.ChatAccess)client).afkCinematics$chat(commandChat ? "/" : "");
+                *///?}
+            }
         }
         observedMotion = player == null || lastPosition == null ? Vec3.ZERO : player.position().subtract(lastPosition);
         if (player != null && travelVehicle(player.getVehicle()) && player.getVehicle() == lastVehicle)
@@ -233,7 +255,7 @@ public final class AfkCinematics {
         Minecraft client = Minecraft.getInstance();
         if (store == null || !config().enabled || !conflict.isEmpty() || player == null || world == null
             || client.player != player || client.level != world || client.getConnection() != connection
-            || screen() != null || client.isPaused()
+            || screen() != null && !chatting() || client.isPaused()
             || (!client.isWindowActive() && !config().unfocused)
             || !steering() && (activityUse == null ? INPUT.held() : INPUT.heldExcept(token(activityUse)))) return false;
         //? if >=26.2 {
@@ -264,6 +286,7 @@ public final class AfkCinematics {
         anchor = player.position();
         Vec subject = WorldGeometry.point(anchor.add(0, player.getBbHeight() * 0.65, 0));
         activity = activityKind();
+        manualSession = manual;
         manualTravel = manual && activity.travel();
         fishingHook = activity == Scene.Kind.FISHING ? FishingActivity.hook(player, world) : null;
         if (fishingHook != null) lastFishingStart = fishingHook;
@@ -287,15 +310,13 @@ public final class AfkCinematics {
     }
 
     public static void stop() {
-        if (activityUse != null) {
-            INPUT.suppress(token(activityUse));
-            clearBindings(activityUse);
-            activityUse = null;
-        }
+        cancelActivityUse();
+        pendingChat = null;
         session = null;
         movingGeometry = null;
         activity = Scene.Kind.PLAYER;
         manualTravel = false;
+        manualSession = false;
         vehicle = null;
         fishingHook = null;
         appliedCamera = null;
@@ -304,6 +325,32 @@ public final class AfkCinematics {
         manualWait = 0;
         manualFeedback = false;
         IDLE.reset(System.nanoTime());
+    }
+
+    private static void cancelActivityUse() {
+        if (activityUse != null) {
+            INPUT.suppress(token(activityUse));
+            clearBindings(activityUse);
+            activityUse = null;
+        }
+    }
+
+    private static boolean allowsChat(Screen screen) { return session != null && config().keepChat && screen instanceof ChatScreen; }
+    public static boolean chatting() { return allowsChat(screen()); }
+
+    public static void screenChanged(Screen next) {
+        if (next == null) return;
+        if (!allowsChat(next)) { stop(); return; }
+        cancelActivityUse();
+        INPUT.consumeHeld();
+        for (var binding : Minecraft.getInstance().options.keyMappings) {
+            if (binding.isDown()) INPUT.consume(token(((KeyMappingAccess)binding).afkCinematics$key()));
+        }
+        // Vanilla's screen close restores physical key states; quarantine them before that can happen.
+        for (var binding : Minecraft.getInstance().options.keyMappings) {
+            InputConstants.Key key = ((KeyMappingAccess)binding).afkCinematics$key();
+            if (INPUT.consumed(token(key))) clearBindings(key);
+        }
     }
 
     public static void nextShot() { if (session != null) session.nextShot(); }
@@ -380,6 +427,14 @@ public final class AfkCinematics {
             return false;
         }
         var options = Minecraft.getInstance().options;
+        if (chatting()) {
+            IDLE.reset(System.nanoTime());
+            if (INPUT.suppressed(token) && !INPUT.consumed(token)) return true;
+            INPUT.consume(token);
+            clearBindings(key);
+            return false;
+        }
+        if (INPUT.consumed(token)) return true;
         boolean dangerous = matches(options.keyAttack, key) || matches(options.keyUse, key) || matches(options.keyDrop, key);
         if (screenshot && action == InputConstants.PRESS) {
             // Capture handlers read the event directly; shared bindings and repeats stay suppressed.
@@ -395,6 +450,16 @@ public final class AfkCinematics {
                     if (ownsCamera() || manualWait > 0) stop();
                     else requestStart();
                 } else nextShot();
+            }
+            return true;
+        }
+        if (session != null && config().keepChat && screen() == null && (matches(options.keyChat, key) || matches(options.keyCommand, key))) {
+            if (INPUT.suppressed(token)) return true;
+            INPUT.consume(token);
+            clearBindings(key);
+            if (action == InputConstants.PRESS) {
+                pendingChat = session;
+                commandChat = !matches(options.keyChat, key);
             }
             return true;
         }
@@ -430,7 +495,7 @@ public final class AfkCinematics {
     public static boolean allowActivityUse() {
         var client = Minecraft.getInstance();
         if (session == null || player == null || player != client.player || world == null || world != client.level
-            || connection != client.getConnection() || client.hitResult == null || client.hitResult.getType() != HitResult.Type.MISS) return false;
+            || connection != client.getConnection() || screen() != null || client.hitResult == null || client.hitResult.getType() != HitResult.Type.MISS) return false;
         if (activity == Scene.Kind.FISHING) {
             if (fishingHook == null || FishingActivity.hook(player, world) != fishingHook) return false;
         } else if (activity != Scene.Kind.FLIGHT || !manualTravel || !config().travelControls || !player.isFallFlying()) return false;
@@ -455,9 +520,10 @@ public final class AfkCinematics {
     }
 
     public static void blockInput(InputConstants.Key key) {
-        INPUT.press(token(key), true);
+        if (chatting()) INPUT.consume(token(key));
+        else INPUT.press(token(key), true);
         clearBindings(key);
-        stop();
+        if (!chatting()) stop();
     }
 
     private static long token(InputConstants.Key key) {
@@ -467,8 +533,13 @@ public final class AfkCinematics {
     public static void mouseMoved(double x, double y) {
         if (Minecraft.getInstance().isWindowActive() && Math.abs(x) + Math.abs(y) > 0.01) {
             IDLE.reset(System.nanoTime());
-            if (!aiming()) stop();
+            if (!chatting() && !aiming()) stop();
         }
+    }
+
+    public static void mouseScrolled() {
+        IDLE.reset(System.nanoTime());
+        if (!chatting()) stop();
     }
 
     private static boolean movementInput() {
@@ -505,7 +576,11 @@ public final class AfkCinematics {
             || session == null && manualWait > 0 && activityKind().travel());
     }
 
-    private static boolean aiming() { return steering() || session != null && activity == Scene.Kind.FISHING; }
+    private static boolean aiming() {
+        return steering() || session != null && activity == Scene.Kind.FISHING
+            || store != null && config().manualLook && (session != null && manualSession && activity == Scene.Kind.PLAYER
+                || session == null && manualWait > 0 && activityKind() == Scene.Kind.PLAYER);
+    }
 
     private static boolean travelling() {
         Scene.Kind kind = activityKind();
