@@ -41,8 +41,9 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
                     var settings = new SettingsScreen(parent);
                     AfkCinematics.showScreen(settings);
-                    go(settings, "Camera");
                 });
+                context.takeScreenshot(TestScreenshotOptions.of("settings-home").withDestinationDir(artifacts));
+                context.runOnClient(client -> go((SettingsScreen)AfkCinematics.screen(), "Camera"));
                 context.takeScreenshot(TestScreenshotOptions.of("camera-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
@@ -130,6 +131,9 @@ public final class SettingsGameTest implements FabricClientGameTest {
                         settings.mouseScrolled(0, 0, 0, -1);
                         checkBounds(settings);
                     }
+                    settings.keyPressed(new KeyEvent(InputConstants.KEY_ESCAPE, 0, 0));
+                    require(AfkCinematics.screen() == settings, "Back closed settings instead of returning home");
+                    button(settings, "Activities");
                     settings.onClose();
                     require(AfkCinematics.screen() == settings, "First save failure hid the error");
                     require(settings.children().stream().anyMatch(child -> child instanceof Button button
