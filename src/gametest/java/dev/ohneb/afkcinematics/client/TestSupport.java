@@ -98,7 +98,7 @@ public final class TestSupport {
 
     public static boolean hidden(Minecraft client) {
         //? if >=26.2 {
-        /*return client.gui.hud.isHidden();
+        /*return ((dev.ohneb.afkcinematics.testmixin.HudStateAccess)client.gui.hud).afkCinematics$storedHidden();
         *///?} else {
         return client.options.hideGui;
         //?}
@@ -106,7 +106,7 @@ public final class TestSupport {
 
     public static void hide(Minecraft client, boolean hidden) {
         //? if >=26.2 {
-        /*if (client.gui.hud.isHidden() != hidden) client.gui.hud.toggle();
+        /*if (hidden(client) != hidden) client.gui.hud.toggle();
         *///?} else {
         client.options.hideGui = hidden;
         //?}

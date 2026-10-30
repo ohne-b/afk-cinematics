@@ -28,6 +28,14 @@ public final class ToastGameTest implements FabricClientGameTest {
             context.waitFor(client -> toast.frames > 0);
             start(context);
             context.waitTicks(10);
+            context.runOnClient(client -> {
+                require(!hidden(client), "Cinematic changed the stored F1 setting");
+                require(effectiveHidden(client), "Cinematic HUD hiding did not reach vanilla F1 consumers");
+                //? if >=26.2 {
+                /*require(client.gameRenderer.gameRenderState().guiRenderState.isHudHidden,
+                    "Extracted HUD visibility remained stale");
+                *///?}
+            });
             int frames = context.computeOnClient(client -> toast.frames);
             int updates = context.computeOnClient(client -> toast.updates);
             context.waitTicks(20);
@@ -37,6 +45,25 @@ public final class ToastGameTest implements FabricClientGameTest {
                 AfkCinematics.config().hideHud = false;
             });
             context.waitFor(client -> toast.frames > frames);
+            context.runOnClient(client -> {
+                require(!effectiveHidden(client), "Disabling Hide HUD left vanilla visibility hidden");
+                hide(client, true);
+            });
+            context.waitTicks(5);
+            context.runOnClient(client -> {
+                require(AfkCinematics.showing() && hidden(client) && effectiveHidden(client), "F1 state was not preserved");
+                AfkCinematics.config().hideHud = true;
+                // Toggle twice under the override: each must invert the real stored state.
+                //? if >=26.2 {
+                /*client.gui.hud.toggle();
+                require(!hidden(client) && effectiveHidden(client), "F1 toggle read the cinematic override");
+                client.gui.hud.toggle();
+                *///?}
+                AfkCinematics.stop();
+                require(hidden(client) && effectiveHidden(client), "Stopping lost the user's F1 setting");
+                hide(client, false);
+            });
+            start(context);
             context.runOnClient(client -> AfkCinematics.config().hideHud = true);
             context.waitTicks(5);
             int beforeExit = context.computeOnClient(client -> toast.frames);
@@ -51,6 +78,14 @@ public final class ToastGameTest implements FabricClientGameTest {
                 focused = null;
             });
         }
+    }
+
+    private static boolean effectiveHidden(Minecraft client) {
+        //? if >=26.2 {
+        /*return client.gui.hud.isHidden();
+        *///?} else {
+        return !Minecraft.renderNames();
+        //?}
     }
 
     private static ToastManager manager(Minecraft client) {

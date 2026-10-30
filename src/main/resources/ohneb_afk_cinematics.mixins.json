@@ -13,6 +13,7 @@
     "GuiMixin",
     "HandMixin",
     "HudMixin",
+    "HudVisibilityMixin",
     "KeyboardMixin",
     "KeyMappingAccess",
     "KeyMappingMixin",
@@ -25,6 +26,7 @@
     "PlayerNameMixin",
     "PlayerAudioMixin",
     "ScreenshotMixin",
+    "ScreenEffectVisibilityMixin",
     "ToastMixin",
     "UnderwaterAdditionsMixin",
     "UnderwaterLoopMixin"

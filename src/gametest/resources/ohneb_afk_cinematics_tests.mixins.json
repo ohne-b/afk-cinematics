@@ -2,6 +2,6 @@
   "required": true,
   "package": "dev.ohneb.afkcinematics.testmixin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["KeyboardInvoker", "MouseInvoker", "PhysicalInputMixin", "FocusMixin", "ControlClickMixin", "SceneryFrameMixin", "CameraStopMixin", "PlayerNameProbe", "ScreenshotProbe", "UnderwaterAudioProbe", "PlayerWaterInvoker"],
+  "client": ["KeyboardInvoker", "MouseInvoker", "PhysicalInputMixin", "FocusMixin", "ControlClickMixin", "SceneryFrameMixin", "CameraStopMixin", "PlayerNameProbe", "ScreenshotProbe", "UnderwaterAudioProbe", "PlayerWaterInvoker", "HudStateAccess"],
   "injectors": {"defaultRequire": 1}
 }
