@@ -40,11 +40,11 @@ public final class ConfigStore {
             config.letterbox = bool("letterbox", false);
             config.music = bool("music", false);
             config.unfocused = bool("unfocused", false);
-            config.boats = bool("boats", true);
-            config.minecarts = bool("minecarts", true);
-            config.flight = bool("flight", true);
+            config.boats = startMode("boats");
+            config.minecarts = startMode("minecarts");
+            config.flight = startMode("flight");
             config.travelControls = bool("travelControls", true);
-            config.fishing = bool("fishing", true);
+            config.fishing = startMode("fishing");
         } catch (IOException | RuntimeException exception) {
             readable = false;
             config.enabled = false;
@@ -55,6 +55,12 @@ public final class ConfigStore {
     public CinematicConfig config() { return config; }
     public boolean readable() { return readable; }
     public String error() { return error; }
+
+    private CinematicConfig.StartMode startMode(String key) {
+        var legacy = !bool(key, true) ? CinematicConfig.StartMode.OFF
+            : config.automatic ? CinematicConfig.StartMode.AUTOMATIC : CinematicConfig.StartMode.MANUAL;
+        return enumeration(key, legacy);
+    }
 
     private boolean bool(String key, boolean fallback) {
         var value = document.get(key);
@@ -122,11 +128,11 @@ public final class ConfigStore {
         updated.addProperty("letterbox", config.letterbox);
         updated.addProperty("music", config.music);
         updated.addProperty("unfocused", config.unfocused);
-        updated.addProperty("boats", config.boats);
-        updated.addProperty("minecarts", config.minecarts);
-        updated.addProperty("flight", config.flight);
+        updated.addProperty("boats", config.boats.name().toLowerCase(Locale.ROOT));
+        updated.addProperty("minecarts", config.minecarts.name().toLowerCase(Locale.ROOT));
+        updated.addProperty("flight", config.flight.name().toLowerCase(Locale.ROOT));
         updated.addProperty("travelControls", config.travelControls);
-        updated.addProperty("fishing", config.fishing);
+        updated.addProperty("fishing", config.fishing.name().toLowerCase(Locale.ROOT));
         Path temporary = null;
         try {
             Path directory = path.toAbsolutePath().getParent();

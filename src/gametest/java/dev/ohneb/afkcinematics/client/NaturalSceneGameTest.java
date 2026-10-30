@@ -123,7 +123,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                         } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
                     }
                     AfkCinematics.config().subject = CinematicConfig.Subject.SCENERY;
-                    AfkCinematics.config().fishing = true;
+                    AfkCinematics.config().fishing = dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.MANUAL;
                     String selectedShots = System.getProperty("afkcinematics.test.shots");
                     if (selectedShots != null) {
                         var choices = java.util.EnumSet.noneOf(Shot.Type.class);
@@ -142,7 +142,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                     sceneryFrames.add("nanoseconds,x,y,z,opacity,scenery,shot,type,yaw,pitch");
                 });
                 if (fishing) {
-                    context.runOnClient(client -> AfkCinematics.config().automatic = true);
+                    context.runOnClient(client -> AfkCinematics.config().fishing = CinematicConfig.StartMode.AUTOMATIC);
                     mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS);
                     context.waitTicks(1);
                     mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.RELEASE);

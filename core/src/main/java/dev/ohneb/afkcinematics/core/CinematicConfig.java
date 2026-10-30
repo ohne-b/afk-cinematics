@@ -3,6 +3,7 @@ package dev.ohneb.afkcinematics.core;
 import java.util.EnumSet;
 
 public final class CinematicConfig {
+    public enum StartMode { OFF, MANUAL, AUTOMATIC }
     public enum Motion { GENTLE, REDUCED, STILL }
     public enum Subject { MIXED, PLAYER, SCENERY }
     public enum Lens {
@@ -43,9 +44,19 @@ public final class CinematicConfig {
     public boolean letterbox = false;
     public boolean music = false;
     public boolean unfocused = false;
-    public boolean boats = true;
-    public boolean minecarts = true;
-    public boolean flight = true;
+    public StartMode boats = StartMode.AUTOMATIC;
+    public StartMode minecarts = StartMode.AUTOMATIC;
+    public StartMode flight = StartMode.AUTOMATIC;
     public boolean travelControls = true;
-    public boolean fishing = true;
+    public StartMode fishing = StartMode.AUTOMATIC;
+
+    public boolean automatic(Scene.Kind activity) {
+        return switch (activity) {
+            case BOAT -> boats == StartMode.AUTOMATIC;
+            case MINECART -> minecarts == StartMode.AUTOMATIC;
+            case FLIGHT -> flight == StartMode.AUTOMATIC;
+            case FISHING -> fishing == StartMode.AUTOMATIC;
+            default -> automatic;
+        };
+    }
 }

@@ -44,6 +44,7 @@ public final class TestSupport {
             var config = AfkCinematics.config();
             config.enabled = true;
             config.automatic = false;
+            config.boats = config.minecarts = config.flight = config.fishing = CinematicConfig.StartMode.MANUAL;
             config.unfocused = true;
             config.music = false;
             config.motion = CinematicConfig.Motion.GENTLE;

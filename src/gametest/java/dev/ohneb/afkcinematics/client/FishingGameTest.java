@@ -1,5 +1,7 @@
 package dev.ohneb.afkcinematics.client;
 
+import dev.ohneb.afkcinematics.core.CinematicConfig;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.ohneb.afkcinematics.core.Shot;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -25,8 +27,8 @@ public final class FishingGameTest implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
         configure(context);
         context.runOnClient(client -> {
-            AfkCinematics.config().fishing = true;
-            AfkCinematics.config().automatic = true;
+            AfkCinematics.config().fishing = dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.MANUAL;
+            AfkCinematics.config().fishing = CinematicConfig.StartMode.AUTOMATIC;
             AfkCinematics.config().shots = EnumSet.of(Shot.Type.ANGLER);
             sceneryFrames = new ArrayList<>();
             revealedShot = null;
@@ -180,7 +182,7 @@ public final class FishingGameTest implements FabricClientGameTest {
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
-                AfkCinematics.config().automatic = false;
+                AfkCinematics.config().fishing = CinematicConfig.StartMode.MANUAL;
                 sceneryFrames = null;
                 revealedShot = null;
                 focused = null;
