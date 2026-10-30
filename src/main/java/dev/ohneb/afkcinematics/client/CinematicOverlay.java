@@ -7,6 +7,9 @@ public final class CinematicOverlay {
 
     public static void draw(GuiGraphics graphics) {
         if (!AfkCinematics.showing()) return;
+        //? if >=26.1 {
+        /*graphics.nextStratum();
+        *///?}
         int width = graphics.guiWidth(), height = graphics.guiHeight();
         if (AfkCinematics.config().letterbox) {
             int bar = Math.round(height * 0.09F);
