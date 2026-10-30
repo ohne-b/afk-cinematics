@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Open travel and fishing shot choices directly from Activities. (#48)
 - Use familiar settings choices, show the start key and explain unavailable starts. (#46)
 - Choose cinematic playlists, set their volume and control music from chat. (#45)
 - Keep cinematics running in chat, with optional mouse look after a manual start. (#44)

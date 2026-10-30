@@ -45,6 +45,8 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     AfkCinematics.showScreen(settings);
                 });
                 context.takeScreenshot(TestScreenshotOptions.of("settings-home").withDestinationDir(artifacts));
+                context.runOnClient(client -> go((SettingsScreen)AfkCinematics.screen(), "Activities"));
+                context.takeScreenshot(TestScreenshotOptions.of("activity-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> go((SettingsScreen)AfkCinematics.screen(), "Camera"));
                 context.takeScreenshot(TestScreenshotOptions.of("camera-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
