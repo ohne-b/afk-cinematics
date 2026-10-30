@@ -215,6 +215,7 @@ public final class TravelGameTest implements FabricClientGameTest {
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst()
                 .getInventory().countItem(Items.EMERALD) == 32, "Minecart view changed inventory"));
 
+            context.waitTicks(65); // Let vanilla's 60-tick dismount cooldown expire before the next fixture.
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
                 BlockPos base = BlockPos.containing(center.get());
