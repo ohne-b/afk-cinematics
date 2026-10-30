@@ -11,19 +11,13 @@ import org.spongepowered.asm.mixin.Mixin;
 public abstract class HudRenderMixin {
     //? if <26.2 {
     //? if >=26.1 {
-    /*@WrapMethod(method = "extract")
+    /*// Split the name to bypass Stonecutter's GUI render-to-extraction replacement.
+    @WrapMethod(method = {"extract", "ren" + "der(Lnet/minecraft/client/DeltaTracker;Z)V"})
     *///?} else {
     @WrapMethod(method = "render(Lnet/minecraft/client/DeltaTracker;Z)V")
     //?}
     private void afkCinematics$hideModHuds(DeltaTracker delta, boolean advance, Operation<Void> original) {
         HudVisibility.render(() -> original.call(delta, advance));
     }
-    //? if >=26.1 {
-    /*// Keep Stonecutter's GUI render-to-extraction replacement away from this world-render method.
-    @WrapMethod(method = "ren" + "der()V")
-    private void afkCinematics$renderModHuds(Operation<Void> original) {
-        HudVisibility.render(() -> original.call());
-    }
-    *///?}
     //?}
 }
