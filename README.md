@@ -1,3 +1,5 @@
+![AFK Cinematics ? cinematic flight over a mountain forest](https://raw.githubusercontent.com/ohne-b/afk-cinematics/main/assets/banner.webp)
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/ohne-b/afk-cinematics/main/assets/logo.svg" width="128" alt="AFK Cinematics logo">
 </p>
