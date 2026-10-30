@@ -8,6 +8,7 @@ import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
@@ -25,6 +26,7 @@ import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.function.Function;
 
 public final class SettingsScreen extends Screen {
     private enum Page { HOME, GENERAL, ACTIVITIES, CAMERA, DISPLAY, SOUND, CONTROLS, SHOTS }
@@ -47,8 +49,9 @@ public final class SettingsScreen extends Screen {
     private int offset;
     private int maxOffset;
     private Component error = Component.empty();
-    private boolean saveFailed;
-    private Button close;
+    private boolean saveFailed, focusSaveError;
+    private Button close, preview;
+    private Component startIssue;
 
     public SettingsScreen(Screen parent) {
         super(text("settings"));
@@ -81,14 +84,32 @@ public final class SettingsScreen extends Screen {
             addRenderableWidget(widget);
         }
         int half = (contentWidth - 6) / 2;
-        var preview = Button.builder(text("preview"), button -> {
+        preview = Button.builder(text("preview"), button -> {
             if (save()) { AfkCinematics.showScreen(null); AfkCinematics.requestStart(); }
         }).bounds(width / 2 - half - 3, height - 26, half, 20).build();
-        preview.active = minecraft.level != null && config.enabled && AfkCinematics.conflict().isEmpty() && AfkCinematics.store().readable();
-        preview.setTooltip(Tooltip.create(text("preview.help")));
+        startIssue = null;
+        updateStart();
         addRenderableWidget(preview);
         close = addRenderableWidget(Button.builder(saveFailed ? text("close_unsaved") : CommonComponents.GUI_DONE, button -> onClose())
             .bounds(width / 2 + 3, height - 26, half, 20).build());
+    }
+
+    @Override public void tick() {
+        super.tick();
+        updateStart();
+        if (focusSaveError) {
+            setFocused(close);
+            close.setFocused(true);
+            focusSaveError = false;
+        }
+    }
+
+    private void updateStart() {
+        Component problem = AfkCinematics.startProblem();
+        if (problem.equals(startIssue)) return;
+        startIssue = problem;
+        preview.active = problem.getString().isEmpty();
+        preview.setTooltip(Tooltip.create(preview.active ? text("preview.help") : problem));
     }
 
     private List<AbstractWidget> controls(CinematicConfig config, int buttonWidth) {
@@ -105,29 +126,18 @@ public final class SettingsScreen extends Screen {
                 widgets.add(toggle("unfocused", () -> config.unfocused, value -> config.unfocused = value));
             }
             case CAMERA -> {
-                widgets.add(Button.builder(value("subject", config.subject), button -> {
-                    config.subject = CinematicConfig.Subject.values()[(config.subject.ordinal() + 1) % CinematicConfig.Subject.values().length];
-                    button.setMessage(value("subject", config.subject));
+                widgets.add(choice("subject", config.subject, CinematicConfig.Subject.values(), value -> text(value.name().toLowerCase(Locale.ROOT)), value -> {
+                    config.subject = value;
                     refreshControls();
-                }).tooltip(Tooltip.create(text("subject.help"))).build());
-                widgets.add(Button.builder(text("playerShare", config.playerShare), button -> {
-                    config.playerShare = (config.playerShare / 25 + 1) % 5 * 25;
-                    button.setMessage(text("playerShare", config.playerShare));
-                }).tooltip(Tooltip.create(text("playerShare.help"))).build());
+                }, value -> Tooltip.create(text("subject.help"))));
+                widgets.add(slider("playerShare", buttonWidth, 0, 100, config.playerShare, value -> config.playerShare = value));
                 widgets.getLast().active = config.subject == CinematicConfig.Subject.MIXED;
-                widgets.add(Button.builder(value("motion", config.motion), button -> {
-                    config.motion = CinematicConfig.Motion.values()[(config.motion.ordinal() + 1) % CinematicConfig.Motion.values().length];
-                    button.setMessage(value("motion", config.motion));
-                }).tooltip(Tooltip.create(text("motion.help"))).build());
-                widgets.add(Button.builder(value("pace", config.pace), button -> {
-                    config.pace = CinematicConfig.Pace.values()[(config.pace.ordinal() + 1) % CinematicConfig.Pace.values().length];
-                    button.setMessage(value("pace", config.pace));
-                    button.setTooltip(paceHelp(config));
-                }).tooltip(paceHelp(config)).build());
-                widgets.add(Button.builder(value("lens", config.lens), button -> {
-                    config.lens = CinematicConfig.Lens.values()[(config.lens.ordinal() + 1) % CinematicConfig.Lens.values().length];
-                    button.setMessage(value("lens", config.lens));
-                }).tooltip(Tooltip.create(text("lens.help"))).build());
+                widgets.add(choice("motion", config.motion, CinematicConfig.Motion.values(), value -> text(value.name().toLowerCase(Locale.ROOT)),
+                    value -> config.motion = value, value -> Tooltip.create(text("motion.help"))));
+                widgets.add(choice("pace", config.pace, CinematicConfig.Pace.values(), value -> text("pace.range", (int)value.minimumSeconds, (int)value.maximumSeconds),
+                    value -> config.pace = value, value -> Tooltip.create(text("pace.help", (int)value.minimumSeconds, (int)value.maximumSeconds))));
+                widgets.add(choice("lens", config.lens, CinematicConfig.Lens.values(), value -> text(value.name().toLowerCase(Locale.ROOT)),
+                    value -> config.lens = value, value -> Tooltip.create(text("lens.help"))));
                 widgets.add(Button.builder(text("shots", config.shots.size()), button -> {
                     page = Page.SHOTS;
                     offset = 0;
@@ -142,12 +152,10 @@ public final class SettingsScreen extends Screen {
             }
             case SOUND -> {
                 widgets.add(toggle("music", () -> config.music, value -> config.music = value));
-                widgets.add(Button.builder(label("soundtrack", text("soundtrack." + config.soundtrack.name().toLowerCase(Locale.ROOT))), button -> {
-                    var choices = CinematicConfig.Soundtrack.values();
-                    config.soundtrack = choices[(config.soundtrack.ordinal() + 1) % choices.length];
-                    button.setMessage(label("soundtrack", text("soundtrack." + config.soundtrack.name().toLowerCase(Locale.ROOT))));
+                widgets.add(choice("soundtrack", config.soundtrack, CinematicConfig.Soundtrack.values(), value -> text("soundtrack." + value.name().toLowerCase(Locale.ROOT)), value -> {
+                    config.soundtrack = value;
                     refreshControls();
-                }).tooltip(Tooltip.create(text("soundtrack.help"))).build());
+                }, value -> Tooltip.create(text("soundtrack.help"))));
                 widgets.add(slider("musicVolume", buttonWidth, 0, 100, config.musicVolume, value -> config.musicVolume = value));
                 if (config.soundtrack == CinematicConfig.Soundtrack.CUSTOM) {
                     var input = new EditBox(font, buttonWidth, 20, text("customMusic"));
@@ -192,6 +200,12 @@ public final class SettingsScreen extends Screen {
                     config.shots.addAll(types);
                     refreshControls();
                 }).build());
+                if (shotSet == ShotSet.SCENERY) widgets.add(Button.builder(text("shots.moving"), button -> {
+                    config.shots.addAll(types);
+                    config.shots.remove(Shot.Type.PAN);
+                    config.shots.remove(Shot.Type.STILL);
+                    refreshControls();
+                }).build());
                 for (Shot.Type type : types) {
                     String key = "shot." + type.name().toLowerCase(Locale.ROOT);
                     Button button = toggle(key, () -> config.shots.contains(type), enabled -> {
@@ -202,12 +216,6 @@ public final class SettingsScreen extends Screen {
                     shotButtons.put(type, button);
                     widgets.add(button);
                 }
-                if (shotSet == ShotSet.SCENERY) widgets.add(Button.builder(text("shots.moving"), button -> {
-                    config.shots.addAll(types);
-                    config.shots.remove(Shot.Type.PAN);
-                    config.shots.remove(Shot.Type.STILL);
-                    refreshControls();
-                }).build());
                 refreshShots(config);
             }
         }
@@ -266,20 +274,23 @@ public final class SettingsScreen extends Screen {
         return Button.builder(text(key), button -> open(destination)).tooltip(Tooltip.create(text(key + ".help"))).build();
     }
 
-    private Button activity(String key, Supplier<CinematicConfig.StartMode> get, Consumer<CinematicConfig.StartMode> set) {
-        return Button.builder(label(key, startLabel(key, get.get())), button -> {
-            var modes = CinematicConfig.StartMode.values();
-            set.accept(modes[(get.get().ordinal() + 1) % modes.length]);
-            button.setMessage(label(key, startLabel(key, get.get())));
-        }).tooltip(Tooltip.create(text(key + ".help"))).build();
+    private <T> CycleButton<T> choice(String key, T initial, T[] values, Function<T, Component> labels,
+        Consumer<T> set, Function<T, Tooltip> help) {
+        //? if >=1.21.11 {
+        var builder = CycleButton.builder(labels, initial).withValues(values);
+        //?} else {
+        /*var builder = CycleButton.builder(labels).withValues(values).withInitialValue(initial);
+        *///?}
+        return builder.withTooltip(help::apply).create(text(key), (button, value) -> set.accept(value));
+    }
+
+    private CycleButton<CinematicConfig.StartMode> activity(String key, Supplier<CinematicConfig.StartMode> get, Consumer<CinematicConfig.StartMode> set) {
+        return choice(key, get.get(), CinematicConfig.StartMode.values(), value -> startLabel(key, value), set,
+            value -> Tooltip.create(text(key + ".help")));
     }
 
     private static Component startLabel(String key, CinematicConfig.StartMode mode) {
         return text("start." + (mode == CinematicConfig.StartMode.AUTOMATIC ? key.equals("fishing") ? "cast" : "idle" : mode.name().toLowerCase(Locale.ROOT)));
-    }
-
-    private static Tooltip paceHelp(CinematicConfig config) {
-        return Tooltip.create(text("pace.help", (int)config.pace.minimumSeconds, (int)config.pace.maximumSeconds));
     }
 
     private void refreshShots(CinematicConfig config) {
@@ -294,12 +305,12 @@ public final class SettingsScreen extends Screen {
         Button button = Button.builder(label(key, get.getAsBoolean() ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF), b -> {
             set.accept(!get.getAsBoolean());
             b.setMessage(label(key, get.getAsBoolean() ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF));
+            if (key.equals("enabled")) refreshControls();
         }).build();
         button.setTooltip(Tooltip.create(text(key + ".help")));
         return button;
     }
 
-    private static Component value(String key, Enum<?> value) { return label(key, text(value.name().toLowerCase(Locale.ROOT))); }
     private static Component label(String key, Component value) { return Component.translatable("options.generic_value", text(key), value); }
     private static Component text(String key, Object... values) { return Component.translatable("ohneb_afk_cinematics." + key, values); }
 
@@ -309,6 +320,8 @@ public final class SettingsScreen extends Screen {
         error = text("save_error");
         saveFailed = true;
         close.setMessage(text("close_unsaved"));
+        close.setTooltip(Tooltip.create(error));
+        focusSaveError = true;
         return false;
     }
 
@@ -350,6 +363,9 @@ public final class SettingsScreen extends Screen {
         else if (status.getString().isEmpty() && page == Page.SOUND && AfkCinematics.config().soundtrack == CinematicConfig.Soundtrack.CUSTOM
             && !CinematicMusic.customAvailable(AfkCinematics.config().customMusic)) status = text("customMusic.missing");
         else if (status.getString().isEmpty() && maxOffset > 0) status = text("scroll");
+        else if (status.getString().isEmpty() && (page == Page.HOME || page == Page.CONTROLS || page == Page.ACTIVITIES)) status = AfkCinematics.TOGGLE.isUnbound()
+            ? text("key.unbound") : text("key.start", AfkCinematics.TOGGLE.getTranslatedKeyMessage());
+        else if (status.getString().isEmpty() && (page == Page.CAMERA || page == Page.SOUND)) status = text("key.choices");
         if (!status.getString().isEmpty()) {
             var lines = font.split(status, width - 24);
             for (int i = 0; i < Math.min(2, lines.size()); i++) {
