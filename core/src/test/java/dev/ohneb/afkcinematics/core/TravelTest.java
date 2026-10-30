@@ -33,6 +33,28 @@ class TravelTest {
         }
     }
 
+    @Test void minecartTrailFitsAStraightRailTunnelWithoutChangingOpenViews() {
+        Geometry tunnel = new Geometry() {
+            private boolean inside(Vec point, double margin) {
+                return Math.abs(point.x()) + margin < .5 && point.y() - margin > -1.2 && point.y() + margin < .8;
+            }
+            public boolean clear(Vec a, Vec b, double margin) { return inside(a, .25 + margin) && inside(b, .25 + margin); }
+            public boolean visible(Vec a, Vec b, double margin) { return inside(a, margin) && inside(b, margin); }
+        };
+        var config = new CinematicConfig();
+        config.shots = EnumSet.of(Shot.Type.TRAIL);
+        var search = new TravelSearch(ZERO, Scene.Kind.MINECART, config, new ShotHistory(), new Random(3));
+        ShotPlanner.Plan found = null;
+        while (!search.exhausted() && found == null) found = search.next(tunnel);
+        assertNotNull(found, "A straight, one-block-wide rail tunnel needs a centered trailing fallback");
+        assertEquals(0, found.shot().start().x(), 1e-10);
+        assertEquals(0, found.shot().start().y(), 1e-10);
+        assertEquals(5, found.shot().start().distance(ZERO), 1e-10);
+        var open = new TravelSearch(ZERO, Scene.Kind.MINECART, config, new ShotHistory(), new Random(3)).next(OPEN);
+        assertNotNull(open);
+        assertTrue(Math.abs(open.shot().start().x()) > 3, "Open journeys still prefer the wide angled view");
+    }
+
     @Test void movingViewsSweepFromTheLastWorldPositionEvenUnderCover() {
         Geometry wall = new Geometry() {
             public boolean clear(Vec a, Vec b, double margin) { return Math.min(a.x(), b.x()) >= 0 || Math.max(a.x(), b.x()) < 0; }

@@ -62,6 +62,11 @@ final class TravelSearch {
             case LEAD -> 155 * side;
             default -> 55 * side;
         };
+        if (kind == Scene.Kind.MINECART && type == Shot.Type.TRAIL && view >= 4) {
+            // Keep the closest fallback inside a straight rail tunnel.
+            angle = 0;
+            height = 0;
+        }
         double radians = Math.toRadians(angle);
         Vec start = subject.add(new Vec(Math.sin(radians) * distance, height, -Math.cos(radians) * distance));
         double lead = switch (type) {
