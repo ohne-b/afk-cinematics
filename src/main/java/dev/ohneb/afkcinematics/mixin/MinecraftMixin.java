@@ -9,9 +9,18 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.concurrent.CompletableFuture;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 
 @Mixin(Minecraft.class)
 public abstract class MinecraftMixin {
+    //? if <26.2 {
+    @ModifyExpressionValue(method = "renderNames",
+        at = @At(value = "FIELD", target = "Lnet/minecraft/client/Options;hideGui:Z", opcode = 180))
+    private static boolean afkCinematics$hiddenNames(boolean original) {
+        return original || AfkCinematics.hideHud();
+    }
+    //?}
+
     @Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
     private void afkCinematics$attack(CallbackInfoReturnable<Boolean> cir) {
         if (AfkCinematics.ownsCamera()) { AfkCinematics.stop(); cir.setReturnValue(false); }
