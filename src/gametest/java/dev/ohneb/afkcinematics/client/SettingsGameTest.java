@@ -41,16 +41,17 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
                     var settings = new SettingsScreen(parent);
                     AfkCinematics.showScreen(settings);
-                    press(settings, "Camera");
+                    go(settings, "Camera");
                 });
                 context.takeScreenshot(TestScreenshotOptions.of("camera-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
-                    press(settings, "Activities...");
-                    press(settings, "Fishing: ON");
-                    require(!fixture.config().fishing, "Fishing control did not change its setting");
-                    press(settings, "Fishing: OFF");
-                    press(settings, "Camera");
+                    go(settings, "Activities");
+                    press(settings, "Fishing: On cast");
+                    require(fixture.config().fishing == dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.OFF, "Fishing control did not change its setting");
+                    press(settings, "Fishing: Off");
+                    press(settings, "Fishing: Manual");
+                    go(settings, "Camera");
                     press(settings, "Shot types: " + Shot.Type.values().length + " enabled");
                     for (Shot.Type type : Shot.Type.values()) {
                         if (type == Shot.Type.PAN) continue;
@@ -89,7 +90,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
                 context.takeScreenshot(TestScreenshotOptions.of("fishing-shot-set").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
-                    press(settings, "Display");
+                    go(settings, "Display");
                     var fps = fpsSlider(settings);
                     client.setLastInputType(InputType.KEYBOARD_TAB);
                     settings.setFocused(fps);
@@ -106,7 +107,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     var settings = (SettingsScreen)AfkCinematics.screen();
                     settings.resize(220, 140);
                     checkBounds(settings);
-                    press(settings, "Camera");
+                    go(settings, "Camera");
                     press(settings, "Shot types: " + Shot.Type.values().length + " enabled");
                     for (Shot.Type type : Shot.Type.values()) {
                         showShotSet(settings, type);
@@ -114,8 +115,8 @@ public final class SettingsGameTest implements FabricClientGameTest {
                         button(settings, label + ": ON");
                         checkBounds(settings);
                     }
-                    for (String page : new String[]{"Camera", "Display", "General"}) {
-                        press(settings, page);
+                    for (String page : new String[]{"Camera", "Display", "AFK", "Activities", "Sound", "Controls"}) {
+                        go(settings, page);
                         checkBounds(settings);
                         if (page.equals("Display")) {
                             var fps = fpsSlider(settings);
@@ -163,14 +164,14 @@ public final class SettingsGameTest implements FabricClientGameTest {
     }
 
     private static void showShotSet(SettingsScreen settings, Shot.Type type) {
-        String target = "Set: " + (type.travelOnly() ? "Travel" : type.fishingOnly() ? "Fishing" : "Player & scenery");
+        String target = "For: " + (type.travelOnly() ? "Travel" : type.fishingOnly() ? "Fishing" : "Player & scenery");
         for (int step = 0; step < 3; step++) {
-            Button selector = button(settings, "shot-set selector", label -> label.startsWith("Set: "));
+            Button selector = button(settings, "shot-set selector", label -> label.startsWith("For: "));
             if (selector.getMessage().getString().equals(target)) return;
             settings.setFocused(selector);
             selector.setFocused(true);
             selector.onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
-            require(settings.getFocused() instanceof Button focused && focused.getMessage().getString().startsWith("Set: "),
+            require(settings.getFocused() instanceof Button focused && focused.getMessage().getString().startsWith("For: "),
                 "Switching sets lost keyboard focus");
         }
         throw new AssertionError("Missing shot set: " + target);
@@ -187,6 +188,16 @@ public final class SettingsGameTest implements FabricClientGameTest {
         *///?} else {
         return new KeyEvent(InputConstants.KEY_RIGHT, 0, 0);
         //?}
+    }
+
+    private static void go(SettingsScreen settings, String label) {
+        for (int step = 0; step < 2; step++) {
+            var back = settings.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
+                .filter(button -> button.getMessage().getString().equals("Back")).findFirst();
+            if (back.isEmpty()) break;
+            back.get().onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
+        }
+        press(settings, label);
     }
 
     private static void press(SettingsScreen settings, String label) {
