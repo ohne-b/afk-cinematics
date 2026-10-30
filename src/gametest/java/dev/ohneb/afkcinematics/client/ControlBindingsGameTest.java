@@ -190,6 +190,7 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
         var oldChat = context.computeOnClient(client -> ((KeyMappingAccess)client.options.keyChat).afkCinematics$key());
         var oldUse = context.computeOnClient(client -> ((KeyMappingAccess)client.options.keyUse).afkCinematics$key());
         var oldCommand = context.computeOnClient(client -> ((KeyMappingAccess)client.options.keyCommand).afkCinematics$key());
+        var oldToggle = context.computeOnClient(client -> ((KeyMappingAccess)AfkCinematics.TOGGLE).afkCinematics$key());
         context.runOnClient(client -> {
             AfkCinematics.config().keepChat = true;
             client.options.keyChat.setKey(keyboardKey(InputConstants.KEY_U));
@@ -243,9 +244,13 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
                 AfkCinematics.showScreen(null);
                 hide(client, false);
             });
-            start(context);
             context.runOnClient(client -> {
                 AfkCinematics.config().manualLook = true;
+                AfkCinematics.requestStart();
+                AfkCinematics.mouseMoved(2, 1);
+            });
+            context.waitFor(client -> AfkCinematics.showing(), 240);
+            context.runOnClient(client -> {
                 client.player.setYRot(client.player.getYRot() + 10);
                 AfkCinematics.mouseMoved(2, 1);
             });
@@ -264,6 +269,16 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
             context.waitTicks(2);
             context.runOnClient(client -> require(AfkCinematics.screen() == null, "A stale session opened chat"));
             key(context, InputConstants.KEY_U, InputConstants.RELEASE);
+            start(context);
+            context.runOnClient(client -> {
+                AfkCinematics.TOGGLE.setKey(keyboardKey(InputConstants.KEY_U));
+                KeyMapping.resetMapping();
+            });
+            key(context, InputConstants.KEY_U, InputConstants.PRESS);
+            context.waitTicks(2);
+            context.runOnClient(client -> require(!AfkCinematics.ownsCamera() && AfkCinematics.screen() == null,
+                "A shared chat key overrode the cinematic toggle"));
+            key(context, InputConstants.KEY_U, InputConstants.RELEASE);
         } finally {
             context.runOnClient(client -> {
                 heldKey = -1;
@@ -273,6 +288,7 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
                 client.options.keyChat.setKey(oldChat);
                 client.options.keyUse.setKey(oldUse);
                 client.options.keyCommand.setKey(oldCommand);
+                AfkCinematics.TOGGLE.setKey(oldToggle);
                 KeyMapping.resetMapping();
             });
         }
