@@ -44,6 +44,7 @@ public final class CinematicConfig {
     public boolean music = false;
     public boolean unfocused = false;
     public boolean boats = true;
+    public boolean minecarts = true;
     public boolean flight = true;
     public boolean travelControls = true;
     public boolean fishing = true;

@@ -20,6 +20,9 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.PoweredRailBlock;
+import net.minecraft.world.level.block.RailBlock;
+import net.minecraft.world.level.block.state.properties.RailShape;
 import net.minecraft.world.phys.Vec3;
 import java.nio.file.Path;
 import java.util.EnumSet;
@@ -31,7 +34,7 @@ public final class TravelGameTest implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
         configure(context);
         context.runOnClient(client -> {
-            AfkCinematics.config().boats = AfkCinematics.config().flight = AfkCinematics.config().travelControls = true;
+            AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = AfkCinematics.config().travelControls = true;
             AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL);
         });
         try (var world = context.worldBuilder().create()) {
@@ -69,6 +72,7 @@ public final class TravelGameTest implements FabricClientGameTest {
             context.waitTicks(20);
             context.runOnClient(client -> {
                 require(AfkCinematics.showing(), "Steering stopped the manually started boat camera");
+                require(AfkCinematics.frameLimit() == 0, "Boat view overrode normal FPS");
                 require(client.player.position().distanceTo(before) > 2, "Boat controls did not reach vanilla");
                 require(camera(client).position().distanceTo(cameraBefore) > 2, "Camera did not follow the raft");
                 require(camera(client).position().distanceTo(client.player.position()) < 16, "Boat camera lost its subject");
@@ -141,6 +145,73 @@ public final class TravelGameTest implements FabricClientGameTest {
             context.waitFor(client -> !AfkCinematics.ownsCamera(), 5);
             context.runOnClient(client -> AfkCinematics.config().automatic = false);
 
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                player.stopRiding();
+                BlockPos base = BlockPos.containing(center.get());
+                for (BlockPos block : BlockPos.betweenClosed(base.offset(-24, -1, -24), base.offset(24, 14, 24)))
+                    player.level().setBlock(block, (block.getY() < base.getY() ? Blocks.STONE : Blocks.AIR).defaultBlockState(),
+                        Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                for (int x = -12; x <= 12; x++) for (int z = -12; z <= 12; z++) {
+                    if (Math.abs(x) != 12 && Math.abs(z) != 12) continue;
+                    boolean corner = Math.abs(x) == 12 && Math.abs(z) == 12;
+                    RailShape shape = !corner ? (Math.abs(z) == 12 ? RailShape.EAST_WEST : RailShape.NORTH_SOUTH)
+                        : x < 0 ? (z < 0 ? RailShape.SOUTH_EAST : RailShape.NORTH_EAST)
+                        : z < 0 ? RailShape.SOUTH_WEST : RailShape.NORTH_WEST;
+                    var rail = corner ? Blocks.RAIL.defaultBlockState().setValue(RailBlock.SHAPE, shape)
+                        : Blocks.POWERED_RAIL.defaultBlockState().setValue(PoweredRailBlock.SHAPE, shape).setValue(PoweredRailBlock.POWERED, true);
+                    player.level().setBlock(base.offset(x, -1, z), Blocks.REDSTONE_BLOCK.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                    player.level().setBlock(base.offset(x, 0, z), rail, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                }
+                //? if >=26.2 {
+                /*var cart = EntityTypes.MINECART.create(player.level(), EntitySpawnReason.COMMAND);
+                *///?} else {
+                var cart = EntityType.MINECART.create(player.level(), EntitySpawnReason.COMMAND);
+                //?}
+                require(cart != null, "Missing minecart fixture");
+                cart.snapTo(base.getX() + .5, base.getY() + .0625, base.getZ() - 11.5, 0, 0);
+                player.level().addFreshEntity(cart);
+                require(player.startRiding(cart), "Could not board minecart");
+                cart.setDeltaMovement(.3, 0, 0);
+            });
+            context.waitFor(client -> client.player.getVehicle() != null && client.player.getVehicle().getType()
+                //? if >=26.2 {
+                /*== EntityTypes.MINECART);
+                *///?} else {
+                == EntityType.MINECART);
+                //?}
+            context.waitTicks(30);
+            context.runOnClient(client -> AfkCinematics.config().automatic = true);
+            context.waitFor(client -> AfkCinematics.showing(), 400);
+            context.waitTicks(15);
+            Vec3 cartBefore = context.computeOnClient(client -> client.player.getVehicle().position());
+            Vec3 cartCameraBefore = context.computeOnClient(client -> camera(client).position());
+            context.waitTicks(35);
+            context.runOnClient(client -> {
+                require(AfkCinematics.showing(), "Rail travel or a turn stopped the automatic minecart view");
+                require(client.player.getVehicle().position().distanceTo(cartBefore) > 2, "Minecart did not travel on the rails");
+                require(camera(client).position().distanceTo(cartCameraBefore) > 2, "Camera did not follow the minecart");
+                require(AfkCinematics.frameLimit() == 0, "Minecart view overrode normal FPS");
+                AfkCinematics.config().minecarts = false;
+                AfkCinematics.config().automatic = false;
+            });
+            context.waitFor(client -> !AfkCinematics.ownsCamera(), 5);
+            context.runOnClient(client -> AfkCinematics.requestStart());
+            context.waitTicks(25);
+            context.runOnClient(client -> {
+                require(!AfkCinematics.ownsCamera(), "Disabled minecart cinematics still started");
+                AfkCinematics.config().minecarts = true;
+            });
+            start(context);
+            context.runOnClient(client -> AfkCinematics.mouseMoved(2, 1));
+            context.runOnClient(client -> require(AfkCinematics.showing(), "Looking around ended a manual minecart view"));
+            screenshot(context, "minecart-trail");
+            key(context, InputConstants.KEY_LSHIFT, InputConstants.PRESS);
+            context.waitFor(client -> !client.player.isPassenger() && !AfkCinematics.ownsCamera(), 20);
+            key(context, InputConstants.KEY_LSHIFT, InputConstants.RELEASE);
+            world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst()
+                .getInventory().countItem(Items.EMERALD) == 32, "Minecart view changed inventory"));
+
             var air = new AtomicReference<Vec3>();
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
@@ -159,6 +230,7 @@ public final class TravelGameTest implements FabricClientGameTest {
             context.waitTicks(30);
             context.runOnClient(client -> {
                 require(AfkCinematics.showing(), "Flight input ended the manual camera");
+                require(AfkCinematics.frameLimit() == 0, "Flight view overrode normal FPS");
                 require(client.player.position().distanceTo(air.get()) > 4, "Flight input was swallowed");
                 require(camera(client).position().distanceTo(client.player.position()) < 20, "Flight camera did not track the player");
             });

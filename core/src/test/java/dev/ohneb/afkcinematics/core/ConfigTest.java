@@ -31,12 +31,15 @@ class ConfigTest {
         assertTrue(store.config().hidePlayerNames);
         store.config().hidePlayerNames = false;
         store.config().boats = false;
+        assertTrue(store.config().minecarts);
+        store.config().minecarts = false;
         store.config().travelControls = false;
         assertTrue(store.config().fishing);
         store.config().fishing = false;
         assertTrue(store.save());
         assertFalse(new ConfigStore(path).config().hidePlayerNames);
         assertFalse(new ConfigStore(path).config().boats);
+        assertFalse(new ConfigStore(path).config().minecarts);
         assertFalse(new ConfigStore(path).config().travelControls);
         assertFalse(new ConfigStore(path).config().fishing);
         assertTrue(new ConfigStore(path).config().flight);

@@ -17,7 +17,7 @@ class TravelTest {
             public boolean clear(Vec a, Vec b, double margin) { return a.distance(ZERO) < 14 && b.distance(ZERO) < 14; }
             public boolean visible(Vec a, Vec b, double margin) { return true; }
         };
-        for (var kind : new Scene.Kind[]{Scene.Kind.BOAT, Scene.Kind.FLIGHT}) {
+        for (var kind : new Scene.Kind[]{Scene.Kind.BOAT, Scene.Kind.MINECART, Scene.Kind.FLIGHT}) {
             for (var type : Shot.Type.values()) {
                 if (!type.travelOnly()) continue;
                 var config = new CinematicConfig();
