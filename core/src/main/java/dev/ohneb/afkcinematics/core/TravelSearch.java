@@ -62,7 +62,8 @@ final class TravelSearch {
             case LEAD -> 155 * side;
             default -> 55 * side;
         };
-        if (kind == Scene.Kind.MINECART && type == Shot.Type.TRAIL && view >= 4) {
+        boolean centeredCart = kind == Scene.Kind.MINECART && type == Shot.Type.TRAIL && view >= 4;
+        if (centeredCart) {
             // Keep the closest fallback inside a straight rail tunnel.
             angle = 0;
             height = 0;
@@ -75,7 +76,8 @@ final class TravelSearch {
             case LEAD -> 1.5;
             default -> 2.5;
         };
-        Vec focus = subject.add(new Vec(0, .2, lead * scale));
+        // The close tunnel view follows the rider, not a look-ahead point beyond the next corner.
+        Vec focus = centeredCart ? subject : subject.add(new Vec(0, .2, lead * scale));
         double duration = config.pace.minimumSeconds + random.nextDouble() * (config.pace.maximumSeconds - config.pace.minimumSeconds);
         Shot shot = new Shot(type, start, start, start, focus, focus, duration);
         Scene scene = new Scene(subject, start, kind, 0);

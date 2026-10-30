@@ -69,6 +69,24 @@ class TravelTest {
         assertFalse(moving.follow(new Vec(50, 0, 0), 200_000_000, false), "Covered cuts cannot excuse a teleport");
     }
 
+    @Test void centeredMinecartViewDoesNotAimThroughTheNextTunnelWall() {
+        Geometry corner = new Geometry() {
+            private boolean inside(Vec point, double margin) {
+                return Math.abs(point.x()) + margin < .5 && point.y() - margin > -1.2
+                    && point.y() + margin < .8 && point.z() + margin < 1;
+            }
+            public boolean clear(Vec a, Vec b, double margin) { return inside(a, .25 + margin) && inside(b, .25 + margin); }
+            public boolean visible(Vec a, Vec b, double margin) { return inside(a, margin) && inside(b, margin); }
+        };
+        var config = new CinematicConfig();
+        config.shots = EnumSet.of(Shot.Type.TRAIL);
+        var search = new TravelSearch(ZERO, Scene.Kind.MINECART, config, new ShotHistory(), new Random(3));
+        ShotPlanner.Plan found = null;
+        while (!search.exhausted() && found == null) found = search.next(corner);
+        assertNotNull(found, "The rider and camera are visible before the bend; an imaginary lead point must not reject them");
+        assertEquals(ZERO, found.shot().focusStart());
+    }
+
     @Test void highFlightFramingLeavesRoomForFollowingLag() {
         Geometry range = new Geometry() {
             public boolean clear(Vec a, Vec b, double margin) { return true; }

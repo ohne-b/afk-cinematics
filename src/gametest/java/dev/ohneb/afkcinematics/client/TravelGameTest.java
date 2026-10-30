@@ -40,7 +40,17 @@ public final class TravelGameTest implements FabricClientGameTest {
             AfkCinematics.config().travelControls = true;
             AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL);
         });
-        try (var world = context.worldBuilder().create()) {
+        boolean rotateWithCart = context.computeOnClient(client -> client.options.rotateWithMinecart().get());
+        context.runOnClient(client -> client.options.rotateWithMinecart().set(true));
+        try (var world = context.worldBuilder().adjustSettings(settings -> {
+            var previous = settings.getSettings();
+            var data = previous.dataConfiguration();
+            settings.setSettings(new net.minecraft.client.gui.screens.worldselection.WorldCreationContext(
+                previous.options(), previous.datapackDimensions(), previous.selectedDimensions(), previous.worldgenRegistries(),
+                previous.dataPackResources(), new net.minecraft.world.level.WorldDataConfiguration(data.dataPacks(),
+                    data.enabledFeatures().join(net.minecraft.world.flag.FeatureFlagSet.of(net.minecraft.world.flag.FeatureFlags.MINECART_IMPROVEMENTS))),
+                previous.initialWorldCreationOptions()));
+        }).create()) {
             var center = new AtomicReference<Vec3>();
             world.getServer().runOnServer(server -> {
                 server.setDifficulty(Difficulty.PEACEFUL, true);
@@ -184,14 +194,27 @@ public final class TravelGameTest implements FabricClientGameTest {
                 == EntityType.MINECART);
                 //?}
             context.waitTicks(30);
+            context.runOnClient(client -> require(client.level.enabledFeatures().contains(net.minecraft.world.flag.FeatureFlags.MINECART_IMPROVEMENTS),
+                "Minecart rotation fixture did not enable experimental movement"));
             context.runOnClient(client -> AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.AUTOMATIC);
             context.waitFor(client -> AfkCinematics.showing(), 400);
             context.waitTicks(15);
             Vec3 cartBefore = context.computeOnClient(client -> client.player.getVehicle().position());
             Vec3 cartCameraBefore = context.computeOnClient(client -> camera(client).position());
-            context.waitTicks(35);
+            float riderYaw = context.computeOnClient(client -> client.player.getYRot());
+            var turnedWithCart = new java.util.concurrent.atomic.AtomicBoolean();
+            context.runOnClient(client -> cameraTimings = new java.util.ArrayList<>());
+            for (int tick = 0; tick < 180; tick++) {
+                context.waitTicks(1);
+                context.runOnClient(client -> {
+                    if (Math.abs(Math.IEEEremainder(client.player.getYRot() - riderYaw, 360)) > 30) turnedWithCart.set(true);
+                    require(AfkCinematics.showing(), "Open rail corner ended the camera: " + cameraStop);
+                });
+            }
+            context.runOnClient(client -> cameraTimings = null);
             context.runOnClient(client -> {
                 require(AfkCinematics.showing(), "Rail travel or a turn stopped the automatic minecart view");
+                require(turnedWithCart.get(), "The fixture did not rotate the rider through a rail corner");
                 require(client.player.getVehicle().position().distanceTo(cartBefore) > 2, "Minecart did not travel on the rails");
                 require(camera(client).position().distanceTo(cartCameraBefore) > 2, "Camera did not follow the minecart");
                 require(AfkCinematics.frameLimit() == 0, "Minecart view overrode normal FPS");
@@ -209,6 +232,13 @@ public final class TravelGameTest implements FabricClientGameTest {
             context.runOnClient(client -> AfkCinematics.mouseMoved(2, 1));
             context.runOnClient(client -> require(AfkCinematics.showing(), "Looking around ended a manual minecart view"));
             screenshot(context, "minecart-trail");
+            context.runOnClient(client -> {
+                AfkCinematics.config().travelControls = false;
+                client.player.setYRot(client.player.getYRot() + 15);
+            });
+            context.waitFor(client -> !AfkCinematics.ownsCamera(), 5);
+            context.runOnClient(client -> AfkCinematics.config().travelControls = true);
+            start(context);
             key(context, InputConstants.KEY_LSHIFT, InputConstants.PRESS);
             context.waitFor(client -> !client.player.isPassenger() && !AfkCinematics.ownsCamera(), 20);
             key(context, InputConstants.KEY_LSHIFT, InputConstants.RELEASE);
@@ -339,6 +369,8 @@ public final class TravelGameTest implements FabricClientGameTest {
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
+                cameraTimings = null;
+                client.options.rotateWithMinecart().set(rotateWithCart);
                 AfkCinematics.config().boats = AfkCinematics.config().flight = CinematicConfig.StartMode.MANUAL;
                 AfkCinematics.config().travelControls = true;
                 focused = null;
