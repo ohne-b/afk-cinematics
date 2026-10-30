@@ -104,7 +104,7 @@ class TravelTest {
         Pose local = new Pose(new Vec(0, 2, -10), 0, 0);
         Pose previous = moving.apply(local, ZERO, 0, 1, false);
         moving.course(-170);
-        assertFalse(moving.needsReframe(), "Crossing north must take the short turn");
+        assertFalse(moving.needsReframe(Scene.Kind.BOAT), "Crossing north must take the short turn");
         for (long now = 20_000_000; now <= 3_000_000_000L; now += 20_000_000) {
             assertTrue(moving.follow(ZERO, now, false));
             Pose next = moving.apply(local, ZERO, 0, 1, false);
@@ -113,8 +113,8 @@ class TravelTest {
         }
         assertEquals(-170, Math.IEEEremainder(previous.yaw(), 360), .1);
         moving.course(10);
-        assertTrue(moving.needsReframe());
-        assertFalse(moving.needsReframe(), "A reversal requests one cut, not a queue of cuts");
+        assertTrue(moving.needsReframe(Scene.Kind.BOAT));
+        assertFalse(moving.needsReframe(Scene.Kind.BOAT), "A reversal requests one cut, not a queue of cuts");
         assertTrue(moving.follow(ZERO, 3_020_000_000L, true));
         assertEquals(previous, moving.apply(local, ZERO, 0, 1, true));
         Pose covered = moving.apply(local, ZERO, 1, 1, false);
@@ -122,7 +122,7 @@ class TravelTest {
         Pose destination = moving.apply(local, ZERO, 1, 2, false);
         assertTrue(destination.position().distance(covered.position()) > 19);
         assertEquals(10, destination.yaw(), .001);
-        assertFalse(moving.needsReframe());
+        assertFalse(moving.needsReframe(Scene.Kind.BOAT));
     }
 
     @Test void captureStillRequiresVisibilityOfTheMovingSubject() {
@@ -135,5 +135,25 @@ class TravelTest {
         assertNotNull(moving.apply(local, ZERO, 0, 1, false));
         assertTrue(moving.follow(new Vec(1, 0, 0), 100_000_000L, true));
         assertNull(moving.apply(local, ZERO, 0, 1, true));
+    }
+
+    @Test void minecartBendsKeepTheTakeButReversalsStillRequestCover() {
+        var moving = new MovingGeometry(OPEN, ZERO, 0);
+        moving.course(0);
+        Pose local = new Pose(new Vec(0, 2, -10), 0, 0);
+        Pose previous = moving.apply(local, ZERO, 0, 1, false);
+        moving.course(90);
+        for (long now = 20_000_000; now <= 6_000_000_000L; now += 20_000_000) {
+            assertFalse(moving.needsReframe(Scene.Kind.MINECART), "A normal rail bend must not request another shot");
+            assertTrue(moving.follow(ZERO, now, false));
+            Pose next = moving.apply(local, ZERO, 0, 1, false);
+            assertNotNull(next);
+            assertTrue(next.position().distance(previous.position()) < .08, "Rail bends still turn smoothly");
+            previous = next;
+        }
+        assertEquals(90, previous.yaw(), 1);
+        moving.course(-90);
+        assertTrue(moving.needsReframe(Scene.Kind.MINECART));
+        assertFalse(moving.needsReframe(Scene.Kind.MINECART));
     }
 }

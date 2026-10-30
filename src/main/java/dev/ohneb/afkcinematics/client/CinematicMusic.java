@@ -3,6 +3,9 @@ package dev.ohneb.afkcinematics.client;
 import dev.ohneb.afkcinematics.mixin.MusicManagerAccess;
 import dev.ohneb.afkcinematics.core.CinematicConfig;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
@@ -13,6 +16,10 @@ public final class CinematicMusic {
     private static Track owned;
     private static int savedDelay;
     private static boolean skip;
+    private static LocalPlayer angler;
+    private static ClientLevel fishingWorld;
+    private static ClientPacketListener fishingConnection;
+    private static long recastUntil;
     private static String previousDisc = "";
     private static final String[] DISCS = {"cat", "blocks", "chirp", "far", "mall", "mellohi", "stal", "strad", "ward", "wait", "otherside", "relic", "creator", "creator_music_box", "precipice"};
     private static final RandomSource RANDOM = RandomSource.create();
@@ -27,14 +34,22 @@ public final class CinematicMusic {
         var client = Minecraft.getInstance();
         var access = access();
         var config = AfkCinematics.config();
-        boolean wanted = AfkCinematics.showing() && config.music && config.musicVolume > 0;
+        boolean betweenCasts = angler != null && angler == client.player && fishingWorld == client.level
+            && fishingConnection == client.getConnection() && System.nanoTime() - recastUntil < 0
+            && angler.isAlive() && !angler.isSpectator() && angler.hurtTime == 0
+            && !client.isPaused() && AfkCinematics.screen() == null
+            && (client.isWindowActive() || config.unfocused) && config.enabled && config.music && config.musicVolume > 0
+            && (angler.getMainHandItem().is(net.minecraft.world.item.Items.FISHING_ROD)
+                || angler.getOffhandItem().is(net.minecraft.world.item.Items.FISHING_ROD));
+        if (!betweenCasts || AfkCinematics.showing()) clearRecast();
+        boolean wanted = (AfkCinematics.showing() || betweenCasts) && config.music && config.musicVolume > 0;
         if (owned != null) {
             // Paused sound engines do not advance tickable fades.
             if ((!wanted && client.isPaused()) || access.afkCinematics$current() != owned
                 || owned.isStopped() || !client.getSoundManager().isActive(owned)) clear();
             else owned.fading = !wanted || skip || !owned.matches(config);
         }
-        if (wanted && owned == null && access.afkCinematics$current() == null
+        if (wanted && AfkCinematics.showing() && owned == null && access.afkCinematics$current() == null
             && client.options.getSoundSourceVolume(SoundSource.MUSIC) > 0
             && client.options.getSoundSourceVolume(SoundSource.MASTER) > 0) {
             SoundEvent sound = nextSound(config);
@@ -47,6 +62,7 @@ public final class CinematicMusic {
     }
 
     public static void clear() {
+        clearRecast();
         if (owned == null) return;
         var client = Minecraft.getInstance();
         client.getSoundManager().stop(owned);
@@ -57,6 +73,22 @@ public final class CinematicMusic {
         }
         owned = null;
         skip = false;
+    }
+
+    static void finishCast() {
+        if (!manages()) return;
+        var client = Minecraft.getInstance();
+        angler = client.player;
+        fishingWorld = client.level;
+        fishingConnection = client.getConnection();
+        recastUntil = System.nanoTime() + 5_000_000_000L;
+    }
+
+    private static void clearRecast() {
+        angler = null;
+        fishingWorld = null;
+        fishingConnection = null;
+        recastUntil = 0;
     }
 
     public static void next() { if (manages()) skip = true; }

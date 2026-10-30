@@ -36,8 +36,9 @@ public final class MovingGeometry implements Geometry {
         if (!followsCourse) { heading = degrees; followsCourse = true; }
     }
 
-    public boolean needsReframe() {
-        if (!followsCourse || reframeRequested || Math.abs(Math.IEEEremainder(desiredHeading - heading, 360)) < 75) return false;
+    public boolean needsReframe(Scene.Kind kind) {
+        double threshold = kind == Scene.Kind.MINECART ? 135 : 75;
+        if (!followsCourse || reframeRequested || Math.abs(Math.IEEEremainder(desiredHeading - heading, 360)) < threshold) return false;
         reframeRequested = true;
         return true;
     }

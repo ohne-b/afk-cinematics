@@ -334,6 +334,10 @@ public final class AfkCinematics {
     }
 
     public static void stop() {
+        var client = Minecraft.getInstance();
+        if (session != null && activity == Scene.Kind.FISHING && fishingHook != null && player != null
+            && player == client.player && world == client.level && connection == client.getConnection()
+            && (player.fishing == null || fishingHook.isRemoved())) CinematicMusic.finishCast();
         cancelActivityUse();
         pendingChat = null;
         session = null;
@@ -416,7 +420,7 @@ public final class AfkCinematics {
                 player.yOld + (player.getY() - player.yOld) * partial + player.getBbHeight() * 0.65,
                 player.zOld + (player.getZ() - player.zOld) * partial);
             if (!movingGeometry.follow(subject, now, session.capturing())) { stop(); return null; }
-            if (!session.capturing() && session.settled() && movingGeometry.needsReframe()) session.nextShot();
+            if (!session.capturing() && session.settled() && movingGeometry.needsReframe(activity)) session.nextShot();
             if (fishingHook != null) {
                 bobber = FishingActivity.target(fishingHook, partial, subject);
                 session.fishing(bobber);
