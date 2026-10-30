@@ -2,8 +2,8 @@
 
 ## Unreleased
 
+- Choose cinematic playlists, set their volume and control music from chat. (#45)
 - Keep cinematics running in chat, with optional mouse look after a manual start. (#44)
-
 - Simplify settings navigation and give each activity its own start choice. (#43)
 - Hide HUD follows F1 visibility without changing the player's saved HUD state (#42).
 - Minecart travel views, normal FPS caps during activities and a configurable K start/stop key (#41).
