@@ -155,10 +155,10 @@ public final class SettingsScreen extends Screen {
                     input.setValue(config.customMusic);
                     input.setHint(text("customMusic.hint"));
                     input.setTooltip(Tooltip.create(text("customMusic.help")));
-                    input.setTextColor(CinematicMusic.customAvailable(config.customMusic) ? 0xFFFFFF : 0xFF7777);
+                    input.setTextColor(CinematicMusic.customAvailable(config.customMusic) ? 0xFFFFFFFF : 0xFFFF7777);
                     input.setResponder(value -> {
                         config.customMusic = value.strip();
-                        input.setTextColor(CinematicMusic.customAvailable(config.customMusic) ? 0xFFFFFF : 0xFF7777);
+                        input.setTextColor(CinematicMusic.customAvailable(config.customMusic) ? 0xFFFFFFFF : 0xFFFF7777);
                     });
                     widgets.add(input);
                 }
