@@ -242,7 +242,10 @@ public final class AfkCinematics {
             manualWait--;
             IDLE.reset(now);
             if (eligible && vanillaPose != null) { start(true); manualWait = 0; }
-            else if (manualWait == 0) message("unavailable");
+            else if (manualWait == 0) {
+                Component problem = startProblem();
+                message(problem.getString().isEmpty() ? Component.translatable("ohneb_afk_cinematics.unavailable") : problem);
+            }
         } else if (activityKind() == Scene.Kind.FISHING) {
             // A cast starts once its bobber reaches water; waking never restarts the same cast.
             if (eligible && config().automatic(Scene.Kind.FISHING) && FishingActivity.hook(player, world) != lastFishingStart) start(false);
@@ -302,6 +305,23 @@ public final class AfkCinematics {
         }
         session.tick(System.nanoTime());
         manualFeedback = manual && !session.showing();
+    }
+
+    public static Component startProblem() {
+        var client = Minecraft.getInstance();
+        String key;
+        if (store == null || !store.readable()) key = "read_error";
+        else if (!config().enabled) key = "start.disabled";
+        else if (!conflict.isEmpty()) return Component.translatable("ohneb_afk_cinematics.conflict", conflict);
+        else if (client.level == null || client.player == null) key = "start.world";
+        else if (client.player.isSpectator()) key = "start.spectator";
+        else if (!client.player.isAlive() || client.player.isSleeping() || client.player.isOnFire()
+            || client.player.isInLava() || client.player.hurtTime > 0) key = "start.unsafe";
+        else if (client.player.isPassenger() && !activityKind().travel()
+            && !(activityKind() == Scene.Kind.FISHING && travelVehicle(client.player.getVehicle()))) key = "start.vehicle";
+        else if (client.player.isFallFlying() && config().flight == CinematicConfig.StartMode.OFF) key = "start.flight";
+        else return Component.empty();
+        return Component.translatable("ohneb_afk_cinematics." + key);
     }
 
     public static void requestStart() {
@@ -630,12 +650,14 @@ public final class AfkCinematics {
         *///?}
     }
 
-    public static void message(String key) {
+    public static void message(String key) { message(Component.translatable("ohneb_afk_cinematics." + key)); }
+
+    private static void message(Component text) {
         if (Minecraft.getInstance().player == null) return;
         //? if >=26.2 {
-        /*Minecraft.getInstance().gui.hud.setOverlayMessage(Component.translatable("ohneb_afk_cinematics." + key), false);
+        /*Minecraft.getInstance().gui.hud.setOverlayMessage(text, false);
         *///?} else {
-        Minecraft.getInstance().gui.setOverlayMessage(Component.translatable("ohneb_afk_cinematics." + key), false);
+        Minecraft.getInstance().gui.setOverlayMessage(text, false);
         //?}
     }
 }
