@@ -12,6 +12,7 @@ another mod's camera. Never move or rotate the player, send synthetic
 gameplay input, alter inventory, keep a server session active, or change persistent
 game options to produce a cinematic. Restore control before processing wake input.
 An attack, use or drop action that wakes the camera must stay suppressed until release.
+Expose the transient F1 flag to mod HUDs only while rendering; restore it in `finally`.
 Keep suppression across world/player replacement and vanilla key-state restoration.
 Consumed cinematic controls retain suppression through screens until physical release.
 Chat may retain an existing session; screen-consumed keys cannot become gameplay on close.
