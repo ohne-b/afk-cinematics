@@ -40,11 +40,11 @@ public final class ConfigStore {
             config.letterbox = bool("letterbox", false);
             config.music = bool("music", false);
             config.unfocused = bool("unfocused", false);
-            config.boats = startMode("boats");
-            config.minecarts = startMode("minecarts");
-            config.flight = startMode("flight");
+            config.boats = enumeration("boats", CinematicConfig.StartMode.AUTOMATIC);
+            config.minecarts = enumeration("minecarts", CinematicConfig.StartMode.AUTOMATIC);
+            config.flight = enumeration("flight", CinematicConfig.StartMode.AUTOMATIC);
             config.travelControls = bool("travelControls", true);
-            config.fishing = startMode("fishing");
+            config.fishing = enumeration("fishing", CinematicConfig.StartMode.AUTOMATIC);
         } catch (IOException | RuntimeException exception) {
             readable = false;
             config.enabled = false;
@@ -55,12 +55,6 @@ public final class ConfigStore {
     public CinematicConfig config() { return config; }
     public boolean readable() { return readable; }
     public String error() { return error; }
-
-    private CinematicConfig.StartMode startMode(String key) {
-        var legacy = !bool(key, true) ? CinematicConfig.StartMode.OFF
-            : config.automatic ? CinematicConfig.StartMode.AUTOMATIC : CinematicConfig.StartMode.MANUAL;
-        return enumeration(key, legacy);
-    }
 
     private boolean bool(String key, boolean fallback) {
         var value = document.get(key);
@@ -90,10 +84,7 @@ public final class ConfigStore {
             }
         }
         if (selected.isEmpty()) return EnumSet.allOf(Shot.Type.class);
-        // Alpha 1 saved selections without a catalog. Preserve its disabled shots on upgrade.
-        var known = EnumSet.of(Shot.Type.ARC, Shot.Type.DOLLY, Shot.Type.DRIFT, Shot.Type.CRANE,
-            Shot.Type.OVERHEAD, Shot.Type.FLYOVER, Shot.Type.LOW_PASS, Shot.Type.REVEAL,
-            Shot.Type.FLY_THROUGH, Shot.Type.TRAVERSE, Shot.Type.PAN, Shot.Type.STILL);
+        var known = EnumSet.allOf(Shot.Type.class);
         if (document.get("knownShots") instanceof JsonArray catalog) {
             known.clear();
             for (var value : catalog) {

@@ -47,12 +47,12 @@ class ConfigTest {
         assertEquals(600, new ConfigStore(path).config().idleSeconds);
     }
 
-    @Test void activityChoicesPreserveLegacyAutomaticAndDisabledSettings() throws Exception {
+    @Test void activityChoicesPersistIndependentlyOfAfkStart() throws Exception {
         Path path = directory.resolve("activities.json");
-        Files.writeString(path, "{\"automatic\":false,\"boats\":true,\"flight\":false}");
+        Files.writeString(path, "{\"automatic\":false,\"boats\":\"manual\",\"flight\":\"off\"}");
         var store = new ConfigStore(path);
         assertEquals(CinematicConfig.StartMode.MANUAL, store.config().boats);
-        assertEquals(CinematicConfig.StartMode.MANUAL, store.config().fishing);
+        assertEquals(CinematicConfig.StartMode.AUTOMATIC, store.config().fishing);
         assertEquals(CinematicConfig.StartMode.OFF, store.config().flight);
         store.config().fishing = CinematicConfig.StartMode.AUTOMATIC;
         assertTrue(store.save());
@@ -72,15 +72,13 @@ class ConfigTest {
         assertTrue(Files.isDirectory(path));
     }
 
-    @Test void shotOptionsRemainCompatibleWithExistingSettings() throws Exception {
+    @Test void shotOptionsPersistAndNewShotsAreEnabled() throws Exception {
         Path path = directory.resolve("settings.json");
         Files.writeString(path, "{\"music\":true,\"shots\":[\"pan\",null,\"future_shot\",\"crane\"],\"pace\":\"long\"}");
         var store = new ConfigStore(path);
         assertTrue(store.readable());
         assertTrue(store.config().music);
-        assertEquals(EnumSet.complementOf(EnumSet.of(Shot.Type.ARC, Shot.Type.DOLLY, Shot.Type.DRIFT,
-            Shot.Type.OVERHEAD, Shot.Type.FLYOVER, Shot.Type.LOW_PASS, Shot.Type.REVEAL,
-            Shot.Type.FLY_THROUGH, Shot.Type.TRAVERSE, Shot.Type.STILL)), store.config().shots);
+        assertEquals(EnumSet.of(Shot.Type.PAN, Shot.Type.CRANE), store.config().shots);
         assertEquals(CinematicConfig.Pace.LONG, store.config().pace);
         assertEquals(CinematicConfig.Subject.MIXED, store.config().subject);
         assertEquals(CinematicConfig.Lens.CINEMATIC, store.config().lens);
