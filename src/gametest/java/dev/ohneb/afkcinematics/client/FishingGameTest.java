@@ -58,6 +58,7 @@ public final class FishingGameTest implements FabricClientGameTest {
             context.waitFor(client -> revealedShot != null && revealedShot.type() == Shot.Type.ANGLER, 80);
             context.runOnClient(client -> {
                 require(AfkCinematics.showing(), "Idle fishing did not start a view");
+                require(AfkCinematics.frameLimit() == 0, "Fishing view overrode normal FPS");
                 AfkCinematics.mouseMoved(2, 1);
                 require(AfkCinematics.showing(), "Looking around ended fishing");
                 AfkCinematics.config().shots.add(Shot.Type.FLOAT);

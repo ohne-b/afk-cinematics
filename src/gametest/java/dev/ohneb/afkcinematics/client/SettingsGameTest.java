@@ -124,7 +124,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
                             fps.setFocused(true);
                             for (int step = 0; step < 84; step++) settings.keyPressed(rightArrow());
                             require(fixture.config().cinematicFps == 144, "Narrow FPS slider skipped integer values");
-                            require(fps.getMessage().getString().equals("Cinematic FPS: 144"), "FPS slider label was stale");
+                            require(fps.getMessage().getString().equals("AFK FPS: 144"), "FPS slider label was stale");
                         }
                         settings.mouseScrolled(0, 0, 0, -1);
                         checkBounds(settings);
@@ -163,7 +163,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
     }
 
     private static void showShotSet(SettingsScreen settings, Shot.Type type) {
-        String target = "Set: " + (type.travelOnly() ? "Boat & flight" : type.fishingOnly() ? "Fishing" : "Player & scenery");
+        String target = "Set: " + (type.travelOnly() ? "Travel" : type.fishingOnly() ? "Fishing" : "Player & scenery");
         for (int step = 0; step < 3; step++) {
             Button selector = button(settings, "shot-set selector", label -> label.startsWith("Set: "));
             if (selector.getMessage().getString().equals(target)) return;
@@ -178,7 +178,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
 
     private static AbstractWidget fpsSlider(SettingsScreen settings) {
         return settings.children().stream().filter(AbstractWidget.class::isInstance).map(AbstractWidget.class::cast)
-            .filter(widget -> widget.getMessage().getString().startsWith("Cinematic FPS:")).findFirst().orElseThrow();
+            .filter(widget -> widget.getMessage().getString().startsWith("AFK FPS:")).findFirst().orElseThrow();
     }
 
     private static KeyEvent rightArrow() {

@@ -21,10 +21,13 @@ import net.minecraft.world.entity.projectile.FishingHook;
 import net.minecraft.world.item.Items;
 //? if >=1.21.11 {
 import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
+import net.minecraft.world.entity.vehicle.minecart.AbstractMinecart;
 //?} else if >=1.21.2 {
 /*import net.minecraft.world.entity.vehicle.AbstractBoat;
+import net.minecraft.world.entity.vehicle.AbstractMinecart;
 *///?} else {
 /*import net.minecraft.world.entity.vehicle.Boat;
+import net.minecraft.world.entity.vehicle.AbstractMinecart;
 *///?}
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
@@ -46,7 +49,7 @@ public final class AfkCinematics {
     //?} else {
     /*private static final String CATEGORY = "key.categories.ohneb_afk_cinematics";
     *///?}
-    public static final KeyMapping TOGGLE = new KeyMapping("key.ohneb_afk_cinematics.toggle", InputConstants.UNKNOWN.getValue(), CATEGORY);
+    public static final KeyMapping TOGGLE = new KeyMapping("key.ohneb_afk_cinematics.toggle", InputConstants.KEY_K, CATEGORY);
     public static final KeyMapping SETTINGS = new KeyMapping("key.ohneb_afk_cinematics.settings", InputConstants.UNKNOWN.getValue(), CATEGORY);
     public static final KeyMapping NEXT = new KeyMapping("key.ohneb_afk_cinematics.next", InputConstants.UNKNOWN.getValue(), CATEGORY);
     private static final IdleTimer IDLE = new IdleTimer();
@@ -139,7 +142,7 @@ public final class AfkCinematics {
         return source == player && cameraAudioActive(player) ? audioSubmerged && audioFluid.is(tag) : source.isEyeInFluid(tag);
     }
     public static int frameLimit() {
-        if (!showing() || !eligible()) return 0;
+        if (activity != Scene.Kind.PLAYER || !showing() || !eligible()) return 0;
         var client = Minecraft.getInstance();
         //? if >=1.21.5 {
         if (client.getFramerateLimitTracker().getThrottleReason()
@@ -186,7 +189,7 @@ public final class AfkCinematics {
             focused = focus;
         }
         observedMotion = player == null || lastPosition == null ? Vec3.ZERO : player.position().subtract(lastPosition);
-        if (player != null && boat(player.getVehicle()) && player.getVehicle() == lastVehicle)
+        if (player != null && travelVehicle(player.getVehicle()) && player.getVehicle() == lastVehicle)
             observedMotion = lastVehicle.position().subtract(lastVehiclePosition);
         boolean moved = player != null && lastPosition != null && movedFrom(lastPosition, false);
         // Controller look can change player rotation without a keyboard or mouse callback.
@@ -205,7 +208,7 @@ public final class AfkCinematics {
         if (session != null) {
             if (!eligible || !travelling() && movedFrom(anchor, true)) stop();
             else {
-                if (activity == Scene.Kind.BOAT || activity == Scene.Kind.FLIGHT) movingGeometry.course(travelBearing());
+                if (activity.travel()) movingGeometry.course(travelBearing());
                 session.tick(now);
                 if (session.ended()) {
                     if (manualFeedback) message("no_view");
@@ -245,7 +248,7 @@ public final class AfkCinematics {
         Scene.Kind kind = activityKind();
         if (session != null && (kind != activity || player.getVehicle() != vehicle)) return false;
         if (session != null && activity == Scene.Kind.FISHING && FishingActivity.hook(player, world) != fishingHook) return false;
-        return player.isAlive() && !player.isSleeping() && (!player.isPassenger() || kind == Scene.Kind.BOAT || kind == Scene.Kind.FISHING && boat(player.getVehicle()))
+        return player.isAlive() && !player.isSleeping() && (!player.isPassenger() || kind.travel() || kind == Scene.Kind.FISHING && travelVehicle(player.getVehicle()))
             && (!player.isFallFlying() || kind == Scene.Kind.FLIGHT) && !player.isInLava() && !player.isUsingItem()
             && !player.isOnFire() && player.hurtTime == 0 && !player.isSpectator();
     }
@@ -261,16 +264,16 @@ public final class AfkCinematics {
         anchor = player.position();
         Vec subject = WorldGeometry.point(anchor.add(0, player.getBbHeight() * 0.65, 0));
         activity = activityKind();
-        manualTravel = manual && (activity == Scene.Kind.BOAT || activity == Scene.Kind.FLIGHT);
+        manualTravel = manual && activity.travel();
         fishingHook = activity == Scene.Kind.FISHING ? FishingActivity.hook(player, world) : null;
         if (fishingHook != null) lastFishingStart = fishingHook;
         vehicle = player.getVehicle();
-        course = vehicle == null ? player.getYRot() : vehicle.getYRot();
+        course = vehicle == null || vehicle instanceof AbstractMinecart ? player.getYRot() : vehicle.getYRot();
         if (activity == Scene.Kind.PLAYER) {
             session = new CinematicSession(subject, vanillaPose, player.getYRot(), config(), new WorldGeometry(world), RANDOM);
         } else {
             movingGeometry = new MovingGeometry(new WorldGeometry(world).forScene(null), subject, System.nanoTime());
-            if (activity == Scene.Kind.BOAT || activity == Scene.Kind.FLIGHT) movingGeometry.course(travelBearing());
+            if (activity.travel()) movingGeometry.course(travelBearing());
             Vec bobber = fishingHook == null ? null : FishingActivity.target(fishingHook, 1, subject);
             session = new CinematicSession(new Vec(0, 0, 0), movingGeometry.local(vanillaPose), travelBearing(), config(), movingGeometry, RANDOM, activity, bobber);
         }
@@ -492,24 +495,27 @@ public final class AfkCinematics {
         if (config().fishing && !player.isFallFlying() && !player.getAbilities().flying
             && FishingActivity.hook(player, world) != null) return Scene.Kind.FISHING;
         if (config().boats && boat(player.getVehicle())) return Scene.Kind.BOAT;
+        if (config().minecarts && player.getVehicle() instanceof AbstractMinecart) return Scene.Kind.MINECART;
         if (config().flight && !player.isPassenger() && (player.isFallFlying() || player.getAbilities().flying)) return Scene.Kind.FLIGHT;
         return Scene.Kind.PLAYER;
     }
 
     private static boolean steering() {
         return store != null && config().travelControls && (movingGeometry != null && manualTravel
-            || session == null && manualWait > 0 && (activityKind() == Scene.Kind.BOAT || activityKind() == Scene.Kind.FLIGHT));
+            || session == null && manualWait > 0 && activityKind().travel());
     }
 
     private static boolean aiming() { return steering() || session != null && activity == Scene.Kind.FISHING; }
 
     private static boolean travelling() {
         Scene.Kind kind = activityKind();
-        return kind == Scene.Kind.BOAT || kind == Scene.Kind.FLIGHT || kind == Scene.Kind.FISHING && boat(player.getVehicle());
+        return kind.travel() || kind == Scene.Kind.FISHING && travelVehicle(player.getVehicle());
     }
 
+    private static boolean travelVehicle(Entity entity) { return boat(entity) || entity instanceof AbstractMinecart; }
+
     private static double travelBearing() {
-        // Remote boats move through interpolation, with no useful velocity on the passenger client.
+        // Vehicles can move through interpolation without useful velocity on the passenger client.
         if (observedMotion.horizontalDistanceSqr() > 0.0025) course = Math.toDegrees(Math.atan2(-observedMotion.x, observedMotion.z));
         return course;
     }

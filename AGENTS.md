@@ -30,7 +30,7 @@ thread; rendering consumes an immutable pose. Stop safely on invalid state or an
 obstructed path. Every stop path uses the same cleanup.
 Apply the transient lens only to the world projection paired with that pose, before
 culling. Preserve the hand projection, panorama mode and the user's FOV option.
-Override the frame cap only while showing a cinematic; preserve normal options and
+Override the frame cap only for ordinary AFK views, not fishing or travel; preserve normal options and
 minimized-window throttling. Do not simulate activity to avoid idle limits.
 Separate scenery viewpoints use covered cuts: render a fully opaque old frame,
 then a fully opaque destination frame, and revalidate before revealing it. Keep all

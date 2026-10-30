@@ -43,7 +43,7 @@ final class ShotPlanner {
         this.config = config;
         this.history = history;
         this.random = random;
-        travel = activity == Scene.Kind.BOAT || activity == Scene.Kind.FLIGHT
+        travel = activity.travel()
             ? new TravelSearch(anchor, activity, config, history, random) : null;
         fishing = activity == Scene.Kind.FISHING ? new FishingSearch(anchor, bobber, config, history, random) : null;
         triedPlayer = config.subject == CinematicConfig.Subject.SCENERY;
