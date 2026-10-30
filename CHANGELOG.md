@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Hide third-party HUDs that respect F1, including direct visibility reads during rendering. (#49)
 - Open travel and fishing shot choices directly from Activities. (#48)
 - Keep a close trailing minecart view available in straight rail tunnels. (#47)
 - Use familiar settings choices, show the start key and explain unavailable starts. (#46)
