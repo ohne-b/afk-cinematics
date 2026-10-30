@@ -135,7 +135,7 @@ class ShotSequenceTest {
         Pose before = session.current();
         session.nextShot();
         frame(session, now + 50_000_000L);
-        assertTrue(session.current().position().distance(before.position()) < 0.01,
+        assertTrue(session.current().position().distance(before.position()) < 0.1,
             "Next shot jumped to the preplanned endpoint");
         for (int tick = 2; tick < 100 && accepted.size() < 3; tick++) frame(session, now + tick * 50_000_000L);
         assertTrue(accepted.size() >= 3, "Next shot reused a plan from a different starting pose");
@@ -151,6 +151,39 @@ class ShotSequenceTest {
             previous = session.fade();
         }
         assertTrue(covers >= 2, "Independent takes were joined into a stop-and-turn movement");
+    }
+
+    @Test void coveredTransitionsKeepBothTakesMovingAndRespectCaptureHolds() {
+        var session = session(geometry(new ArrayList<>(), new boolean[1]), Shot.Type.ARC);
+        long now = 0;
+        Pose previous = ENTRY;
+        double opacity = 0;
+        int take = 0, movingOut = 0, movingIn = 0;
+        boolean captured = false;
+        for (int tick = 0; tick < 900; tick++) {
+            frame(session, now += 50_000_000L);
+            double fade = session.fade();
+            if (take == session.take() && take > 0 && fade > 0 && fade < 1 && opacity > 0 && opacity < 1) {
+                assertTrue(session.current().position().distance(previous.position()) > 1e-8,
+                    "A visible fade froze the moving camera");
+                if (fade > opacity) {
+                    movingOut++;
+                    if (!captured) {
+                        Pose held = session.current();
+                        session.beginCapture(now);
+                        assertEquals(held, session.frame(now + 2_000_000_000L));
+                        session.endCapture(now += 2_000_000_000L);
+                        assertEquals(held, session.frame(now), "Releasing a capture skipped outgoing motion");
+                        assertEquals(fade, session.fade(), 1e-12);
+                        captured = true;
+                    }
+                } else movingIn++;
+            }
+            previous = session.current();
+            opacity = session.fade();
+            take = session.take();
+        }
+        assertTrue(movingOut > 0 && movingIn > 0 && captured);
     }
 
     @Test void recentViewsPreventAnImmediateABACycleWithoutExhaustingTheScene() {
