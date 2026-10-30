@@ -218,6 +218,7 @@ public final class TravelGameTest implements FabricClientGameTest {
             context.waitTicks(65); // Let vanilla's 60-tick dismount cooldown expire before the next fixture.
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
+                require(!player.isShiftKeyDown(), "Server still sees Shift held before the tunnel fixture");
                 BlockPos base = BlockPos.containing(center.get());
                 for (BlockPos block : BlockPos.betweenClosed(base.offset(-1, -1, -24), base.offset(1, 3, 24))) {
                     boolean wall = block.getX() != base.getX() || block.getY() == base.getY() + 3;
