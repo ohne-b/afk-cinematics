@@ -49,7 +49,7 @@ public final class SettingsScreen extends Screen {
     private int offset;
     private int maxOffset;
     private Component error = Component.empty();
-    private boolean saveFailed;
+    private boolean saveFailed, focusSaveError;
     private Button close, preview;
     private Component startIssue;
 
@@ -97,6 +97,11 @@ public final class SettingsScreen extends Screen {
     @Override public void tick() {
         super.tick();
         updateStart();
+        if (focusSaveError) {
+            setFocused(close);
+            close.setFocused(true);
+            focusSaveError = false;
+        }
     }
 
     private void updateStart() {
@@ -316,8 +321,7 @@ public final class SettingsScreen extends Screen {
         saveFailed = true;
         close.setMessage(text("close_unsaved"));
         close.setTooltip(Tooltip.create(error));
-        setFocused(close);
-        close.setFocused(true);
+        focusSaveError = true;
         return false;
     }
 

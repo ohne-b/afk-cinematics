@@ -12,7 +12,7 @@
   <a href="https://github.com/ohne-b/afk-cinematics/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-GPL--3.0--only-green?style=flat-square" alt="License: GPL-3.0-only"></a>
 </p>
 
-**Fabric & NeoForge | Minecraft 1.21â€“26.3 | Client-side**
+**Fabric & NeoForge | Minecraft 1.21–26.3 | Client-side**
 
 Wide aerial passes, low ground shots, underwater views and angled player shots.
 Film your fishing casts, boat rides, minecart trips and flights too.

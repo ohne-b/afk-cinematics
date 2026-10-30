@@ -167,8 +167,13 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     settings.keyPressed(new KeyEvent(InputConstants.KEY_ESCAPE, 0, 0));
                     require(AfkCinematics.screen() == settings, "Back closed settings instead of returning home");
                     button(settings, "Activities");
-                    settings.onClose();
+                    go(settings, "Controls");
+                    var bindings = button(settings, "Key bindings...");
+                    settings.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(bindings.getX() + 5, bindings.getY() + 5,
+                        new net.minecraft.client.input.MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0)), false);
+                    settings.tick();
                     require(AfkCinematics.screen() == settings, "First save failure hid the error");
+                    require(settings.getFocused() == button(settings, "Close without saving"), "Mouse dispatch undid save-error focus");
                     require(settings.children().stream().anyMatch(child -> child instanceof Button button
                         && button.getMessage().getString().equals("Close without saving")), "Save failure did not offer an exit");
                     settings.onClose();
