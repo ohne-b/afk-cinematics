@@ -18,6 +18,7 @@ Only manually started travel views may retain steering. Follow the rendered subj
 without changing its pose; validate movement from the last applied world-camera position.
 Fishing views follow only the current player's live bobber. Permit genuine rod use
 only through vanilla's hand routing; never cast, retrieve or infer a catch automatically.
+Manual Elytra views may pass genuine rocket use through the same hand and input guards.
 Track the effective mouse button after vanilla's platform-specific remapping.
 Inactive release events can be synthetic; they do not establish physical release.
 

@@ -7,6 +7,7 @@
 - Boat, raft and flight tracking views with optional steering during manually started cinematics (#33).
 - Fishing views follow the angler, line and bobber, with prompt entry and normal reeling controls (#34).
 - Low, high and broadside travel views follow gradual turns and cover sharp course changes (#35).
+- Manually started Elytra views keep filming during normal rocket boosts (#36).
 
 ## 0.0.1-alpha.1
 

@@ -14,9 +14,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.FishingHook;
+import net.minecraft.world.item.Items;
 //? if >=1.21.11 {
 import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
 //?} else if >=1.21.2 {
@@ -26,6 +28,7 @@ import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
 *///?}
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -238,7 +241,7 @@ public final class AfkCinematics {
         var options = client.options;
         if (!steering() && movementInput()) return false;
         if ((!steering() && (options.keyUp.isDown() || options.keyDown.isDown() || options.keyLeft.isDown() || options.keyRight.isDown()
-            || options.keyJump.isDown())) || options.keyAttack.isDown() || options.keyUse.isDown() && !allowRodUse() || options.keyDrop.isDown()) return false;
+            || options.keyJump.isDown())) || options.keyAttack.isDown() || options.keyUse.isDown() && !allowActivityUse() || options.keyDrop.isDown()) return false;
         Scene.Kind kind = activityKind();
         if (session != null && (kind != activity || player.getVehicle() != vehicle)) return false;
         if (session != null && activity == Scene.Kind.FISHING && FishingActivity.hook(player, world) != fishingHook) return false;
@@ -392,10 +395,10 @@ public final class AfkCinematics {
             }
             return true;
         }
-        boolean rod = matches(options.keyUse, key) && !matches(options.keyAttack, key) && !matches(options.keyDrop, key)
-            && !movementBinding(key) && allowRodUse();
-        boolean suppressed = INPUT.press(token, ownsCamera() && dangerous && !rod);
-        if (rod && !suppressed) {
+        boolean use = matches(options.keyUse, key) && !matches(options.keyAttack, key) && !matches(options.keyDrop, key)
+            && !movementBinding(key) && allowActivityUse();
+        boolean suppressed = INPUT.press(token, ownsCamera() && dangerous && !use);
+        if (use && !suppressed) {
             activityUse = key;
             IDLE.reset(System.nanoTime());
             return false;
@@ -421,11 +424,21 @@ public final class AfkCinematics {
     public static boolean suppressed(InputConstants.Key key) { return INPUT != null && INPUT.suppressed(token(key)); }
     public static boolean retainsInput(InputConstants.Key key) { return suppressed(key) || key.equals(activityUse); }
 
-    public static boolean allowRodUse() {
+    public static boolean allowActivityUse() {
         var client = Minecraft.getInstance();
-        return session != null && activity == Scene.Kind.FISHING && player == client.player && world == client.level
-            && connection == client.getConnection() && FishingActivity.hook(player, world) == fishingHook
-            && FishingActivity.canUse(player, client.hitResult);
+        if (session == null || player == null || player != client.player || world == null || world != client.level
+            || connection != client.getConnection() || client.hitResult == null || client.hitResult.getType() != HitResult.Type.MISS) return false;
+        if (activity == Scene.Kind.FISHING) {
+            if (fishingHook == null || FishingActivity.hook(player, world) != fishingHook) return false;
+        } else if (activity != Scene.Kind.FLIGHT || !manualTravel || !config().travelControls || !player.isFallFlying()) return false;
+        var item = activity == Scene.Kind.FISHING ? Items.FISHING_ROD : Items.FIREWORK_ROCKET;
+        // Block/entity interactions and unrelated main-hand items must never inherit activity permission.
+        return player.getMainHandItem().is(item) || player.getMainHandItem().isEmpty() && player.getOffhandItem().is(item);
+    }
+
+    public static boolean allowActivityUse(Player actor, InteractionHand hand) {
+        return actor == player && allowActivityUse()
+            && actor.getItemInHand(hand).is(activity == Scene.Kind.FISHING ? Items.FISHING_ROD : Items.FIREWORK_ROCKET);
     }
 
     private static void clearBindings(InputConstants.Key key) {
