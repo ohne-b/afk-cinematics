@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Hide HUD follows F1 visibility without changing the player's saved HUD state (#42).
 - Minecart travel views, normal FPS caps during activities and a configurable K start/stop key (#41).
 - Four new scenery drives, less repetitive sequences, adjustable player-shot frequency and new shots enabled on update (#31).
 - Controller-look wake detection and smooth resumption after client hitches (#32).
