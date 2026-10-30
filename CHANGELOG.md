@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Minecart travel views, normal FPS caps during activities and a configurable K start/stop key (#41).
 - Four new scenery drives, less repetitive sequences, adjustable player-shot frequency and new shots enabled on update (#31).
 - Controller-look wake detection and smooth resumption after client hitches (#32).
 - Boat, raft and flight tracking views with optional steering during manually started cinematics (#33).
