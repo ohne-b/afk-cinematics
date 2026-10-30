@@ -194,6 +194,12 @@ public final class CameraGameTest implements FabricClientGameTest {
             context.waitFor(client -> !CinematicMusic.manages(), 100);
             context.runOnClient(client -> {
                 require(!CinematicMusic.customAvailable("missing:cinematic_test"), "Missing custom music was accepted");
+                var empty = client.getSoundManager().getSoundEvent(net.minecraft.resources.Identifier.parse("afk_cinematics_test:empty"));
+                require(empty != null && empty.getWeight() == 0, "Empty resource-pack event was not registered");
+                require(!CinematicMusic.customAvailable("afk_cinematics_test:empty"), "An empty registered sound was accepted");
+                AfkCinematics.config().customMusic = "afk_cinematics_test:empty";
+                CinematicMusic.tick();
+                require(!CinematicMusic.manages(), "An unplayable event claimed the normal music slot");
                 AfkCinematics.config().customMusic = "minecraft:music_disc.cat";
             });
             context.waitFor(client -> CinematicMusic.manages() && ((MusicManagerAccess)client.getMusicManager()).afkCinematics$current()

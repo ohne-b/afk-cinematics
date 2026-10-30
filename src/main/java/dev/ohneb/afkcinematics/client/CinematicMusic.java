@@ -79,7 +79,8 @@ public final class CinematicMusic {
 
     public static boolean customAvailable(String value) {
         var id = Identifier.tryParse(value);
-        return id != null && Minecraft.getInstance().getSoundManager().getSoundEvent(id) != null;
+        var event = id == null ? null : Minecraft.getInstance().getSoundManager().getSoundEvent(id);
+        return event != null && event.getWeight() > 0;
     }
 
     private static SoundEvent nextSound(CinematicConfig config) {
