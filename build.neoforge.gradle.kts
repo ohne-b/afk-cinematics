@@ -17,8 +17,12 @@ repositories {
 dependencies {
     implementation(project(":core"))
     // The shared 1.21/1.21.1 jar needs WrapMethod, absent from NeoForge 21.0's bundled library.
-    if (minecraftVersion == "1.21" || minecraftVersion == "1.21.1")
-        implementation(jarJar("io.github.llamalad7:mixinextras-neoforge:0.5.5"))
+    if (minecraftVersion == "1.21" || minecraftVersion == "1.21.1") {
+        implementation("io.github.llamalad7:mixinextras-neoforge:0.5.5")
+        jarJar("io.github.llamalad7:mixinextras-neoforge:0.5.5") {
+            version { strictly("[0.4.1,)"); prefer("0.5.5") }
+        }
+    }
 }
 evaluationDependsOn(":core")
 
