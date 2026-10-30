@@ -318,7 +318,8 @@ public final class AfkCinematics {
         else if (!client.player.isAlive() || client.player.isSleeping() || client.player.isOnFire()
             || client.player.isInLava() || client.player.hurtTime > 0) key = "start.unsafe";
         else if (client.player.isPassenger() && !activityKind().travel()
-            && !(activityKind() == Scene.Kind.FISHING && travelVehicle(client.player.getVehicle()))) key = "start.vehicle";
+            && !(activityKind() == Scene.Kind.FISHING && travelVehicle(client.player.getVehicle())))
+            key = travelVehicle(client.player.getVehicle()) ? "start.vehicle" : "start.vehicle.unsupported";
         else if (client.player.isFallFlying() && config().flight == CinematicConfig.StartMode.OFF) key = "start.flight";
         else return Component.empty();
         return Component.translatable("ohneb_afk_cinematics." + key);
@@ -326,7 +327,10 @@ public final class AfkCinematics {
 
     public static void requestStart() {
         stop();
-        if (store != null) manualWait = 20;
+        if (store == null) return;
+        Component problem = startProblem();
+        if (problem.getString().isEmpty()) manualWait = 20;
+        else message(problem);
     }
 
     public static void stop() {

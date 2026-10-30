@@ -129,7 +129,7 @@ public final class SettingsScreen extends Screen {
                 widgets.getLast().active = config.subject == CinematicConfig.Subject.MIXED;
                 widgets.add(choice("motion", config.motion, CinematicConfig.Motion.values(), value -> text(value.name().toLowerCase(Locale.ROOT)),
                     value -> config.motion = value, value -> Tooltip.create(text("motion.help"))));
-                widgets.add(choice("pace", config.pace, CinematicConfig.Pace.values(), value -> text(value.name().toLowerCase(Locale.ROOT)),
+                widgets.add(choice("pace", config.pace, CinematicConfig.Pace.values(), value -> text("pace.range", (int)value.minimumSeconds, (int)value.maximumSeconds),
                     value -> config.pace = value, value -> Tooltip.create(text("pace.help", (int)value.minimumSeconds, (int)value.maximumSeconds))));
                 widgets.add(choice("lens", config.lens, CinematicConfig.Lens.values(), value -> text(value.name().toLowerCase(Locale.ROOT)),
                     value -> config.lens = value, value -> Tooltip.create(text("lens.help"))));
@@ -272,11 +272,11 @@ public final class SettingsScreen extends Screen {
     private <T> CycleButton<T> choice(String key, T initial, T[] values, Function<T, Component> labels,
         Consumer<T> set, Function<T, Tooltip> help) {
         //? if >=1.21.11 {
-        var builder = CycleButton.builder(labels, initial);
+        var builder = CycleButton.builder(labels, initial).withValues(values);
         //?} else {
-        /*var builder = CycleButton.builder(labels).withInitialValue(initial);
+        /*var builder = CycleButton.builder(labels).withValues(values).withInitialValue(initial);
         *///?}
-        return builder.withValues(values).withTooltip(help::apply).create(text(key), (button, value) -> set.accept(value));
+        return builder.withTooltip(help::apply).create(text(key), (button, value) -> set.accept(value));
     }
 
     private CycleButton<CinematicConfig.StartMode> activity(String key, Supplier<CinematicConfig.StartMode> get, Consumer<CinematicConfig.StartMode> set) {
@@ -356,9 +356,9 @@ public final class SettingsScreen extends Screen {
         else if (status.getString().isEmpty() && page == Page.SOUND && AfkCinematics.config().soundtrack == CinematicConfig.Soundtrack.CUSTOM
             && !CinematicMusic.customAvailable(AfkCinematics.config().customMusic)) status = text("customMusic.missing");
         else if (status.getString().isEmpty() && maxOffset > 0) status = text("scroll");
-        else if (status.getString().isEmpty() && (page == Page.HOME || page == Page.CONTROLS)) status = AfkCinematics.TOGGLE.isUnbound()
+        else if (status.getString().isEmpty() && (page == Page.HOME || page == Page.CONTROLS || page == Page.ACTIVITIES)) status = AfkCinematics.TOGGLE.isUnbound()
             ? text("key.unbound") : text("key.start", AfkCinematics.TOGGLE.getTranslatedKeyMessage());
-        else if (status.getString().isEmpty() && (page == Page.CAMERA || page == Page.ACTIVITIES || page == Page.SOUND)) status = text("key.choices");
+        else if (status.getString().isEmpty() && (page == Page.CAMERA || page == Page.SOUND)) status = text("key.choices");
         if (!status.getString().isEmpty()) {
             var lines = font.split(status, width - 24);
             for (int i = 0; i < Math.min(2, lines.size()); i++) {

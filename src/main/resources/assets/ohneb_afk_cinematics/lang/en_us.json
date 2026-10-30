@@ -1,7 +1,7 @@
 {
   "key.categories.ohneb_afk_cinematics": "AFK Cinematics",
   "key.category.ohneb_afk_cinematics.controls": "AFK Cinematics",
-  "key.ohneb_afk_cinematics.toggle": "Toggle cinematic",
+  "key.ohneb_afk_cinematics.toggle": "Start / stop cinematic",
   "key.ohneb_afk_cinematics.settings": "Open cinematic settings",
   "key.ohneb_afk_cinematics.next": "Next shot",
   "ohneb_afk_cinematics.settings": "AFK Cinematics",
@@ -100,7 +100,6 @@
   "ohneb_afk_cinematics.shot.traverse": "Sideways pass",
   "ohneb_afk_cinematics.shot.traverse.help": "A broad sideways drive that keeps its heading and lets the environment move through the frame.",
   "ohneb_afk_cinematics.shots.last": "Enable another shot before turning this one off.",
-  "ohneb_afk_cinematics.activities": "Activities...",
   "ohneb_afk_cinematics.boats": "Boats",
   "ohneb_afk_cinematics.boats.help": "Manual: press your cinematic key. When idle: also start after the idle delay. Covers boats and rafts.",
   "ohneb_afk_cinematics.minecarts": "Minecarts",
@@ -172,6 +171,8 @@
   "ohneb_afk_cinematics.start.world": "Join a world to start a cinematic.",
   "ohneb_afk_cinematics.start.spectator": "Cinematics are unavailable in spectator mode.",
   "ohneb_afk_cinematics.start.unsafe": "Wait until you are safe and awake to start a cinematic.",
-  "ohneb_afk_cinematics.start.vehicle": "Enable this vehicle in Activities. Boats and minecarts are supported.",
-  "ohneb_afk_cinematics.start.flight": "Enable Flight in Activities to film Elytra travel."
+  "ohneb_afk_cinematics.start.vehicle": "Enable this vehicle in Activities to start a travel view.",
+  "ohneb_afk_cinematics.start.flight": "Enable Flight in Activities to film Elytra travel.",
+  "ohneb_afk_cinematics.pace.range": "%s–%s s",
+  "ohneb_afk_cinematics.start.vehicle.unsupported": "This vehicle has no cinematic views. Boats and minecarts are supported."
 }
