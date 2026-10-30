@@ -6,7 +6,6 @@
   "client": [
     "ActivityUseMixin",
     "AmbientSoundsMixin",
-    "BoatMixin",
     "CameraMixin",
     "ChatAccess",
     "DynamicFpsMixin",
@@ -25,6 +24,7 @@
     "MusicManagerAccess",
     "MusicManagerMixin",
     "OptionsMixin",
+    "PassengerTurnMixin",
     "PlayerNameMixin",
     "PlayerAudioMixin",
     "ScreenshotMixin",
