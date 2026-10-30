@@ -32,7 +32,7 @@ class ShotControlTest {
         assertEquals(2, accepted.size(), "Repeated presses queued more than one next shot");
     }
 
-    @Test void searchingForANextShotHoldsAndRevalidatesTheCurrentView() {
+    @Test void searchingForANextShotKeepsMovingAndRevalidatesTheCurrentView() {
         var accepted = new ArrayList<Shot>();
         int[] rejected = {0};
         Geometry open = geometry(accepted, rejected);
@@ -49,9 +49,10 @@ class ShotControlTest {
             long now = tick * 50_000_000L;
             session.tick(now);
             Pose pose = session.frame(now);
-            assertEquals(before.position(), pose.position());
-            assertEquals(0, Math.IEEEremainder(pose.yaw() - before.yaw(), 360), 1e-9);
-            assertEquals(before.pitch(), pose.pitch(), 1e-9);
+            assertEquals(0, before.position().distance(pose.position()), 1e-10);
+            double turn = Math.abs(Math.IEEEremainder(pose.yaw() - before.yaw(), 360));
+            assertTrue(turn > 1e-6 && turn < .5, "Preparing the next take froze or jumped the panorama");
+            assertTrue(Math.abs(pose.pitch() - before.pitch()) < .1, "Preparing the next take jumped its pitch");
             session.nextShot();
         }
         assertEquals(2, accepted.size());
@@ -68,7 +69,7 @@ class ShotControlTest {
         blocked.nextShot();
         occupied[0] = true;
         blocked.tick(7_050_000_000L);
-        assertNull(blocked.frame(7_050_000_000L), "A held view must still react to new obstacles");
+        assertNull(blocked.frame(7_050_000_000L), "A continuing view must still react to new obstacles");
         assertTrue(blocked.ended());
     }
 
