@@ -315,6 +315,9 @@ public final class SettingsScreen extends Screen {
         error = text("save_error");
         saveFailed = true;
         close.setMessage(text("close_unsaved"));
+        close.setTooltip(Tooltip.create(error));
+        setFocused(close);
+        close.setFocused(true);
         return false;
     }
 

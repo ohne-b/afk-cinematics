@@ -12,7 +12,7 @@
   <a href="https://github.com/ohne-b/afk-cinematics/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-GPL--3.0--only-green?style=flat-square" alt="License: GPL-3.0-only"></a>
 </p>
 
-**Fabric & NeoForge | Minecraft 1.21–26.3 | Client-side**
+**Fabric & NeoForge | Minecraft 1.21â€“26.3 | Client-side**
 
 Wide aerial passes, low ground shots, underwater views and angled player shots.
 Film your fishing casts, boat rides, minecart trips and flights too.
@@ -26,12 +26,12 @@ Fabric also needs [Fabric API](https://modrinth.com/mod/fabric-api). No server i
 
 Press **K** to start or stop, or stay still for 30 seconds for an AFK view.
 Change the key in **Options > Controls > Key Binds > AFK Cinematics**.
-Move or open a menu to leave an AFK view.
+Move or open inventory to leave an AFK view. Chat can stay open.
 F2 and supported Fabrishot versions capture the cinematic without ending it.
 
 | Command | Action |
 | --- | --- |
-| `/afkcinematics settings` | Shots, timing and display settings |
+| `/afkcinematics settings` | Open settings |
 | `/afkcinematics start` | Start a cinematic now |
 | `/afkcinematics stop` | Stop the cinematic |
 
