@@ -19,7 +19,8 @@ public abstract class HudRenderMixin {
         HudVisibility.render(() -> original.call(delta, advance));
     }
     //? if >=26.1 {
-    /*@WrapMethod(method = "render()V")
+    /*// Keep Stonecutter's GUI render-to-extraction replacement away from this world-render method.
+    @WrapMethod(method = "ren" + "der()V")
     private void afkCinematics$renderModHuds(Operation<Void> original) {
         HudVisibility.render(() -> original.call());
     }
