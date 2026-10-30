@@ -90,6 +90,9 @@ class ConfigTest {
         store.config().subject = CinematicConfig.Subject.SCENERY;
         store.config().playerShare = 75;
         store.config().lens = CinematicConfig.Lens.GAME;
+        store.config().soundtrack = CinematicConfig.Soundtrack.CUSTOM;
+        store.config().customMusic = "example:quiet_music";
+        store.config().musicVolume = 35;
         store.config().shots = EnumSet.of(Shot.Type.FLYOVER, Shot.Type.LOW_PASS, Shot.Type.REVEAL);
         assertTrue(store.save());
         assertEquals(store.config().shots, new ConfigStore(path).config().shots);
@@ -103,6 +106,9 @@ class ConfigTest {
         assertEquals(upgraded, new ConfigStore(path).config().shots);
         assertEquals(CinematicConfig.Subject.SCENERY, new ConfigStore(path).config().subject);
         assertEquals(CinematicConfig.Lens.GAME, new ConfigStore(path).config().lens);
+        assertEquals(CinematicConfig.Soundtrack.CUSTOM, new ConfigStore(path).config().soundtrack);
+        assertEquals("example:quiet_music", new ConfigStore(path).config().customMusic);
+        assertEquals(35, new ConfigStore(path).config().musicVolume);
         Files.writeString(path, "{\"shots\":[],\"pace\":\"invalid\"}");
         var defaults = new ConfigStore(path).config();
         assertEquals(EnumSet.allOf(Shot.Type.class), defaults.shots);

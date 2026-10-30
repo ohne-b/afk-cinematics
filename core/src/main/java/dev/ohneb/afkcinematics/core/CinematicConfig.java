@@ -4,6 +4,7 @@ import java.util.EnumSet;
 
 public final class CinematicConfig {
     public enum StartMode { OFF, MANUAL, AUTOMATIC }
+    public enum Soundtrack { GAME, CREATIVE, DISCS, CUSTOM }
     public enum Motion { GENTLE, REDUCED, STILL }
     public enum Subject { MIXED, PLAYER, SCENERY }
     public enum Lens {
@@ -43,6 +44,9 @@ public final class CinematicConfig {
     public boolean hidePlayerNames = true;
     public boolean letterbox = false;
     public boolean music = false;
+    public Soundtrack soundtrack = Soundtrack.GAME;
+    public int musicVolume = 100;
+    public String customMusic = "minecraft:music.creative";
     public boolean unfocused = false;
     public StartMode boats = StartMode.AUTOMATIC;
     public StartMode minecarts = StartMode.AUTOMATIC;
