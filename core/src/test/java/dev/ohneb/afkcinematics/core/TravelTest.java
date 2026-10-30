@@ -12,6 +12,126 @@ class TravelTest {
         public boolean visible(Vec a, Vec b, double margin) { return true; }
     };
 
+    @Test void travellingCameraRoundsNarrowCornersWithoutEndingOrCrossingWalls() {
+        Geometry corridor = new Geometry() {
+            private boolean inside(Vec p, double margin) {
+                return Math.abs(p.x()) + margin < .5 && p.z() + margin < .5
+                    || Math.abs(p.z()) + margin < .5 && p.x() - margin > -.5;
+            }
+            private boolean line(Vec a, Vec b, double margin) {
+                int steps = Math.max(1, (int)Math.ceil(a.distance(b) * 100));
+                for (int i = 0; i <= steps; i++) if (!inside(a.lerp(b, (double)i / steps), margin)) return false;
+                return true;
+            }
+            public boolean clear(Vec a, Vec b, double margin) { return line(a, b, .25 + margin); }
+            public boolean visible(Vec a, Vec b, double margin) { return line(a, b, margin); }
+        };
+        var moving = new MovingGeometry(corridor, new Vec(0, 0, -7), 0);
+        moving.course(0);
+        Pose local = new Pose(new Vec(0, 0, -5), 0, 0);
+        Pose previous = null;
+        double previousFade = 0;
+        boolean close = false;
+        for (int frame = 0; frame < 110; frame++) {
+            Vec rider = frame < 35 ? new Vec(0, 0, -7 + frame * .2) : new Vec((frame - 35) * .2, 0, 0);
+            if (frame >= 35) moving.course(-90);
+            assertTrue(moving.follow(rider, frame * 50_000_000L, false));
+            Pose next = moving.apply(local, ZERO, 0, 1, false);
+            assertNotNull(next, "Corner ended the view at frame " + frame);
+            assertTrue(corridor.clear(next.position(), next.position()));
+            if (moving.fade() < 1) assertTrue(corridor.visible(next.position(), rider));
+            if (previous != null && !corridor.clear(previous.position(), next.position())) {
+                assertEquals(1, previousFade, "Disconnected move revealed its origin");
+                assertEquals(1, moving.fade(), "Disconnected move revealed its destination");
+            }
+            close |= next.position().distance(rider) < 2;
+            previous = next;
+            previousFade = moving.fade();
+            moving.coveredFrame();
+        }
+        assertTrue(close, "The wide trail never shortened for the corner");
+        assertEquals(0, moving.fade(), "Recovery remained black after rounding the corner");
+    }
+
+    @Test void obstructionRecoveryWaitsForBothCoveredFramesAndThenWidens() {
+        boolean[] wall = {false};
+        Geometry world = new Geometry() {
+            public boolean clear(Vec a, Vec b, double margin) {
+                return !wall[0] || Math.max(a.z(), b.z()) + .25 + margin < -4
+                    || Math.min(a.z(), b.z()) - .25 - margin > -4;
+            }
+            public boolean visible(Vec a, Vec b, double margin) {
+                return !wall[0] || Math.max(a.z(), b.z()) + margin < -4
+                    || Math.min(a.z(), b.z()) - margin > -4;
+            }
+        };
+        var moving = new MovingGeometry(world, ZERO, 0);
+        moving.course(0);
+        Pose local = new Pose(new Vec(0, 1, -10), 0, 0);
+        Pose original = moving.apply(local, ZERO, 0, 1, false);
+        wall[0] = true;
+        moving.follow(ZERO, 50_000_000, false);
+        assertEquals(original, moving.apply(local, ZERO, 0, 1, false));
+        assertEquals(1, moving.fade());
+        assertEquals(original, moving.apply(local, ZERO, 0, 1, false), "Moved before the origin was covered");
+        moving.coveredFrame();
+        Pose close = moving.apply(local, ZERO, 0, 1, false);
+        assertNotNull(close);
+        assertTrue(close.position().z() > -4);
+        assertEquals(1, moving.fade());
+        assertEquals(close, moving.apply(local, ZERO, 0, 1, false));
+        assertEquals(1, moving.fade(), "Revealed before the destination was covered");
+        moving.coveredFrame();
+        wall[0] = false;
+        Pose previous = close;
+        for (int frame = 2; frame < 100; frame++) {
+            moving.follow(ZERO, frame * 50_000_000L, false);
+            Pose next = moving.apply(local, ZERO, 0, 1, false);
+            assertNotNull(next);
+            assertTrue(next.position().distance(previous.position()) <= .101, "Widening snapped back to the original distance");
+            previous = next;
+        }
+        assertEquals(0, moving.fade());
+        assertEquals(original.position().x(), previous.position().x(), 1e-6);
+        assertEquals(original.position().z(), previous.position().z(), 1e-6);
+        assertFalse(moving.follow(new Vec(40, 0, 0), 5_000_000_000L, false), "Recovery excused a teleport");
+    }
+
+    @Test void travelSessionKeepsFilmingWhenOnlyItsPlannedWideViewsAreBlocked() {
+        double[] width = {30};
+        Geometry world = new Geometry() {
+            private boolean sameSide(Vec a, Vec b, double margin) {
+                return Math.max(a.x(), b.x()) + margin < -width[0]
+                    || Math.min(a.x(), b.x()) - margin > width[0]
+                    || Math.abs(a.x()) + margin < width[0] && Math.abs(b.x()) + margin < width[0];
+            }
+            public boolean clear(Vec a, Vec b, double margin) {
+                return sameSide(a, b, .25 + margin);
+            }
+            public boolean visible(Vec a, Vec b, double margin) {
+                return sameSide(a, b, margin);
+            }
+        };
+        var moving = new MovingGeometry(world, ZERO, 0);
+        moving.course(0);
+        var config = new CinematicConfig();
+        config.shots = EnumSet.of(Shot.Type.ESCORT);
+        var session = new CinematicSession(ZERO, new Pose(new Vec(0, .4, 0), 0, 0), 0,
+            config, moving, new Random(3), Scene.Kind.MINECART);
+        for (int frame = 0; frame < 300; frame++) {
+            long now = frame * 50_000_000L;
+            moving.follow(ZERO, now, false);
+            if (frame == 60) { width[0] = 1.5; session.nextShot(); }
+            session.tick(now);
+            Pose local = session.frame(now);
+            assertNotNull(local, "Session rejected the unadjusted travel pose at " + frame);
+            assertNotNull(moving.apply(local, session.focus(), session.fade(), session.take(), false), "Applied travel view failed at " + frame);
+            session.coveredFrame();
+            moving.coveredFrame();
+            assertFalse(session.ended());
+        }
+    }
+
     @Test void travelViewsKeepTheirOffsetAndFindCloseFallbacks() {
         Geometry narrow = new Geometry() {
             public boolean clear(Vec a, Vec b, double margin) { return a.distance(ZERO) < 14 && b.distance(ZERO) < 14; }

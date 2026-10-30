@@ -30,8 +30,9 @@ Validate the swept camera volume and subject visibility using loaded terrain onl
 Check the client chunk cache directly; `ClientLevel.hasChunk` does not prove loading.
 Planning must bound the camera curve and moving sightline between samples.
 Apply the pose before culling and render extraction. Keep world access on the client
-thread; rendering consumes an immutable pose. Stop safely on invalid state or an
-obstructed path. Every stop path uses the same cleanup.
+thread; rendering consumes an immutable pose. Travel views shorten around obstacles;
+disconnected recovery views require opaque origin and destination frames. Stop on
+invalid state or when no clear view remains. Every stop path uses the same cleanup.
 Apply the transient lens only to the world projection paired with that pose, before
 culling. Preserve the hand projection, panorama mode and the user's FOV option.
 Override the frame cap only for ordinary AFK views, not fishing or travel; preserve normal options and

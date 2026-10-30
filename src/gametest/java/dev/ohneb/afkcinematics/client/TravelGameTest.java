@@ -176,6 +176,13 @@ public final class TravelGameTest implements FabricClientGameTest {
                     player.level().setBlock(base.offset(x, -1, z), Blocks.REDSTONE_BLOCK.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
                     player.level().setBlock(base.offset(x, 0, z), rail, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
                 }
+                for (int x : new int[]{-9, 9}) for (int z : new int[]{-9, 9}) {
+                    for (BlockPos block : BlockPos.betweenClosed(base.offset(x - 2, 3, z - 2), base.offset(x + 2, 5, z + 2)))
+                        player.level().setBlock(block, Blocks.OAK_LEAVES.defaultBlockState()
+                            .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                    for (int y = 0; y <= 4; y++) player.level().setBlock(base.offset(x, y, z), Blocks.OAK_LOG.defaultBlockState(),
+                        Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                }
                 //? if >=26.2 {
                 /*var cart = EntityTypes.MINECART.create(player.level(), EntitySpawnReason.COMMAND);
                 *///?} else {
@@ -208,7 +215,7 @@ public final class TravelGameTest implements FabricClientGameTest {
                 context.waitTicks(1);
                 context.runOnClient(client -> {
                     if (Math.abs(Math.IEEEremainder(client.player.getYRot() - riderYaw, 360)) > 30) turnedWithCart.set(true);
-                    require(AfkCinematics.showing(), "Open rail corner ended the camera: " + cameraStop);
+                    require(AfkCinematics.showing(), "Tree-lined rail corner ended the camera: " + cameraStop);
                 });
             }
             context.runOnClient(client -> cameraTimings = null);
