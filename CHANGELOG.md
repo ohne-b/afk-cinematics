@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Open travel and fishing shot choices directly from Activities. (#48)
 - Keep a close trailing minecart view available in straight rail tunnels. (#47)
 - Use familiar settings choices, show the start key and explain unavailable starts. (#46)
 - Choose cinematic playlists, set their volume and control music from chat. (#45)

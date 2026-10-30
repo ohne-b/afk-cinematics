@@ -44,6 +44,8 @@ public final class SettingsScreen extends Screen {
     private final Screen parent;
     private final EnumMap<Shot.Type, Button> shotButtons = new EnumMap<>(Shot.Type.class);
     private Page page = Page.HOME;
+    private Page shotsParent = Page.CAMERA;
+    private int shotsOffset;
     private ShotSet shotSet = ShotSet.SCENERY;
     private Button shotSetControl;
     private int offset;
@@ -138,17 +140,17 @@ public final class SettingsScreen extends Screen {
                     value -> config.pace = value, value -> Tooltip.create(text("pace.help", (int)value.minimumSeconds, (int)value.maximumSeconds))));
                 widgets.add(choice("lens", config.lens, CinematicConfig.Lens.values(), value -> text(value.name().toLowerCase(Locale.ROOT)),
                     value -> config.lens = value, value -> Tooltip.create(text("lens.help"))));
-                widgets.add(Button.builder(text("shots", config.shots.size()), button -> {
-                    page = Page.SHOTS;
-                    offset = 0;
-                    rebuildWidgets();
-                }).tooltip(Tooltip.create(text("shots.help"))).build());
+                widgets.add(Button.builder(text("shots", config.shots.size()), button -> openShots(shotSet))
+                    .tooltip(Tooltip.create(text("shots.help"))).build());
             }
             case ACTIVITIES -> {
                 widgets.add(activity("boats", () -> config.boats, value -> config.boats = value));
                 widgets.add(activity("minecarts", () -> config.minecarts, value -> config.minecarts = value));
                 widgets.add(activity("flight", () -> config.flight, value -> config.flight = value));
                 widgets.add(activity("fishing", () -> config.fishing, value -> config.fishing = value));
+                for (ShotSet set : new ShotSet[]{ShotSet.TRAVEL, ShotSet.FISHING})
+                    widgets.add(Button.builder(text("shots.title", text("shots.set." + set.name().toLowerCase(Locale.ROOT))),
+                        button -> openShots(set)).build());
             }
             case SOUND -> {
                 widgets.add(toggle("music", () -> config.music, value -> config.music = value));
@@ -267,7 +269,19 @@ public final class SettingsScreen extends Screen {
         }
     }
 
-    private void back() { open(page == Page.SHOTS ? Page.CAMERA : Page.HOME); }
+    private void openShots(ShotSet set) {
+        shotsParent = page;
+        shotsOffset = offset;
+        shotSet = set;
+        open(Page.SHOTS);
+    }
+
+    private void back() {
+        if (page != Page.SHOTS) { open(Page.HOME); return; }
+        page = shotsParent;
+        offset = shotsOffset;
+        rebuildWidgets();
+    }
 
     private Button navigate(Page destination) {
         String key = "page." + destination.name().toLowerCase(Locale.ROOT);
