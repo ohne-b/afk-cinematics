@@ -24,7 +24,7 @@ Download from [Modrinth](https://modrinth.com/project/afkcinematics) or
 Put the jar for your Minecraft version and loader in `mods`.
 Fabric also needs [Fabric API](https://modrinth.com/mod/fabric-api). No server installation needed.
 
-Press **K** to start or stop, or stay still for 30 seconds for an AFK view.
+Press **F6** to start or stop, or stay still for 30 seconds for an AFK view.
 Change the key in **Options > Controls > Key Binds > AFK Cinematics**.
 Move or open inventory to leave an AFK view. Chat can stay open.
 F2 and supported Fabrishot versions capture the cinematic without ending it.

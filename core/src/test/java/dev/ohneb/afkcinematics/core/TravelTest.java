@@ -12,6 +12,32 @@ class TravelTest {
         public boolean visible(Vec a, Vec b, double margin) { return true; }
     };
 
+    @Test void optionalSightlinePaddingDoesNotRejectARiderBesideABlockCorner() {
+        Geometry corner = new Geometry() {
+            private boolean line(Vec a, Vec b, double margin) {
+                int steps = Math.max(1, (int)Math.ceil(a.distance(b) * 100));
+                for (int i = 0; i <= steps; i++) {
+                    Vec p = a.lerp(b, (double)i / steps);
+                    if (p.x() >= 1 - margin && p.x() <= 2 + margin && p.y() >= 1 - margin && p.y() <= 2 + margin
+                        && p.z() >= 1 - margin && p.z() <= 2 + margin) return false;
+                }
+                return true;
+            }
+            public boolean clear(Vec a, Vec b, double margin) { return line(a, b, .25 + margin); }
+            public boolean visible(Vec a, Vec b, double margin) { return line(a, b, margin); }
+        };
+        Vec rider = new Vec(.75, 1.5, .75), camera = new Vec(.5, 1.5, -2);
+        assertTrue(corner.clear(camera, camera));
+        assertTrue(corner.visible(camera, rider));
+        assertFalse(corner.visible(camera, rider, .3));
+        var moving = new MovingGeometry(corner, rider, 0);
+        moving.course(0);
+        Pose view = moving.apply(Pose.lookingAt(camera.subtract(rider), ZERO), ZERO, 0, 1, false);
+        assertNotNull(view, "Optional clearance around the rider must not end an otherwise clear travel view");
+        assertTrue(corner.clear(view.position(), view.position()));
+        assertTrue(corner.visible(view.position(), rider));
+    }
+
     @Test void travellingCameraRoundsNarrowCornersWithoutEndingOrCrossingWalls() {
         Geometry corridor = new Geometry() {
             private boolean inside(Vec p, double margin) {

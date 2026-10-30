@@ -98,14 +98,9 @@ public final class MovingGeometry implements Geometry {
         if (distance > .001) {
             Vec direction = offset.scale(1 / distance);
             double maximum = Math.min(distance, cut ? distance : arm + elapsed * 2);
-            point = along(direction, maximum);
-            if (point == null) {
-                // A corner can block the old viewing direction completely; try the new course nearby.
-                for (int side : new int[]{0, 180, 90, -90}) {
-                    Vec nearby = rotate(new Vec(0, .2, -1.25), desiredHeading + side).add(target);
-                    if (usable(nearby)) { point = nearby; break; }
-                }
-            }
+            point = nearby(direction, maximum, .3);
+            // A rider beside a corner can be inside the padding while the real sightline is clear.
+            if (point == null) point = nearby(direction, maximum, 0);
         }
         if (point == null) return null;
 
@@ -122,7 +117,7 @@ public final class MovingGeometry implements Geometry {
             double limit = Math.max(.35, movement * 1.5 + elapsed * 12);
             double travel = from.distance(point);
             Vec step = travel > limit ? from.lerp(point, limit / travel) : point;
-            if (usable(step) && world.clear(from, step)) point = step;
+            if (usable(step, 0) && world.clear(from, step)) point = step;
             else {
                 // Do not jump through a trunk. Cover the old view, then recheck a close destination.
                 recovery = Recovery.ORIGIN;
@@ -145,24 +140,35 @@ public final class MovingGeometry implements Geometry {
         return result;
     }
 
-    private Vec along(Vec direction, double maximum) {
+    private Vec nearby(Vec direction, double maximum, double margin) {
+        Vec point = along(direction, maximum, margin);
+        if (point != null) return point;
+        // A corner can block the old viewing direction completely; try the new course nearby.
+        for (int side : new int[]{0, 180, 90, -90}) {
+            Vec candidate = rotate(new Vec(0, .2, -1.25), desiredHeading + side).add(target);
+            if (usable(candidate, margin)) return candidate;
+        }
+        return null;
+    }
+
+    private Vec along(Vec direction, double maximum, double margin) {
         double minimum = Math.min(.8, maximum);
         Vec far = target.add(direction.scale(maximum));
-        if (usable(far)) return far;
+        if (usable(far, margin)) return far;
         Vec near = target.add(direction.scale(minimum));
-        if (!usable(near)) return null;
+        if (!usable(near, margin)) return null;
         // Fixed work per frame; the padded arm also leaves room before foliage reaches the camera.
         for (int i = 0; i < 6; i++) {
             double middle = (minimum + maximum) * .5;
             Vec candidate = target.add(direction.scale(middle));
-            if (usable(candidate)) { minimum = middle; near = candidate; }
+            if (usable(candidate, margin)) { minimum = middle; near = candidate; }
             else maximum = middle;
         }
         return near;
     }
 
-    private boolean usable(Vec point) {
-        return Scene.inRange(point, target) && world.clear(point, point) && world.visible(point, target, .3);
+    private boolean usable(Vec point, double margin) {
+        return Scene.inRange(point, target) && world.clear(point, point) && world.visible(point, target, margin);
     }
 
     private Pose coveredOrigin() {
