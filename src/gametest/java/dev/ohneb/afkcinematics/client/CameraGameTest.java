@@ -125,6 +125,22 @@ public final class CameraGameTest implements FabricClientGameTest {
             context.waitForScreen(SettingsScreen.class);
             screenshot(context, "settings");
             context.runOnClient(client -> {
+                var settings = (SettingsScreen)AfkCinematics.screen();
+                var toggleKey = ((dev.ohneb.afkcinematics.mixin.KeyMappingAccess)AfkCinematics.TOGGLE).afkCinematics$key();
+                pressSetting(settings, "Controls");
+                pressSetting(settings, "Key bindings...");
+                require(AfkCinematics.screen() instanceof net.minecraft.client.gui.screens.options.controls.KeyBindsScreen,
+                    "Settings did not open vanilla key bindings");
+                AfkCinematics.screen().onClose();
+                require(AfkCinematics.screen() == settings, "Key bindings did not return to cinematic settings");
+                require(((dev.ohneb.afkcinematics.mixin.KeyMappingAccess)AfkCinematics.TOGGLE).afkCinematics$key().equals(toggleKey),
+                    "Opening key bindings changed the cinematic binding");
+                AfkCinematics.config().enabled = false;
+                settings.tick();
+                require(!setting(settings, "Start cinematic").active, "Disabled camera left Start available");
+                AfkCinematics.config().enabled = true;
+                settings.tick();
+                require(setting(settings, "Start cinematic").active, "Start did not recover when the camera became available");
                 AfkCinematics.showScreen(null);
                 AfkCinematics.config().automatic = true;
                 AfkCinematics.config().idleSeconds = 10;
@@ -225,6 +241,16 @@ public final class CameraGameTest implements FabricClientGameTest {
             require(!AfkCinematics.ownsCamera(), "Disconnect left a camera owner");
             focused = null;
         });
+    }
+
+    private static net.minecraft.client.gui.components.Button setting(SettingsScreen screen, String label) {
+        return screen.children().stream().filter(net.minecraft.client.gui.components.Button.class::isInstance)
+            .map(net.minecraft.client.gui.components.Button.class::cast).filter(button -> button.getMessage().getString().equals(label))
+            .findFirst().orElseThrow();
+    }
+
+    private static void pressSetting(SettingsScreen screen, String label) {
+        setting(screen, label).onPress(new net.minecraft.client.input.KeyEvent(InputConstants.KEY_SPACE, 0, 0));
     }
 
     private static void screenshot(ClientGameTestContext context, String name) {

@@ -50,7 +50,8 @@ public final class SettingsScreen extends Screen {
     private int maxOffset;
     private Component error = Component.empty();
     private boolean saveFailed;
-    private Button close;
+    private Button close, preview;
+    private Component startIssue;
 
     public SettingsScreen(Screen parent) {
         super(text("settings"));
@@ -83,15 +84,27 @@ public final class SettingsScreen extends Screen {
             addRenderableWidget(widget);
         }
         int half = (contentWidth - 6) / 2;
-        var preview = Button.builder(text("preview"), button -> {
+        preview = Button.builder(text("preview"), button -> {
             if (save()) { AfkCinematics.showScreen(null); AfkCinematics.requestStart(); }
         }).bounds(width / 2 - half - 3, height - 26, half, 20).build();
-        Component startProblem = AfkCinematics.startProblem();
-        preview.active = startProblem.getString().isEmpty();
-        preview.setTooltip(Tooltip.create(preview.active ? text("preview.help") : startProblem));
+        startIssue = null;
+        updateStart();
         addRenderableWidget(preview);
         close = addRenderableWidget(Button.builder(saveFailed ? text("close_unsaved") : CommonComponents.GUI_DONE, button -> onClose())
             .bounds(width / 2 + 3, height - 26, half, 20).build());
+    }
+
+    @Override public void tick() {
+        super.tick();
+        updateStart();
+    }
+
+    private void updateStart() {
+        Component problem = AfkCinematics.startProblem();
+        if (problem.equals(startIssue)) return;
+        startIssue = problem;
+        preview.active = problem.getString().isEmpty();
+        preview.setTooltip(Tooltip.create(preview.active ? text("preview.help") : problem));
     }
 
     private List<AbstractWidget> controls(CinematicConfig config, int buttonWidth) {
