@@ -13,6 +13,12 @@ import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 
 @Mixin(Minecraft.class)
 public abstract class MinecraftMixin {
+    //? if >=26.1 && <26.2 {
+    /*@com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod(method = "handleKeybinds")
+    private void afkCinematics$realF1(com.llamalad7.mixinextras.injector.wrapoperation.Operation<Void> original) {
+        dev.ohneb.afkcinematics.client.HudVisibility.input(() -> original.call());
+    }
+    *///?}
     //? if <26.2 {
     @ModifyExpressionValue(method = "renderNames",
         at = @At(value = "FIELD", target = "Lnet/minecraft/client/Options;hideGui:Z", opcode = 180))
