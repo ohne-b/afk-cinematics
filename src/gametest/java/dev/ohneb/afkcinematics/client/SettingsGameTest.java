@@ -60,6 +60,14 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     button(settings, "Fishing: Off").onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 1));
                     require(fixture.config().fishing == dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.AUTOMATIC,
                         "Shift-click did not cycle the activity backward");
+                    var selectedShots = EnumSet.copyOf(fixture.config().shots);
+                    for (String group : new String[]{"Travel", "Fishing"}) {
+                        press(settings, group + " shots");
+                        button(settings, "For: " + group);
+                        press(settings, "Back");
+                        button(settings, "Fishing: On cast");
+                    }
+                    require(fixture.config().shots.equals(selectedShots), "Opening activity shots changed the selection");
                     go(settings, "Camera");
                     var subject = button(settings, "Subject: Mixed");
                     settings.setFocused(subject);
@@ -152,6 +160,17 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     for (String page : new String[]{"Camera", "Display", "AFK", "Activities", "Sound", "Controls"}) {
                         go(settings, page);
                         checkBounds(settings);
+                        if (page.equals("Activities")) {
+                            for (String group : new String[]{"Travel", "Fishing"}) {
+                                String shortcut = group + " shots";
+                                press(settings, shortcut);
+                                button(settings, "For: " + group);
+                                settings.keyPressed(new KeyEvent(InputConstants.KEY_ESCAPE, 0, 0));
+                                require(settings.children().stream().anyMatch(child -> child instanceof AbstractButton button
+                                    && button.getMessage().getString().equals(shortcut)), "Back lost the activity scroll position");
+                                checkBounds(settings);
+                            }
+                        }
                         if (page.equals("Display")) {
                             var fps = fpsSlider(settings);
                             client.setLastInputType(InputType.KEYBOARD_TAB);
