@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.EnumSet;
+import java.util.function.Predicate;
 
 import static dev.ohneb.afkcinematics.client.TestSupport.require;
 
@@ -53,21 +54,39 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     press(settings, "Shot types: " + Shot.Type.values().length + " enabled");
                     for (Shot.Type type : Shot.Type.values()) {
                         if (type == Shot.Type.PAN) continue;
+                        showShotSet(settings, type);
                         String label = Component.translatable("ohneb_afk_cinematics.shot." + type.name().toLowerCase(Locale.ROOT)).getString();
                         press(settings, label + ": ON");
                     }
                     require(fixture.config().shots.equals(EnumSet.of(Shot.Type.PAN)), "Shot controls did not preserve the selected style");
+                    showShotSet(settings, Shot.Type.PAN);
                     require(!button(settings, "Panorama: ON").active, "The last enabled shot could be disabled");
                 });
                 context.takeScreenshot(TestScreenshotOptions.of("shot-options").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
                     press(settings, "Moving only");
-                    require(fixture.config().shots.equals(EnumSet.complementOf(EnumSet.of(Shot.Type.PAN, Shot.Type.STILL))),
-                        "Moving-only selection included stationary shots or omitted a drive");
+                    var scenery = EnumSet.allOf(Shot.Type.class);
+                    scenery.removeIf(type -> type.travelOnly() || type.fishingOnly());
+                    var moving = EnumSet.copyOf(scenery);
+                    moving.remove(Shot.Type.PAN);
+                    moving.remove(Shot.Type.STILL);
+                    require(fixture.config().shots.equals(moving), "Moving-only selection changed another camera set");
                     press(settings, "Enable all");
-                    require(fixture.config().shots.equals(EnumSet.allOf(Shot.Type.class)), "Enable all omitted shot types");
+                    require(fixture.config().shots.equals(scenery), "Enable all changed another camera set");
+                    showShotSet(settings, Shot.Type.TRAIL);
+                    press(settings, "Enable all");
+                    require(fixture.config().shots.contains(Shot.Type.BROADSIDE) && !fixture.config().shots.contains(Shot.Type.ANGLER),
+                        "Travel selection changed the fishing set");
                 });
+                context.takeScreenshot(TestScreenshotOptions.of("travel-shot-set").withDestinationDir(artifacts));
+                context.runOnClient(client -> {
+                    var settings = (SettingsScreen)AfkCinematics.screen();
+                    showShotSet(settings, Shot.Type.ANGLER);
+                    press(settings, "Enable all");
+                    require(fixture.config().shots.equals(EnumSet.allOf(Shot.Type.class)), "Grouped controls omitted a shot type");
+                });
+                context.takeScreenshot(TestScreenshotOptions.of("fishing-shot-set").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
                     press(settings, "Display");
@@ -90,6 +109,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     press(settings, "Camera");
                     press(settings, "Shot types: " + Shot.Type.values().length + " enabled");
                     for (Shot.Type type : Shot.Type.values()) {
+                        showShotSet(settings, type);
                         String label = Component.translatable("ohneb_afk_cinematics.shot." + type.name().toLowerCase(Locale.ROOT)).getString();
                         button(settings, label + ": ON");
                         checkBounds(settings);
@@ -127,15 +147,33 @@ public final class SettingsGameTest implements FabricClientGameTest {
     }
 
     private static Button button(SettingsScreen settings, String label) {
+        return button(settings, label, label::equals);
+    }
+
+    private static Button button(SettingsScreen settings, String label, Predicate<String> match) {
         for (int direction : new int[]{1, -1}) {
             for (int step = 0; step <= Shot.Type.values().length + 2; step++) {
                 var found = settings.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
-                    .filter(button -> button.getMessage().getString().equals(label)).findFirst();
+                    .filter(button -> match.test(button.getMessage().getString())).findFirst();
                 if (found.isPresent()) return found.get();
                 settings.mouseScrolled(0, 0, 0, direction);
             }
         }
         throw new AssertionError("Missing settings control: " + label);
+    }
+
+    private static void showShotSet(SettingsScreen settings, Shot.Type type) {
+        String target = "Set: " + (type.travelOnly() ? "Boat & flight" : type.fishingOnly() ? "Fishing" : "Player & scenery");
+        for (int step = 0; step < 3; step++) {
+            Button selector = button(settings, "shot-set selector", label -> label.startsWith("Set: "));
+            if (selector.getMessage().getString().equals(target)) return;
+            settings.setFocused(selector);
+            selector.setFocused(true);
+            selector.onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
+            require(settings.getFocused() instanceof Button focused && focused.getMessage().getString().startsWith("Set: "),
+                "Switching sets lost keyboard focus");
+        }
+        throw new AssertionError("Missing shot set: " + target);
     }
 
     private static AbstractWidget fpsSlider(SettingsScreen settings) {
