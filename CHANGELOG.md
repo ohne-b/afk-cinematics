@@ -10,6 +10,7 @@
 - Manually started Elytra views keep filming during normal rocket boosts (#36).
 - Moving takes continue through Next-shot preparation and fades (#37).
 - The shot picker separates scenery, travel and fishing selections, with presets scoped to each set (#38).
+- Compatible Minecraft versions share release jars, reducing downloads from 34 files to 19 while keeping every supported version (#39).
 
 ## 0.0.1-alpha.1
 
