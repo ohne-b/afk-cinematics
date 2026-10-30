@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.input.KeyEvent;
@@ -48,12 +49,28 @@ public final class SettingsGameTest implements FabricClientGameTest {
                 context.takeScreenshot(TestScreenshotOptions.of("camera-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
+                    go(settings, "AFK");
+                    press(settings, "Enabled: ON");
+                    require(AfkCinematics.startProblem().getString().contains("Cinematics are off"), "Disabled manual start had no clear reason");
+                    require(!button(settings, "Start cinematic").active, "Disabling cinematics left Start enabled");
+                    press(settings, "Enabled: OFF");
                     go(settings, "Activities");
                     press(settings, "Fishing: On cast");
                     require(fixture.config().fishing == dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.OFF, "Fishing control did not change its setting");
-                    press(settings, "Fishing: Off");
-                    press(settings, "Fishing: Manual");
+                    button(settings, "Fishing: Off").onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 1));
+                    require(fixture.config().fishing == dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.AUTOMATIC,
+                        "Shift-click did not cycle the activity backward");
                     go(settings, "Camera");
+                    var subject = button(settings, "Subject: Mixed");
+                    settings.setFocused(subject);
+                    subject.setFocused(true);
+                    subject.onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
+                    require(settings.getFocused() == button(settings, "Subject: Player"), "Changing subject lost keyboard focus");
+                    var share = settings.children().stream().filter(AbstractWidget.class::isInstance).map(AbstractWidget.class::cast)
+                        .filter(widget -> widget.getMessage().getString().startsWith("Player shots:")).findFirst().orElseThrow();
+                    require(!share.active, "Player frequency remained editable outside Mixed views");
+                    button(settings, "Subject: Player").onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 1));
+                    require(fixture.config().subject == dev.ohneb.afkcinematics.core.CinematicConfig.Subject.MIXED, "Subject did not cycle backward");
                     press(settings, "Shot types: " + Shot.Type.values().length + " enabled");
                     for (Shot.Type type : Shot.Type.values()) {
                         if (type == Shot.Type.PAN) continue;
@@ -150,8 +167,13 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     settings.keyPressed(new KeyEvent(InputConstants.KEY_ESCAPE, 0, 0));
                     require(AfkCinematics.screen() == settings, "Back closed settings instead of returning home");
                     button(settings, "Activities");
-                    settings.onClose();
+                    go(settings, "Controls");
+                    var bindings = button(settings, "Key bindings...");
+                    settings.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(bindings.getX() + 5, bindings.getY() + 5,
+                        new net.minecraft.client.input.MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0)), false);
+                    settings.tick();
                     require(AfkCinematics.screen() == settings, "First save failure hid the error");
+                    require(settings.getFocused() == button(settings, "Close without saving"), "Mouse dispatch undid save-error focus");
                     require(settings.children().stream().anyMatch(child -> child instanceof Button button
                         && button.getMessage().getString().equals("Close without saving")), "Save failure did not offer an exit");
                     settings.onClose();
@@ -167,14 +189,14 @@ public final class SettingsGameTest implements FabricClientGameTest {
         } catch (Exception exception) { throw new AssertionError(exception); }
     }
 
-    private static Button button(SettingsScreen settings, String label) {
+    private static AbstractButton button(SettingsScreen settings, String label) {
         return button(settings, label, label::equals);
     }
 
-    private static Button button(SettingsScreen settings, String label, Predicate<String> match) {
+    private static AbstractButton button(SettingsScreen settings, String label, Predicate<String> match) {
         for (int direction : new int[]{1, -1}) {
             for (int step = 0; step <= Shot.Type.values().length + 2; step++) {
-                var found = settings.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
+                var found = settings.children().stream().filter(AbstractButton.class::isInstance).map(AbstractButton.class::cast)
                     .filter(button -> match.test(button.getMessage().getString())).findFirst();
                 if (found.isPresent()) return found.get();
                 settings.mouseScrolled(0, 0, 0, direction);
@@ -186,7 +208,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
     private static void showShotSet(SettingsScreen settings, Shot.Type type) {
         String target = "For: " + (type.travelOnly() ? "Travel" : type.fishingOnly() ? "Fishing" : "Player & scenery");
         for (int step = 0; step < 3; step++) {
-            Button selector = button(settings, "shot-set selector", label -> label.startsWith("For: "));
+            AbstractButton selector = button(settings, "shot-set selector", label -> label.startsWith("For: "));
             if (selector.getMessage().getString().equals(target)) return;
             settings.setFocused(selector);
             selector.setFocused(true);
@@ -212,7 +234,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
 
     private static void go(SettingsScreen settings, String label) {
         for (int step = 0; step < 2; step++) {
-            var back = settings.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
+            var back = settings.children().stream().filter(AbstractButton.class::isInstance).map(AbstractButton.class::cast)
                 .filter(button -> button.getMessage().getString().equals("Back")).findFirst();
             if (back.isEmpty()) break;
             back.get().onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
@@ -221,7 +243,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
     }
 
     private static void press(SettingsScreen settings, String label) {
-        Button button = button(settings, label);
+        AbstractButton button = button(settings, label);
         require(button.active, "Settings control was unexpectedly disabled: " + label);
         button.onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
     }
