@@ -9,6 +9,7 @@
 - Low, high and broadside travel views follow gradual turns and cover sharp course changes (#35).
 - Manually started Elytra views keep filming during normal rocket boosts (#36).
 - Moving takes continue through Next-shot preparation and fades (#37).
+- The shot picker separates scenery, travel and fishing selections, with presets scoped to each set (#38).
 
 ## 0.0.1-alpha.1
 

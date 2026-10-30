@@ -25,9 +25,22 @@ import java.util.function.Consumer;
 
 public final class SettingsScreen extends Screen {
     private enum Page { GENERAL, CAMERA, DISPLAY, SHOTS, ACTIVITIES }
+    private enum ShotSet {
+        SCENERY, TRAVEL, FISHING;
+
+        boolean includes(Shot.Type type) {
+            return switch (this) {
+                case SCENERY -> !type.travelOnly() && !type.fishingOnly();
+                case TRAVEL -> type.travelOnly();
+                case FISHING -> type.fishingOnly();
+            };
+        }
+    }
     private final Screen parent;
     private final EnumMap<Shot.Type, Button> shotButtons = new EnumMap<>(Shot.Type.class);
     private Page page = Page.GENERAL;
+    private ShotSet shotSet = ShotSet.SCENERY;
+    private Button shotSetControl;
     private int offset;
     private int maxOffset;
     private Component error = Component.empty();
@@ -167,15 +180,21 @@ public final class SettingsScreen extends Screen {
                 widgets.add(toggle("music", () -> config.music, value -> config.music = value));
             }
             case SHOTS -> {
+                var types = EnumSet.noneOf(Shot.Type.class);
+                for (Shot.Type type : Shot.Type.values()) if (shotSet.includes(type)) types.add(type);
+                shotSetControl = Button.builder(label("shots.set", text("shots.set." + shotSet.name().toLowerCase(Locale.ROOT))), button -> {
+                    boolean focused = button.isFocused();
+                    shotSet = ShotSet.values()[(shotSet.ordinal() + 1) % ShotSet.values().length];
+                    offset = 0;
+                    rebuildWidgets();
+                    if (focused) { setFocused(shotSetControl); shotSetControl.setFocused(true); }
+                }).tooltip(Tooltip.create(text("shots.set.help"))).build();
+                widgets.add(shotSetControl);
                 widgets.add(Button.builder(text("shots.all"), button -> {
-                    config.shots = EnumSet.allOf(Shot.Type.class);
+                    config.shots.addAll(types);
                     rebuildWidgets();
                 }).build());
-                widgets.add(Button.builder(text("shots.moving"), button -> {
-                    config.shots = EnumSet.complementOf(EnumSet.of(Shot.Type.PAN, Shot.Type.STILL));
-                    rebuildWidgets();
-                }).build());
-                for (Shot.Type type : Shot.Type.values()) {
+                for (Shot.Type type : types) {
                     String key = "shot." + type.name().toLowerCase(Locale.ROOT);
                     Button button = toggle(key, () -> config.shots.contains(type), enabled -> {
                         if (enabled) config.shots.add(type);
@@ -185,6 +204,12 @@ public final class SettingsScreen extends Screen {
                     shotButtons.put(type, button);
                     widgets.add(button);
                 }
+                if (shotSet == ShotSet.SCENERY) widgets.add(Button.builder(text("shots.moving"), button -> {
+                    config.shots.addAll(types);
+                    config.shots.remove(Shot.Type.PAN);
+                    config.shots.remove(Shot.Type.STILL);
+                    rebuildWidgets();
+                }).build());
                 refreshShots(config);
             }
         }
@@ -254,7 +279,8 @@ public final class SettingsScreen extends Screen {
 
     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         super.render(graphics, mouseX, mouseY, delta);
-        graphics.drawCenteredString(font, page == Page.SHOTS ? text("shots.title") : title, width / 2, 10, 0xFFFFFFFF);
+        graphics.drawCenteredString(font, page == Page.SHOTS
+            ? text("shots.title", text("shots.set." + shotSet.name().toLowerCase(Locale.ROOT))) : title, width / 2, 10, 0xFFFFFFFF);
         Component status = error;
         if (!AfkCinematics.store().readable()) status = text("read_error");
         else if (!AfkCinematics.conflict().isEmpty()) status = text("conflict", AfkCinematics.conflict());
