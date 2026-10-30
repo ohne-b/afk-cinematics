@@ -125,8 +125,13 @@ Stable releases become latest; alpha/beta/RC versions remain prereleases. An exi
 release stops publication instead of overwriting assets or tags.
 
 Then run the same inputs with destination `modrinth` or `curseforge`. Distribution
-requires the matching public GitHub release and checksum manifest. Each Minecraft
-version/loader is a separate upload, with Fabric API required for Fabric builds.
+requires the matching public GitHub release and checksum manifest. Compatible
+Minecraft versions share one upload per loader, with Fabric API required for Fabric builds.
+The release helper validates all 34 build artifacts, then packages 19 jars using the
+explicit groups in `COMPATIBLE_GAMES`. Shared code and resources must match exactly;
+only the declared version, Minecraft requirements, NeoForge line minimums and Loom's
+compile-target field may differ. A mismatch stops packaging until the group is split.
+Game requirements enumerate supported versions; they never admit future patches.
 The pinned [mc-publish action](https://github.com/Kira-NT/mc-publish) handles these
 uploads. Configure the destinations you use in GitHub's `release` environment:
 

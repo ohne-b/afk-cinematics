@@ -57,11 +57,11 @@ class ReleaseTest(unittest.TestCase):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 release.validate_run(dict(run, **{key: value}), "a" * 40)
 
-    def target(self, loader):
-        config = self.root / "versions" / f"1.21.11-{loader}" / "gradle.properties"
+    def target(self, loader, game="1.21.11", neo="21.11.48"):
+        config = self.root / "versions" / f"{game}-{loader}" / "gradle.properties"
         config.parent.mkdir(parents=True, exist_ok=True)
-        config.write_text("minecraft_version=1.21.11\n")
-        return next(t for t in release.targets(self.root, "0.1.0") if t["loader"] == loader)
+        config.write_text(f"minecraft_version={game}\nneoforge_version={neo}\n")
+        return next(t for t in release.targets(self.root, "0.1.0") if t["target"] == f"{game}-{loader}")
 
     def test_each_target_has_exact_metadata_and_dependency(self):
         fabric = self.target("fabric")
@@ -101,6 +101,10 @@ class ReleaseTest(unittest.TestCase):
 modId = "{release.MOD_ID}"
 version = "0.1.0+mc1.21.11-neoforge"
 [[dependencies.{release.MOD_ID}]]
+modId = "neoforge"
+versionRange = "[21.11.48,)"
+side = "CLIENT"
+[[dependencies.{release.MOD_ID}]]
 modId = "minecraft"
 versionRange = "{game}"
 side = "CLIENT"
@@ -119,6 +123,101 @@ side = "CLIENT"
         with self.assertRaises(ValueError):
             release.bundle(self.root, "0.1.0", "a" * 40, self.root / "missing", out)
         self.assertFalse(out.exists())
+
+    def write_group_member(self, target, overrides=None):
+        entries = {"LICENSE.md": b"SPDX-License-Identifier: GPL-3.0-only\n",
+                   "Camera.class": b"same compiled code", "assets/logo.png": b"same resource"}
+        version = "0.1.0+mc" + target["target"]
+        if target["loader"] == "fabric":
+            entries["fabric.mod.json"] = json.dumps({"id": release.MOD_ID, "version": version,
+                "environment": "client", "license": "GPL-3.0-only",
+                "depends": {"minecraft": target["minecraft"], "fabricloader": ">=0.19.3", "java": ">=21"},
+                "mixins": ["camera.mixins.json"]}).encode()
+            entries["META-INF/MANIFEST.MF"] = ("Manifest-Version: 1.0\r\nFabric-Mapping-Namespace: intermediary\r\n"
+                f"Fabric-Minecraft-Version: {target['minecraft']}\r\n\r\n").encode()
+        else:
+            entries["META-INF/neoforge.mods.toml"] = f'''license = "GPL-3.0-only"
+[[mods]]
+modId = "{release.MOD_ID}"
+version = "{version}"
+[[dependencies.{release.MOD_ID}]]
+modId = "minecraft"
+versionRange = "[{target['minecraft']}]"
+side = "CLIENT"
+[[dependencies.{release.MOD_ID}]]
+modId = "neoforge"
+versionRange = "{target['neoforge_range']}"
+side = "CLIENT"
+'''.encode()
+        entries.update(overrides or {})
+        path = self.root / "download" / target["file"]
+        path.parent.mkdir(exist_ok=True)
+        with ZipFile(path, "w") as jar:
+            for name, contents in entries.items():
+                jar.writestr(name, contents)
+        return path
+
+    def test_grouped_bundle_keeps_code_and_exact_game_and_loader_requirements(self):
+        release.prepare(self.root, "0.1.0")
+        license_text = "SPDX-License-Identifier: GPL-3.0-only\n"
+        (self.root / "LICENSE.md").write_text(license_text)
+        for loader in ("fabric", "neoforge"):
+            for game, neo in (("1.21", "21.0.167"), ("1.21.1", "21.1.265")):
+                self.write_group_member(self.target(loader, game, neo))
+        out = self.root / "bundle"
+        def archive(command, **kwargs):
+            Path(next(a.removeprefix("--output=") for a in command if a.startswith("--output="))).write_bytes(b"source")
+        with patch("release.subprocess.run", side_effect=archive):
+            matrix = release.bundle(self.root, "0.1.0", "a" * 40, self.root / "download", out)
+        self.assertEqual(len(matrix), 2)
+        for target in matrix:
+            self.assertEqual(target["game_versions"], "1.21\n1.21.1")
+            self.assertEqual(target["minecraft"], "1.21-1.21.1")
+            release.validate_jar(out / target["file"], target, "0.1.0", license_text)
+            with ZipFile(out / target["file"]) as jar:
+                self.assertEqual(jar.read("Camera.class"), b"same compiled code")
+                self.assertEqual(jar.read("assets/logo.png"), b"same resource")
+                if target["loader"] == "fabric":
+                    meta = json.loads(jar.read("fabric.mod.json"))
+                    self.assertEqual(meta["depends"]["minecraft"], ["1.21", "1.21.1"])
+                    self.assertEqual(meta["depends"]["fabricloader"], ">=0.19.3")
+                    self.assertEqual(meta["mixins"], ["camera.mixins.json"])
+                else:
+                    self.assertEqual(target["neoforge_range"], "[21.0.167,21.1.0-alpha),[21.1.265,21.2.0-alpha)")
+
+    def test_duplicate_entry_fails_before_bundle_is_written(self):
+        release.prepare(self.root, "0.1.0")
+        (self.root / "LICENSE.md").write_text("SPDX-License-Identifier: GPL-3.0-only\n")
+        first = self.target("fabric", "1.21")
+        second = self.target("fabric", "1.21.1")
+        path = self.write_group_member(first, {"Camera.class": b"different first entry"})
+        with ZipFile(path, "a") as jar, self.assertWarns(UserWarning):
+            jar.writestr("Camera.class", b"same compiled code")
+        self.write_group_member(second)
+        output = self.root / "bundle"
+        with patch("release.subprocess.run"), self.assertRaisesRegex(ValueError, "Duplicate"):
+            release.bundle(self.root, "0.1.0", "a" * 40, self.root / "download", output)
+        self.assertFalse(output.exists())
+
+    def test_grouping_rejects_changed_code_resources_and_manifest_contracts(self):
+        first = self.target("fabric", "1.21")
+        second = self.target("fabric", "1.21.1")
+        first_path = self.write_group_member(first)
+        with ZipFile(self.write_group_member(second)) as jar:
+            changed_meta = json.loads(jar.read("fabric.mod.json"))
+        changed_meta["depends"]["java"] = ">=25"
+        cases = ({"Camera.class": b"different code"}, {"assets/logo.png": b"different resource"},
+                 {"META-INF/MANIFEST.MF": b"Manifest-Version: 1.0\r\nFabric-Mapping-Namespace: official\r\n"},
+                 {"fabric.mod.json": json.dumps(changed_meta).encode()})
+        for change in cases:
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, "payload differs"):
+                release.grouped_jars([first, second], [first_path, self.write_group_member(second, change)], "0.1.0")
+
+    def test_neoforge_2612_keeps_its_separate_annotation_build(self):
+        matrix = [self.target("neoforge", game, neo) for game, neo in
+                  (("26.1", "26.1.0.19-beta"), ("26.1.1", "26.1.1.12-beta"), ("26.1.2", "26.1.2.124"))]
+        groups = release.grouped_jars(matrix, [self.write_group_member(t) for t in matrix], "0.1.0")
+        self.assertEqual([t["game_versions"] for t, _, _ in groups], ["26.1\n26.1.1", "26.1.2"])
 
     def test_complete_bundle_copies_only_primary_jars_and_archives_pinned_source(self):
         release.prepare(self.root, "0.1.0")
