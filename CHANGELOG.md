@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Keep minecart views through passive rider rotation and aim close tunnel views at the rider. (#51)
 - Keep fishing music between quick casts and keep minecart takes through ordinary bends. (#50)
 - Hide third-party HUDs that respect F1, including direct visibility reads during rendering. (#49)
 - Open travel and fishing shot choices directly from Activities. (#48)
