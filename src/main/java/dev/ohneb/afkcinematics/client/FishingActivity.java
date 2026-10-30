@@ -7,7 +7,6 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.projectile.FishingHook;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.phys.HitResult;
 
 final class FishingActivity {
     private FishingActivity() { }
@@ -48,10 +47,4 @@ final class FishingActivity {
         return new Vec(x, surface, z).subtract(player);
     }
 
-    static boolean canUse(LocalPlayer player, HitResult hit) {
-        // Block/entity interactions precede rod use; an offhand rod cannot authorize another held item.
-        return hit != null && hit.getType() == HitResult.Type.MISS
-            && (player.getMainHandItem().is(Items.FISHING_ROD)
-                || player.getMainHandItem().isEmpty() && player.getOffhandItem().is(Items.FISHING_ROD));
-    }
 }

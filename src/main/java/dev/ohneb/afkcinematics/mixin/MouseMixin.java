@@ -64,7 +64,7 @@ public abstract class MouseMixin {
         if (action == InputConstants.RELEASE) {
             if (owned != null) {
                 if (!Minecraft.getInstance().isWindowActive()) {
-                    // Cancel permitted rod use, but retain physical ownership until a trusted release.
+                    // Cancel permitted activity use, but retain physical ownership until a trusted release.
                     for (InputConstants.Key released : owned) AfkCinematics.input(released, action, false);
                     ci.cancel();
                     return;

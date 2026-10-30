@@ -7,7 +7,9 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Difficulty;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EquipmentSlot;
 //? if >=26.2 {
 /*import net.minecraft.world.entity.EntityTypes;
 *///?} else {
@@ -168,9 +170,75 @@ public final class TravelGameTest implements FabricClientGameTest {
                 player.onUpdateAbilities();
             });
             context.waitFor(client -> !AfkCinematics.ownsCamera(), 20);
+
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                player.setGameMode(GameType.SURVIVAL);
+                player.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.ELYTRA));
+                player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.FIREWORK_ROCKET, 8));
+                player.teleportTo(player.getX(), player.getY() + 100, player.getZ());
+                player.setOnGround(false);
+                player.startFallFlying();
+                player.inventoryMenu.broadcastFullState();
+            });
+            context.waitFor(client -> client.player.isFallFlying() && client.player.getMainHandItem().is(Items.FIREWORK_ROCKET));
+            context.runOnClient(client -> { client.player.setXRot(-5); AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL); });
+            start(context);
+            rocket(context);
+            context.waitFor(client -> client.player.getMainHandItem().getCount() == 7);
+            context.runOnClient(client -> require(AfkCinematics.showing() && client.player.isFallFlying(),
+                "A genuine Elytra boost ended the manual flight view"));
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                require(player.getMainHandItem().getCount() == 7, "The boost did not consume exactly one server rocket");
+                player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+                player.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.FIREWORK_ROCKET, 5));
+                player.inventoryMenu.broadcastFullState();
+            });
+            context.waitFor(client -> client.player.getMainHandItem().isEmpty() && client.player.getOffhandItem().getCount() == 5);
+            rocket(context);
+            context.waitFor(client -> client.player.getOffhandItem().getCount() == 4);
+            context.runOnClient(client -> require(AfkCinematics.showing(), "An offhand boost ended the manual flight view"));
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                require(player.getOffhandItem().getCount() == 4, "Offhand use did not reach vanilla");
+                player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.APPLE, 16));
+                player.inventoryMenu.broadcastFullState();
+            });
+            context.waitFor(client -> client.player.getMainHandItem().is(Items.APPLE));
+            mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS);
+            context.waitTicks(6);
+            context.runOnClient(client -> require(!AfkCinematics.ownsCamera() && !client.options.keyUse.isDown()
+                && !client.player.isUsingItem(), "An offhand rocket authorized unrelated main-hand use"));
+            mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.RELEASE);
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                require(player.getMainHandItem().getCount() == 16 && player.getOffhandItem().getCount() == 4,
+                    "The waking press consumed an item");
+                player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+                player.inventoryMenu.broadcastFullState();
+            });
+            context.waitFor(client -> client.player.getMainHandItem().isEmpty());
+            context.runOnClient(client -> AfkCinematics.config().travelControls = false);
+            start(context);
+            rocket(context);
+            context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Disabled travel controls still permitted a boost"));
+            world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst()
+                .getOffhandItem().getCount() == 4, "Disabled travel controls consumed a rocket"));
         } finally {
-            context.runOnClient(client -> { AfkCinematics.stop(); AfkCinematics.config().automatic = false; focused = null; });
+            context.runOnClient(client -> {
+                AfkCinematics.stop();
+                AfkCinematics.config().automatic = false;
+                AfkCinematics.config().travelControls = true;
+                focused = null;
+            });
         }
+    }
+
+    private static void rocket(ClientGameTestContext context) {
+        mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS);
+        context.waitTicks(1);
+        mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.RELEASE);
     }
 
     private static void screenshot(ClientGameTestContext context, String name) {

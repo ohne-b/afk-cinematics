@@ -19,7 +19,7 @@ public abstract class MinecraftMixin {
 
     @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
     private void afkCinematics$use(CallbackInfo ci) {
-        if (AfkCinematics.ownsCamera() && !AfkCinematics.allowRodUse()) {
+        if (AfkCinematics.ownsCamera() && !AfkCinematics.allowActivityUse()) {
             AfkCinematics.blockInput(((KeyMappingAccess)Minecraft.getInstance().options.keyUse).afkCinematics$key());
             ci.cancel();
         }
