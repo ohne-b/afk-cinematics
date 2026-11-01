@@ -62,7 +62,17 @@ final class SmokeProbe {
             press(playlist(screen));
             if (config.soundtrack != dev.ohneb.afkcinematics.core.CinematicConfig.Soundtrack.CUSTOM)
                 throw new AssertionError("Rebuilding settings lost the playlist index");
-            playlist(screen).mouseScrolled(0, 0, 0, 1);
+            var choice = playlist(screen);
+            choice.mouseScrolled(0, 0, 0, 1);
+            if (config.soundtrack != dev.ohneb.afkcinematics.core.CinematicConfig.Soundtrack.CUSTOM)
+                throw new AssertionError("Scrolling changed the playlist");
+            screen.setFocused(choice);
+            choice.setFocused(true);
+            //? if >=1.21.9 {
+            screen.keyPressed(new net.minecraft.client.input.KeyEvent(com.mojang.blaze3d.platform.InputConstants.KEY_LEFT, 0, 0));
+            //?} else {
+            /*screen.keyPressed(com.mojang.blaze3d.platform.InputConstants.KEY_LEFT, 0, 0);
+            *///?}
             if (config.soundtrack != dev.ohneb.afkcinematics.core.CinematicConfig.Soundtrack.DISCS)
                 throw new AssertionError("Playlist did not cycle backward");
         } finally {
