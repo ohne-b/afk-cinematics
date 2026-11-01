@@ -31,7 +31,7 @@ final class SmokeProbe {
                 /*var result = Path.of(System.getProperty("afkcinematics.smoke.result"));
                 Files.createDirectories(result.getParent());
                 try (var image = net.minecraft.client.Screenshot.takeScreenshot(Minecraft.getInstance().getMainRenderTarget())) {
-                    image.writeTo(result.resolveSibling(result.getFileName() + "-settings.png"));
+                    image.writeToFile(result.resolveSibling(result.getFileName() + "-settings.png"));
                 }
                 *///?}
                 checkChoices();
