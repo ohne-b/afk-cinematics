@@ -67,12 +67,12 @@ final class SmokeProbe {
 
     private static net.minecraft.client.gui.components.CycleButton<?> playlist(SettingsScreen screen) {
         for (int i = 0; i < 20; i++) {
-        var found = screen.children().stream().filter(net.minecraft.client.gui.components.CycleButton.class::isInstance)
-            .map(child -> (net.minecraft.client.gui.components.CycleButton<?>)child)
-            .filter(button -> button.getValue() instanceof dev.ohneb.afkcinematics.core.CinematicConfig.Soundtrack)
-            .findFirst();
-        if (found.isPresent()) return found.get();
-        screen.mouseScrolled(0, 0, 0, -1);
+            var found = screen.children().stream().filter(net.minecraft.client.gui.components.CycleButton.class::isInstance)
+                .map(child -> (net.minecraft.client.gui.components.CycleButton<?>)child)
+                .filter(button -> button.getValue() instanceof dev.ohneb.afkcinematics.core.CinematicConfig.Soundtrack)
+                .findFirst();
+            if (found.isPresent()) return found.get();
+            screen.mouseScrolled(0, 0, 0, -1);
         }
         throw new AssertionError("Missing playlist control");
     }

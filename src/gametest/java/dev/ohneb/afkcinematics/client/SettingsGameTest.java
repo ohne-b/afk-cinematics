@@ -55,6 +55,15 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     go(settings, "AFK details");
                     field(settings, "FPS while AFK").setValue("144");
                     require(fixture.config().cinematicFps == 144, "Exact FPS entry was lost");
+                    field(settings, "FPS while AFK").setValue("30");
+                    field(settings, "FPS while AFK").setValue("300");
+                    go(settings, "Camera");
+                    settings.onClose();
+                    settings.tick();
+                    require(AfkCinematics.screen() == settings && field(settings, "FPS while AFK").getValue().equals("300"),
+                        "Rebuilding settings silently saved a numeric prefix");
+                    require(settings.getFocused() == field(settings, "FPS while AFK"), "Invalid hidden number did not regain focus");
+                    field(settings, "FPS while AFK").setValue("144");
                     var subject = button(settings, "Subject: Mixed");
                     settings.setFocused(subject);
                     subject.setFocused(true);

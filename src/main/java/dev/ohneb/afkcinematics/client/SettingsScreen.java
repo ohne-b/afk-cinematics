@@ -56,7 +56,9 @@ public final class SettingsScreen extends Screen {
     private Component startIssue;
     private final List<AbstractWidget> navigation = new ArrayList<>();
     private final java.util.Map<EditBox, Component> numericLabels = new java.util.HashMap<>();
-    private final java.util.Set<EditBox> invalidNumbers = new java.util.HashSet<>();
+    private final java.util.Set<String> invalidNumbers = new java.util.HashSet<>();
+    private final java.util.Map<String, String> numericDrafts = new java.util.HashMap<>();
+    private String focusNumber;
     private int returnFocus;
     private int resumedFocus = -1;
 
@@ -76,8 +78,6 @@ public final class SettingsScreen extends Screen {
             .bounds(x, 28, contentWidth, 20).build());
         shotButtons.clear();
         numericLabels.clear();
-        invalidNumbers.clear();
-        if (error.equals(text("number.invalid"))) error = Component.empty();
         List<AbstractWidget> widgets = controls(config, buttonWidth);
         navigation.clear();
         navigation.addAll(widgets);
@@ -114,6 +114,15 @@ public final class SettingsScreen extends Screen {
         }).bounds(width / 2 - half - 3, height - 26, half, 20).build();
         startIssue = null;
         updateStart();
+        if (focusNumber != null) {
+            numericLabels.forEach((input, label) -> {
+                if (label.equals(text(focusNumber + ".input")) && children().contains(input)) {
+                    setFocused(input);
+                    input.setFocused(true);
+                }
+            });
+            focusNumber = null;
+        }
         addRenderableWidget(preview);
         close = addRenderableWidget(Button.builder(saveFailed ? text("close_unsaved") : CommonComponents.GUI_DONE, button -> onClose())
             .bounds(width / 2 + 3, height - 26, half, 20).build());
@@ -250,20 +259,22 @@ public final class SettingsScreen extends Screen {
         var input = new EditBox(font, width, 20, text(key + ".input"));
         numericLabels.put(input, text(key + ".input"));
         input.setMaxLength(3);
-        input.setValue(Integer.toString(initial));
+        input.setValue(numericDrafts.computeIfAbsent(key, ignored -> Integer.toString(initial)));
+        input.setTextColor(invalidNumbers.contains(key) ? 0xFFFF7777 : 0xFFFFFFFF);
         input.setTooltip(Tooltip.create(text(key + ".help")));
         input.setResponder(value -> {
+            numericDrafts.put(key, value);
             int number;
             try { number = Integer.parseInt(value); }
             catch (NumberFormatException ignored) { number = 0; }
             boolean valid = number >= min && number <= max;
             input.setTextColor(valid ? 0xFFFFFFFF : 0xFFFF7777);
             if (valid) {
-                invalidNumbers.remove(input);
+                invalidNumbers.remove(key);
                 if (invalidNumbers.isEmpty() && error.equals(text("number.invalid"))) error = Component.empty();
                 set.accept(number);
             }
-            else invalidNumbers.add(input);
+            else invalidNumbers.add(key);
         });
         return input;
     }
@@ -272,6 +283,12 @@ public final class SettingsScreen extends Screen {
         return Button.builder(text("section", section == value ? "−" : "+", text("section." + value.name().toLowerCase(Locale.ROOT))), button -> {
             section = section == value ? null : value;
             rebuildWidgets();
+            for (int i = 0; i < navigation.size(); i++) {
+                if (!navigation.get(i).getMessage().getString().endsWith("  " + text("section." + value.name().toLowerCase(Locale.ROOT)).getString())) continue;
+                int row = width >= 320 ? i - 3 : i;
+                if (row < offset) { offset = row; rebuildWidgets(); }
+                break;
+            }
             for (var child : children()) if (child instanceof Button candidate && candidate.getMessage().getString().endsWith(text("section." + value.name().toLowerCase(Locale.ROOT)).getString())) {
                 setFocused(candidate);
                 candidate.setFocused(true);
@@ -378,9 +395,17 @@ public final class SettingsScreen extends Screen {
         if (!AfkCinematics.store().readable()) return true;
         if (!invalidNumbers.isEmpty()) {
             error = text("number.invalid");
-            var input = invalidNumbers.iterator().next();
-            setFocused(input);
-            input.setFocused(true);
+            focusNumber = invalidNumbers.iterator().next();
+            page = Page.HOME;
+            if (focusNumber.equals("fps")) section = Section.AFK;
+            rebuildWidgets();
+            for (int i = 0; i < navigation.size(); i++) {
+                if (!navigation.get(i).getMessage().equals(text(focusNumber + ".input"))) continue;
+                int row = width >= 320 ? i < 6 ? i / 2 : i - 3 : i;
+                offset = Math.clamp(row, 0, maxOffset);
+                rebuildWidgets();
+                break;
+            }
             return false;
         }
         if (AfkCinematics.store().save()) return true;
