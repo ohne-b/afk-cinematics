@@ -363,12 +363,12 @@ public final class MovingGeometry implements Geometry {
         return RoadsideView.fits(pose, body, bodyWidth, bodyHeight, fov, aspect, crop, fill);
     }
 
-    /** Reject short fly-bys and stationary views before spending a take on them. */
+    /** Leave time to prepare a successor; a fresh rig has no motion history yet. */
     boolean fixedWindow(Vec local) {
-        if (!activity.travel() || velocity.length() < .6 || velocity.length() > 9) return false;
+        if (!activity.travel() || velocity.length() > 9) return false;
         Vec point = rotate(local, heading).add(origin);
         if (!usable(point, .15)) return false;
-        for (double seconds : new double[]{0, 1.5, 3}) {
+        for (double seconds : new double[]{0, 1, 2}) {
             Vec future = target.add(velocity.scale(seconds));
             double distance = point.distance(future);
             Pose aim = Pose.lookingAt(point, future);

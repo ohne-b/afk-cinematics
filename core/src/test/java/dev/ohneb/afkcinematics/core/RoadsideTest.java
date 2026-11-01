@@ -16,6 +16,55 @@ class RoadsideTest {
         for (var transition : CinematicConfig.Transition.values()) plantedHandoff(transition);
     }
 
+    @Test void eitherPlantedStyleCanStartWithoutWarmingUpAnotherShot() {
+        for (Shot.Type type : new Shot.Type[]{Shot.Type.PASS_BY, Shot.Type.OVERLOOK}) {
+            var moving = new MovingGeometry(OPEN, ZERO, 0);
+            moving.course(0);
+            moving.framing(Scene.Kind.FOLLOW, false);
+            moving.worldLens(70);
+            moving.viewport(70, 16.0 / 9, true, .7, 1.3);
+            var config = new CinematicConfig();
+            config.shots = EnumSet.of(type);
+            config.frontTravel = false;
+            var session = new CinematicSession(ZERO, new Pose(new Vec(0, 2, -5), 0, 0), 0,
+                config, moving, new Random(4), Scene.Kind.FOLLOW);
+            for (int tick = 0; tick < 10 && !session.showing(); tick++) {
+                session.tick(tick * 50_000_000L);
+                session.frame(tick * 50_000_000L);
+                assertFalse(session.ended(), type + " exhausted its search before motion history existed");
+            }
+            assertEquals(type, session.type());
+            moving.style(type);
+            Pose first = moving.apply(session.current(), session.focus(), session.take(), false);
+            assertNotNull(first);
+            for (int frame = 1; frame <= 20; frame++) {
+                assertTrue(moving.follow(new Vec(0, 0, frame * .2), frame * 50_000_000L, false, true));
+                Pose next = moving.apply(session.current(), session.focus(), session.take(), false);
+                assertNotNull(next);
+                assertEquals(first.position(), next.position(), type + " failed to stay planted as walking began");
+            }
+        }
+    }
+
+    @Test void ordinaryMinecartSpeedLeavesTimeForBothPlantedStylesWithoutFrontViews() {
+        var moving = new MovingGeometry(OPEN, ZERO, 0);
+        moving.course(0);
+        moving.framing(Scene.Kind.MINECART, false);
+        moving.worldLens(70);
+        moving.viewport(70, 16.0 / 9, true, .7, 1.3);
+        for (int frame = 1; frame <= 40; frame++)
+            moving.follow(new Vec(0, 0, frame * .4), frame * 50_000_000L, false, true);
+        for (Shot.Type type : new Shot.Type[]{Shot.Type.PASS_BY, Shot.Type.OVERLOOK}) {
+            var config = new CinematicConfig();
+            config.frontTravel = false;
+            config.shots = EnumSet.of(type);
+            var search = new TravelSearch(ZERO, Scene.Kind.MINECART, config, new ShotHistory(), new Random(4));
+            ShotPlanner.Plan plan = null;
+            while (!search.exhausted() && plan == null) plan = search.next(moving);
+            assertNotNull(plan, type + " rejected every clear viewpoint at eight blocks per second");
+        }
+    }
+
     private void plantedHandoff(CinematicConfig.Transition transition) {
         var moving = new MovingGeometry(OPEN, ZERO, 0);
         moving.course(0);
