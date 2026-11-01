@@ -1,23 +1,17 @@
 package dev.ohneb.afkcinematics.core;
 
-/** Reversible bars; shot cuts do not restart their animation. */
+/** Ease bars in once per session; returning control removes them immediately. */
 public final class Letterbox {
-    private double value, from;
     private boolean visible;
     private long started, previous;
 
     public double sample(long now, boolean show, boolean held) {
-        if (held && visible == show) started += Math.max(0, now - previous);
+        if (!show) { reset(); return 0; }
+        if (!visible) { visible = true; started = now; }
+        else if (held) started += Math.max(0, now - previous);
         previous = now;
-        double progress = Pose.ease((now - started) / (visible ? 550_000_000.0 : 350_000_000.0));
-        value = from + ((visible ? 1 : 0) - from) * progress;
-        if (visible != show) {
-            from = value;
-            visible = show;
-            started = now;
-        }
-        return value;
+        return Pose.ease((now - started) / 850_000_000.0);
     }
 
-    public void reset() { value = from = 0; visible = false; started = previous = 0; }
+    public void reset() { visible = false; started = previous = 0; }
 }

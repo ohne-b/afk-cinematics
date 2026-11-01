@@ -14,9 +14,15 @@ public final class MovingGeometry implements Geometry {
     private long updated;
     private double heading, desiredHeading, turnVelocity, turnScale = 1, scaleVelocity;
     private boolean followsCourse, reframeRequested, tightTurn;
-    private double elapsed, extension = 1;
+    private double elapsed, extension = 1, clearSeconds, searchSeconds;
     private Vec previousTarget, previousOrigin;
     private Vec adjustmentVelocity = new Vec(0, 0, 0);
+    private Vec avoidance;
+    private Vec velocity = new Vec(0, 0, 0);
+    private RoadsideView roadside;
+    private Shot.Type style;
+    private boolean roadsideFinished, roadsideLeaving;
+    private double worldFov = 30, fov = 30, aspect = 16.0 / 9, crop = .82, bodyWidth = .8, bodyHeight = 1.3;
 
     public MovingGeometry(Geometry world, Vec origin, long now) {
         this.world = world;
@@ -26,7 +32,12 @@ public final class MovingGeometry implements Geometry {
     }
 
     public void framing(Scene.Kind activity, boolean frontViews) {
-        if (this.activity != activity) adjustmentVelocity = new Vec(0, 0, 0);
+        if (this.activity != activity) {
+            adjustmentVelocity = new Vec(0, 0, 0);
+            avoidance = null;
+            roadside = null;
+            roadsideFinished = true;
+        }
         this.activity = activity;
         this.frontViews = frontViews;
     }
@@ -37,6 +48,7 @@ public final class MovingGeometry implements Geometry {
         target = next;
         updated = now;
         if (!capture) {
+            Vec before = origin;
             if (followsCourse && activity.travel())
                 origin = motion.follow(next, elapsed, activity == Scene.Kind.FOLLOW || activity == Scene.Kind.RIDE, grounded);
             else {
@@ -44,6 +56,10 @@ public final class MovingGeometry implements Geometry {
                 motion.reset(origin);
             }
             turn(elapsed);
+            if (elapsed > 0) {
+                Vec measured = origin.subtract(before).scale(1 / elapsed);
+                velocity = velocity.lerp(measured, 1 - Math.exp(-elapsed * 5));
+            }
         } else { motion.hold(next); adjustmentVelocity = new Vec(0, 0, 0); }
         return true;
     }
@@ -59,6 +75,7 @@ public final class MovingGeometry implements Geometry {
     public Vec relative(Vec offset) { return rotate(offset, -heading); }
 
     public boolean needsReframe(Scene.Kind kind) {
+        if (style != null && style.fixedTravel()) return roadsideFinished || roadsideLeaving;
         if (!kind.travel() || !followsCourse || reframeRequested
             || Math.abs(Math.IEEEremainder(desiredHeading - heading, 360)) < 155) return false;
         reframeRequested = true;
@@ -100,6 +117,7 @@ public final class MovingGeometry implements Geometry {
     public Pose apply(Pose pose, Vec focus, int take, boolean capture) {
         if (pose == null) return null;
         boolean cut = take != previousTake && !capture;
+        if (cut) { roadside = null; roadsideFinished = roadsideLeaving = false; }
         if (cut && followsCourse && !capture) {
             heading = desiredHeading;
             turnVelocity = 0;
@@ -115,7 +133,30 @@ public final class MovingGeometry implements Geometry {
         Vec worldFocus = focus == null ? null : rotate(focus, heading).add(activity.travel() ? origin : target);
         Pose result = worldFocus == null ? new Pose(point, pose.yaw() + heading, pose.pitch()) : Pose.lookingAt(point, worldFocus);
         if (capture && previous != null) { result = previous; worldFocus = previousFocus; }
-        else if (followsCourse && focus != null) return travel(point, worldFocus, take, cut);
+        else if (followsCourse && focus != null) {
+            if (activity.travel() && style != null && style.fixedTravel() && !roadsideFinished) {
+                if (roadside == null && fixedWindow(pose.position())) roadside = new RoadsideView(point, origin);
+                if (roadside != null) {
+                    Pose planted = roadside.sample(origin, cut ? 0 : elapsed);
+                    Vec future = target.add(velocity.scale(.8));
+                    if (usable(planted.position(), 0) && fits(planted, target, .92)) {
+                        roadsideLeaving |= planted.position().distance(future) > 27
+                            || !fits(planted, future, .72) || !world.visible(planted.position(), future);
+                        previous = planted;
+                        previousFocus = planted.lookAhead(Math.max(1, planted.position().distance(origin)));
+                        previousOrigin = origin;
+                        previousTarget = target;
+                        if (cut) cuts++;
+                        previousTake = take;
+                        return planted;
+                    }
+                }
+                // A sudden turn/obstruction must not strand a planted camera. Recover through
+                // the validated follow selector while its successor is prepared.
+                roadsideFinished = true;
+            }
+            return travel(point, worldFocus, take, cut);
+        }
         Vec from = previous == null || cut ? result.position() : previous.position();
         if (!Scene.inRange(result.position(), target) || !world.clear(from, result.position())
             || !world.visible(result.position(), target)
@@ -130,14 +171,14 @@ public final class MovingGeometry implements Geometry {
     /** Travel framing may shorten, but every applied position still has a clear rider sightline. */
     private Pose travel(Vec desired, Vec focus, int take, boolean cut) {
         boolean walking = walking();
-        if (walking) desired = walkingView(desired, cut);
+        if (activity.travel()) desired = travelView(desired, cut);
         Vec offset = desired.subtract(target);
         double distance = offset.length();
         Vec point = null;
         if (distance > .001) {
             Vec direction = offset.scale(1 / distance);
             // Only obstruction shortens the boom; jumping must not change its intended length.
-            double maximum = distance * (cut || walking ? 1 : Math.min(1, extension + elapsed * 2 / Math.max(.8, distance)));
+            double maximum = distance * (cut || activity.travel() ? 1 : Math.min(1, extension + elapsed * 2 / Math.max(.8, distance)));
             point = nearby(direction, maximum, walking ? .15 : .3);
             // A rider beside a corner can be inside the padding while the real sightline is clear.
             if (point == null) point = nearby(direction, maximum, 0);
@@ -152,13 +193,14 @@ public final class MovingGeometry implements Geometry {
             double limit = Math.max(.001, movement * (walking ? 1 : 1.5) + elapsed * (walking ? 6 : 12));
             double travel = from.distance(point);
             Vec step = travel > limit ? from.lerp(point, limit / travel) : point;
-            if (walking) {
+            if (activity.travel()) {
                 // Ease composition changes relative to the filtered rig, not the player's jump arc.
                 double spring = 6, decay = Math.exp(-spring * elapsed);
                 Vec error = carried.subtract(point);
                 Vec change = adjustmentVelocity.add(error.scale(spring)).scale(elapsed);
                 Vec eased = point.add(error.add(change).scale(decay));
                 Vec velocity = adjustmentVelocity.subtract(change.scale(spring)).scale(decay);
+                if (eased.distance(point) < .0001) { eased = point; velocity = new Vec(0, 0, 0); }
                 double widening = eased.distance(origin) - carried.distance(origin);
                 if (widening > elapsed * 2) {
                     double amount = elapsed * 2 / widening;
@@ -182,7 +224,9 @@ public final class MovingGeometry implements Geometry {
         }
         adjustmentVelocity = nextVelocity;
         double ratio = Math.min(1, point.distance(target) / Math.max(.001, distance));
-        Vec aim = target.lerp(focus, ratio);
+        // Shorten look-ahead only for a close recovery view. A jump or changing boom length
+        // must not continually move the aim between the live player and the filtered rig.
+        Vec aim = activity.travel() ? target.lerp(focus, Math.min(1, point.distance(target) / 3)) : target.lerp(focus, ratio);
         if (!activity.travel() && !world.visible(point, aim)) aim = target;
         Pose result = Pose.lookingAt(point, aim);
         extension = ratio;
@@ -197,22 +241,32 @@ public final class MovingGeometry implements Geometry {
 
     private boolean walking() { return activity == Scene.Kind.FOLLOW || activity == Scene.Kind.RIDE; }
 
-    private Vec walkingView(Vec desired, boolean cut) {
+    private Vec travelView(Vec desired, boolean cut) {
+        if (cut) { avoidance = null; clearSeconds = searchSeconds = 0; }
         Vec carried = previous == null || previousOrigin == null || cut ? desired : previous.position().add(origin.subtract(previousOrigin));
-        Vec ahead = previousOrigin == null || elapsed <= 0 ? new Vec(0, 0, 0) : origin.subtract(previousOrigin).scale(.3 / elapsed);
+        Vec ahead = previousOrigin == null || elapsed <= 0 ? new Vec(0, 0, 0) : origin.subtract(previousOrigin).scale(.65 / elapsed);
         ahead = new Vec(ahead.x(), 0, ahead.z());
-        if (ahead.length() > 1.5) ahead = ahead.scale(1.5 / ahead.length());
+        if (ahead.length() > 4) ahead = ahead.scale(4 / ahead.length());
         // Reserve lower-body visibility on descents, without aiming that preference into a rising step.
         Vec body = new Vec(target.x(), Math.min(target.y(), origin.y()) - .65, target.z());
-        if (!world.visible(target, body)) body = target.add(new Vec(0, -.65, 0));
-        if (usable(desired, .3) && world.visible(desired, body) && world.clear(desired, desired.add(ahead), .3)
-            && (previous == null || cut || world.clear(previous.position(), desired))) return desired;
+        if (!walking()) body = target;
+        else if (!world.visible(target, body)) body = target.add(new Vec(0, -.65, 0));
+        boolean preferred = usable(desired, .15) && world.visible(desired, body) && forecast(desired, ahead)
+            && (previous == null || cut || world.clear(previous.position(), desired));
+        clearSeconds = preferred ? clearSeconds + elapsed : 0;
+        if (preferred && (avoidance == null || clearSeconds >= .65)) { avoidance = null; return desired; }
+
+        Vec retained = avoidance == null ? carried : origin.add(rotate(avoidance, heading));
+        searchSeconds += elapsed;
+        if (avoidance != null && usable(retained, 0) && world.visible(retained, body)
+            && (forecast(retained, ahead) || searchSeconds < .15)) return retained;
+        searchSeconds = 0;
 
         Vec best = null;
         double bestScore = Double.POSITIVE_INFINITY;
         // Keep an established roomy view when a wall or stair edge makes nearby choices alternate.
         if (carried.distance(target) >= Math.min(3.5, desired.distance(target) * .7)) {
-            bestScore = walkingScore(carried, desired, carried, ahead, body, cut, bestScore);
+            bestScore = travelScore(carried, desired, carried, ahead, body, cut, bestScore);
             if (Double.isFinite(bestScore)) best = carried;
         }
         Vec offset = desired.subtract(origin);
@@ -222,21 +276,32 @@ public final class MovingGeometry implements Geometry {
         for (double lift : new double[]{0, .75, 1.5, 3, 4.5, 6}) {
             for (Vec arm : arms) {
                 Vec candidate = origin.add(arm).add(new Vec(0, lift, 0));
-                double score = walkingScore(candidate, desired, carried, ahead, body, cut, bestScore);
+                double score = travelScore(candidate, desired, carried, ahead, body, cut, bestScore);
                 if (score < bestScore) { best = candidate; bestScore = score; }
             }
         }
+        if (best != null) avoidance = rotate(best.subtract(origin), -heading);
         return best == null ? desired : best;
     }
 
-    private double walkingScore(Vec point, Vec desired, Vec carried, Vec ahead, Vec body, boolean cut, double bestScore) {
+    private boolean forecast(Vec point, Vec ahead) {
+        if (!world.clear(point, point.add(ahead), .15)) return false;
+        // Check the swept sightline too: a trunk can miss the camera yet cross the view.
+        for (double fraction : new double[]{.5, 1}) {
+            Vec step = ahead.scale(fraction);
+            if (!world.visible(point.add(step), target.add(step), .15)) return false;
+        }
+        return true;
+    }
+
+    private double travelScore(Vec point, Vec desired, Vec carried, Vec ahead, Vec body, boolean cut, double bestScore) {
         double deviation = point.distance(desired), change = point.distance(carried);
         double score = deviation * deviation + change * change * .5;
         if (score >= bestScore || !usable(point, .15)) return Double.POSITIVE_INFINITY;
         if (!world.visible(point, body)) score += 64;
         if (score >= bestScore) return Double.POSITIVE_INFINITY;
         // Look a short distance ahead so the rig starts lifting or moving sideways before impact.
-        if (!world.clear(point, point.add(ahead), .15)) score += 64;
+        if (!forecast(point, ahead)) score += 256;
         if (score >= bestScore) return Double.POSITIVE_INFINITY;
         if (previous != null && !cut && !world.clear(previous.position(), point)) score += 256;
         return score;
@@ -279,6 +344,38 @@ public final class MovingGeometry implements Geometry {
     }
 
     public int cuts() { return cuts; }
+
+    public void style(Shot.Type type) { style = type; }
+
+    public void worldLens(double value) {
+        if (Double.isFinite(value) && value > 0 && value < 180) worldFov = value;
+    }
+
+    public void viewport(double conservativeFov, double aspect, boolean bars, double width, double height) {
+        this.fov = Math.min(worldFov, conservativeFov);
+        this.aspect = Math.max(.1, aspect);
+        crop = bars ? .82 : 1;
+        bodyWidth = Math.max(.6, width);
+        bodyHeight = Math.max(1, height);
+    }
+
+    private boolean fits(Pose pose, Vec body, double fill) {
+        return RoadsideView.fits(pose, body, bodyWidth, bodyHeight, fov, aspect, crop, fill);
+    }
+
+    /** Reject short fly-bys and stationary views before spending a take on them. */
+    boolean fixedWindow(Vec local) {
+        if (!activity.travel() || velocity.length() < .6 || velocity.length() > 9) return false;
+        Vec point = rotate(local, heading).add(origin);
+        if (!usable(point, .15)) return false;
+        for (double seconds : new double[]{0, 1.5, 3}) {
+            Vec future = target.add(velocity.scale(seconds));
+            double distance = point.distance(future);
+            Pose aim = Pose.lookingAt(point, future);
+            if (distance < 6 || distance > 26 || !fits(aim, future, .65) || !world.visible(point, future, .15)) return false;
+        }
+        return true;
+    }
 
     public boolean adaptsTravel() { return followsCourse; }
 

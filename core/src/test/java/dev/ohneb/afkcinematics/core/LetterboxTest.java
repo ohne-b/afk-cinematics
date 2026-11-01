@@ -16,24 +16,22 @@ class LetterboxTest {
             }
             assertEquals(1, previous);
             assertEquals(1, bars.sample(2_000_000_000L, true, false));
-            assertEquals(1, bars.sample(2_000_000_000L, false, false));
-            assertEquals(.5, bars.sample(2_175_000_000L, false, false), 1e-12);
+            assertEquals(0, bars.sample(2_000_000_000L, false, false));
+            assertEquals(0, bars.sample(2_175_000_000L, false, false));
             assertEquals(0, bars.sample(2_350_000_000L, false, false));
         }
     }
 
-    @Test void capturesFreezeBarsAndRapidRestartsReverseWithoutJumping() {
+    @Test void capturesFreezeEntryButExitIsImmediateAndRestartsBeginFresh() {
         var bars = new Letterbox();
         bars.sample(0, true, false);
-        double halfway = bars.sample(275_000_000L, true, false);
+        double halfway = bars.sample(425_000_000L, true, false);
         assertEquals(.5, halfway, 1e-12);
-        assertEquals(halfway, bars.sample(2_275_000_000L, true, true));
-        assertEquals(halfway, bars.sample(2_275_000_000L, false, false));
-        double leaving = bars.sample(2_400_000_000L, false, false);
-        assertTrue(leaving > 0 && leaving < halfway);
-        assertEquals(leaving, bars.sample(2_400_000_000L, true, false));
-        assertEquals(1, bars.sample(2_950_000_000L, true, false));
+        assertEquals(halfway, bars.sample(2_425_000_000L, true, true));
+        assertEquals(0, bars.sample(2_425_000_000L, false, true));
+        assertEquals(0, bars.sample(2_500_000_000L, true, false));
+        assertEquals(1, bars.sample(3_350_000_000L, true, false));
         bars.reset();
-        assertEquals(0, bars.sample(3_000_000_000L, false, false));
+        assertEquals(0, bars.sample(3_500_000_000L, false, false));
     }
 }

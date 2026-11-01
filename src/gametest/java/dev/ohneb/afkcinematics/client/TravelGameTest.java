@@ -40,6 +40,8 @@ public final class TravelGameTest implements FabricClientGameTest {
             AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL);
         });
         boolean rotateWithCart = context.computeOnClient(client -> client.options.rotateWithMinecart().get());
+        boolean gameFov = context.computeOnClient(client -> AfkCinematics.config().useGameFov);
+        int customFov = context.computeOnClient(client -> AfkCinematics.config().customFov);
         context.runOnClient(client -> client.options.rotateWithMinecart().set(true));
         try (var world = context.worldBuilder().adjustSettings(settings -> {
             var previous = settings.getSettings();
@@ -394,11 +396,63 @@ public final class TravelGameTest implements FabricClientGameTest {
             context.waitFor(client -> !client.player.isPassenger(), 20);
             key(context, InputConstants.KEY_LSHIFT, InputConstants.RELEASE);
             context.runOnClient(client -> require(cameraOwner() == owner, "Dismounting the animal replaced the session"));
+            context.runOnClient(client -> AfkCinematics.stop());
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                BlockPos base = player.blockPosition().below();
+                for (BlockPos block : BlockPos.betweenClosed(base.offset(-20, 0, -20), base.offset(20, 12, 20)))
+                    player.level().setBlock(block, (block.getY() == base.getY() ? Blocks.STONE : Blocks.AIR).defaultBlockState(),
+                        Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                player.teleportTo(base.getX() + .5, base.getY() + 1, base.getZ() + .5);
+            });
+            context.waitFor(client -> client.player.onGround());
+            context.waitTicks(25);
+            context.runOnClient(client -> {
+                client.player.setYRot(0);
+                client.player.setXRot(0);
+                AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL);
+                AfkCinematics.config().frontTravel = false;
+                AfkCinematics.config().letterbox = true;
+                AfkCinematics.config().useGameFov = false;
+                AfkCinematics.config().customFov = 70;
+            });
+            manual(context);
+            key(context, InputConstants.KEY_W, InputConstants.PRESS);
+            context.waitTicks(12);
+            context.runOnClient(client -> {
+                AfkCinematics.config().shots = EnumSet.of(Shot.Type.PASS_BY);
+                AfkCinematics.nextShot();
+            });
+            context.waitFor(client -> ((CinematicSession)cameraOwner()).type() == Shot.Type.PASS_BY, 35);
+            context.waitTicks(2);
+            Vec3 planted = context.computeOnClient(client -> camera(client).position());
+            float plantedYaw = context.computeOnClient(client -> camera(client).yRot());
+            Vec3 passer = context.computeOnClient(client -> client.player.position());
+            context.waitTicks(8);
+            context.runOnClient(client -> {
+                require(AfkCinematics.showing(), "Roadside view ended while walking");
+                require(camera(client).position().distanceTo(planted) < .001, "Roadside camera followed instead of staying planted");
+                require(Math.abs(Math.IEEEremainder(camera(client).yRot() - plantedYaw, 360)) > 1, "Roadside camera did not pan");
+                require(client.player.position().distanceTo(passer) > 1, "Roadside view blocked real movement");
+                try {
+                    var rigField = AfkCinematics.class.getDeclaredField("movingGeometry");
+                    rigField.setAccessible(true);
+                    Object rig = rigField.get(null);
+                    var fovField = rig.getClass().getDeclaredField("fov");
+                    fovField.setAccessible(true);
+                    require(Math.abs(fovField.getDouble(rig) - 70) < .001,
+                        "Roadside framing retained its initial FOV instead of the applied world lens");
+                } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
+            });
+            key(context, InputConstants.KEY_W, InputConstants.RELEASE);
+            screenshot(context, "roadside-pass");
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
                 cameraTimings = null;
                 client.options.rotateWithMinecart().set(rotateWithCart);
+                AfkCinematics.config().useGameFov = gameFov;
+                AfkCinematics.config().customFov = customFov;
                 focused = null;
             });
         }

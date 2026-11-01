@@ -44,8 +44,10 @@ viewpoints within the player-centered range; never interpolate through terrain.
 Underwater takes require a fully submerged camera volume. Use each view's environment
 for planning and handoffs; water may be passable, lava and solid shapes are not.
 Prepare the next take without freezing the current shot. Cut pose, lens and environment
-together; animate letterboxes separately from shot timing. Optional fades must acknowledge
+together; ease letterboxes in independently and remove them immediately on exit. Optional fades must acknowledge
 opaque old and destination frames before revealing the cut. Manual Next discards the prepared plan.
+Planted travel cameras retain their world position, frame the actual body within the world
+lens and prepare early exits without discarding the successor. Recover safely if a view expires.
 Screenshot holds pause the take's timing, not terrain validation. Release each hold
 only for its owning session; a finished capture must not resume a newer session.
 Wildlife belongs only to automatic scenery selection. Keep it occasional, check the

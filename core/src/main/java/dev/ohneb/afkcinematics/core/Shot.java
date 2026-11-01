@@ -4,11 +4,12 @@ public record Shot(Type type, Vec start, Vec control, Vec end, Vec focusStart, V
     public enum Type {
         ARC, DOLLY, DRIFT, CRANE, OVERHEAD, FLYOVER, LOW_PASS, REVEAL, FLY_THROUGH, TRAVERSE, PAN, STILL,
         DIAGONAL_GLIDE, RISING_PASS, DESCENDING_PASS, PULL_AWAY, TRAIL, ESCORT, LEAD, WIDE_TRACK,
-        ANGLER, CAST_LINE, FLOAT, LOW_ESCORT, HIGH_TRAIL, BROADSIDE;
+        ANGLER, CAST_LINE, FLOAT, LOW_ESCORT, HIGH_TRAIL, BROADSIDE, PASS_BY, OVERLOOK;
+        public boolean fixedTravel() { return this == PASS_BY || this == OVERLOOK; }
         public boolean fishingOnly() { return this == ANGLER || this == CAST_LINE || this == FLOAT; }
         public boolean travelOnly() {
             return this == TRAIL || this == ESCORT || this == LEAD || this == WIDE_TRACK
-                || this == LOW_ESCORT || this == HIGH_TRAIL || this == BROADSIDE;
+                || this == LOW_ESCORT || this == HIGH_TRAIL || this == BROADSIDE || fixedTravel();
         }
         public boolean sceneryOnly() {
             return this == OVERHEAD || this == FLY_THROUGH || this == TRAVERSE

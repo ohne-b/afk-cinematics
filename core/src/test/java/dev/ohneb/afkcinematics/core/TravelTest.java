@@ -12,6 +12,56 @@ class TravelTest {
         public boolean visible(Vec a, Vec b, double margin) { return true; }
     };
 
+    @Test void groveKeepsAContinuousRoomyViewWithBoundedQueries() {
+        class Grove implements Geometry {
+            int queries;
+            boolean ray(Vec a, Vec b, double padding) {
+                queries++;
+                for (int tree = 0; tree < 9; tree++) {
+                    double[] low = {1.3 - padding, -2 - padding, tree * 4.0 - padding};
+                    double[] high = {2.3 + padding, 5 + padding, tree * 4.0 + 1 + padding};
+                    double[] point = {a.x(), a.y(), a.z()}, delta = {b.x() - a.x(), b.y() - a.y(), b.z() - a.z()};
+                    double enter = 0, exit = 1;
+                    for (int axis = 0; axis < 3; axis++) {
+                        if (Math.abs(delta[axis]) < 1e-9) {
+                            if (point[axis] < low[axis] || point[axis] > high[axis]) { exit = -1; break; }
+                        } else {
+                            double x = (low[axis] - point[axis]) / delta[axis], y = (high[axis] - point[axis]) / delta[axis];
+                            enter = Math.max(enter, Math.min(x, y)); exit = Math.min(exit, Math.max(x, y));
+                        }
+                    }
+                    if (enter <= exit) return false;
+                }
+                return true;
+            }
+            public boolean clear(Vec a, Vec b, double margin) { return ray(a, b, .25 + margin); }
+            public boolean visible(Vec a, Vec b, double margin) { return a.distance(b) <= 32 && ray(a, b, margin); }
+        }
+        for (Scene.Kind kind : new Scene.Kind[]{Scene.Kind.FOLLOW, Scene.Kind.BOAT}) {
+            Grove grove = new Grove();
+            var moving = new MovingGeometry(grove, new Vec(0, 1.2, -6), 0);
+            moving.framing(kind, false);
+            moving.course(0);
+            Pose local = new Pose(new Vec(5, 2, -8), 0, 0), previous = null;
+            for (int frame = 0; frame < 900; frame++) {
+                Vec subject = new Vec(0, 1.2, -6 + frame / 20.0);
+                moving.follow(subject, frame * 16_666_667L, false, true);
+                Pose view = moving.apply(local, new Vec(0, 0, 1.25), 1, false);
+                assertNotNull(view);
+                int queryCount = grove.queries;
+                assertTrue(grove.visible(view.position(), subject));
+                if (previous != null) {
+                    assertTrue(grove.clear(previous.position(), view.position()));
+                    assertTrue(previous.position().distance(view.position()) < .14, "Camera jumped beside a trunk");
+                }
+                grove.queries = queryCount;
+                assertEquals(1, moving.cuts(), "A continuous clear route should not need another cut");
+                previous = view;
+            }
+            assertTrue(grove.queries < 18_000, "Repeated full searches: " + grove.queries);
+        }
+    }
+
     @Test void walkingJumpsStayInsideTheFrameWhileLandingsAndFallsAreFollowed() {
         var moving = new MovingGeometry(OPEN, ZERO, 0);
         moving.framing(Scene.Kind.FOLLOW, true);
@@ -407,7 +457,7 @@ class TravelTest {
         };
         for (var kind : new Scene.Kind[]{Scene.Kind.BOAT, Scene.Kind.MINECART, Scene.Kind.FLIGHT}) {
             for (var type : Shot.Type.values()) {
-                if (!type.travelOnly()) continue;
+                if (!type.travelOnly() || type.fixedTravel()) continue;
                 var config = new CinematicConfig();
                 config.shots = EnumSet.of(type);
                 var search = new TravelSearch(ZERO, kind, config, new ShotHistory(), new Random(3));

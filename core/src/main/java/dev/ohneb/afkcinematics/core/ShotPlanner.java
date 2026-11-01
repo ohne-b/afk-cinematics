@@ -46,7 +46,7 @@ final class ShotPlanner {
         this.history = history;
         this.random = random;
         travel = activity.travel() || activity == Scene.Kind.FISHING
-            ? new TravelSearch(anchor, activity == Scene.Kind.FISHING ? Scene.Kind.FOLLOW : activity, config, history, random) : null;
+            ? new TravelSearch(anchor, activity, config, history, random) : null;
         fishing = activity == Scene.Kind.FISHING ? new FishingSearch(anchor, bobber, config, history, random) : null;
         triedPlayer = config.subject == CinematicConfig.Subject.SCENERY;
         triedScenery = config.subject == CinematicConfig.Subject.PLAYER;

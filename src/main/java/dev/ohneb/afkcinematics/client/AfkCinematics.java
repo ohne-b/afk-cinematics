@@ -173,7 +173,9 @@ public final class AfkCinematics {
     }
     public static double fieldOfView(Camera camera, double normal) {
         if (session == null || camera != appliedCamera) return normal;
-        return normal + (config().fieldOfView(normal) - normal) * session.lensStrength();
+        double result = normal + (config().fieldOfView(normal) - normal) * session.lensStrength();
+        if (movingGeometry != null) movingGeometry.worldLens(result);
+        return result;
     }
 
     public static void tick() {
@@ -441,9 +443,16 @@ public final class AfkCinematics {
                 player.yOld + (player.getY() - player.yOld) * partial + player.getBbHeight() * 0.65,
                 player.zOld + (player.getZ() - player.zOld) * partial);
             movingGeometry.framing(activity, config().frontTravel);
+            var client = Minecraft.getInstance();
+            var window = client.getWindow();
+            var vehicle = player.getVehicle();
+            double width = Math.max(player.getBbWidth(), vehicle == null ? 0 : vehicle.getBbWidth()) * .6;
+            double height = Math.max(player.getBbHeight() * .7, vehicle == null ? 0 : vehicle.getBbHeight() + .5);
+            movingGeometry.viewport(config().fieldOfView(client.options.fov().get()) * (config().useGameFov ? .85 : 1),
+                (double)window.getWidth() / Math.max(1, window.getHeight()), config().letterbox, width, height);
             boolean grounded = player.isPassenger() ? player.getVehicle().onGround() : player.onGround();
             if (!movingGeometry.follow(subject, now, session.capturing(), grounded)) { stop(); return null; }
-            if (!session.capturing() && session.settled() && movingGeometry.needsReframe(activity)) session.nextShot();
+            if (!session.capturing() && session.settled() && movingGeometry.needsReframe(activity)) session.handoffSoon(now);
             if (fishingHook != null && FishingActivity.hook(player, world) == fishingHook) {
                 bobber = movingGeometry.relative(FishingActivity.target(fishingHook, partial, subject));
                 session.fishing(bobber);
@@ -453,6 +462,7 @@ public final class AfkCinematics {
         int recoveryCuts = movingGeometry == null ? 0 : movingGeometry.cuts();
         Pose pose = session.frame(now);
         if (pose != null && movingGeometry != null) {
+            movingGeometry.style(session.type());
             pose = movingGeometry.apply(pose, session.focus(), session.take(), session.capturing());
             if (pose != null && bobber != null && session.fishingView() && (!movingGeometry.sees(pose, bobber)
                 || !movingGeometry.sees(pose, new Vec(0, 0, 0)))) pose = null;

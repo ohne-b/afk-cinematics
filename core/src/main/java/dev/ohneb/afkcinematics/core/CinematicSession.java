@@ -23,7 +23,7 @@ public final class CinematicSession {
     private long captureStarted;
     private int captures, take;
     private Vec fishingTarget, activeFishingTarget;
-    private boolean changingActivity, ended, advanceRequested, manualAdvance;
+    private boolean changingActivity, ended, advanceRequested, manualAdvance, earlyAdvance;
 
     public CinematicSession(Vec subject, Pose entry, double bearing, CinematicConfig config, Geometry geometry, Random random) {
         this(subject, entry, bearing, config, geometry, random, Scene.Kind.PLAYER);
@@ -59,8 +59,8 @@ public final class CinematicSession {
                 advanceRequested = false;
                 handoff = now;
             } else if (planner == null && pending == null && now >= retryAt
-                && (now - shotStarted) / 1e9 >= shot.duration()
-                    - (activity == Scene.Kind.PLAYER ? ShotPlanner.preparationSeconds(config) : 4)) {
+                && (shot.type().fixedTravel() || (now - shotStarted) / 1e9 >= shot.duration()
+                    - (activity == Scene.Kind.PLAYER ? ShotPlanner.preparationSeconds(config) : 4))) {
                 planner = planner();
                 handoff = shotStarted + Math.round(shot.duration() * 1e9);
             }
@@ -86,7 +86,7 @@ public final class CinematicSession {
         if (ended) return null;
         frameTime = now;
         fade.sample(now);
-        boolean turning = !manualAdvance && activity.travel() && geometry instanceof MovingGeometry moving && moving.turning();
+        boolean turning = !manualAdvance && !earlyAdvance && activity.travel() && geometry instanceof MovingGeometry moving && moving.turning();
         if (pending == null || turning) fade.cancel(now);
         boolean fading = shot != null && config.transition == CinematicConfig.Transition.FADE;
         if (pending != null && (shot == null || now >= handoff - (fading ? ShotFade.DURATION : 0) && !turning)
@@ -108,7 +108,7 @@ public final class CinematicSession {
                     shot = plan.shot();
                     scene = plan.scene();
                     pending = null;
-                    changingActivity = manualAdvance = false;
+                    changingActivity = manualAdvance = earlyAdvance = false;
                     activeFishingTarget = fishingTarget;
                     shotStarted = now;
                     take++;
@@ -147,7 +147,7 @@ public final class CinematicSession {
         fade.cancel(now);
         planner = null;
         pending = null;
-        manualAdvance = advanceRequested = false;
+        manualAdvance = advanceRequested = earlyAdvance = false;
         retryAt = now + 2_000_000_000L;
     }
 
@@ -191,6 +191,7 @@ public final class CinematicSession {
         advanceRequested = true;
     }
     public int take() { return take; }
+    public Shot.Type type() { return shot == null ? null : shot.type(); }
     public boolean capturing() { return captures > 0; }
     public double fadeOpacity() { return showing() ? fade.opacity() : 0; }
     public void coveredFrame() { if (showing()) fade.coveredFrame(); }
@@ -206,6 +207,16 @@ public final class CinematicSession {
             pending = null;
             fade.cancel(frameTime);
         }
+    }
+
+    /** An approaching framing boundary consumes an already prepared successor instead of discarding it. */
+    public void handoffSoon(long now) {
+        if (ended || shot == null || capturing() || earlyAdvance || manualAdvance) return;
+        now = timeline(now);
+        if (now < retryAt) return;
+        earlyAdvance = true;
+        handoff = Math.min(shotStarted + Math.round(shot.duration() * 1e9), now + 300_000_000L);
+        if (planner == null && pending == null) planner = planner();
     }
 
     public void beginCapture(long now) {
