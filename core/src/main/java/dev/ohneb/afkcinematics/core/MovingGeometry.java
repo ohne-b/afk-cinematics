@@ -273,7 +273,10 @@ public final class MovingGeometry implements Geometry {
         double radius = Math.hypot(offset.x(), offset.z());
         Vec[] arms = {offset, rotate(offset, -20), rotate(offset, 20), rotate(offset, -40), rotate(offset, 40),
             rotate(new Vec(0, offset.y(), -radius), desiredHeading)};
-        for (double lift : new double[]{0, .75, 1.5, 3, 4.5, 6}) {
+        // Low cover can leave a full-length route below the preferred walking/riding camera.
+        double[] lifts = walking() ? new double[]{0, .75, 1.5, 3, 4.5, 6, .75 - offset.y(), .25 - offset.y()}
+            : new double[]{0, .75, 1.5, 3, 4.5, 6};
+        for (double lift : lifts) {
             for (Vec arm : arms) {
                 Vec candidate = origin.add(arm).add(new Vec(0, lift, 0));
                 double score = travelScore(candidate, desired, carried, ahead, body, cut, bestScore);
@@ -300,7 +303,7 @@ public final class MovingGeometry implements Geometry {
         if (score >= bestScore || !usable(point, .15)) return Double.POSITIVE_INFINITY;
         if (!world.visible(point, body)) score += 64;
         if (score >= bestScore) return Double.POSITIVE_INFINITY;
-        // Look a short distance ahead so the rig starts lifting or moving sideways before impact.
+        // Look ahead so the rig adjusts height or moves sideways before impact.
         if (!forecast(point, ahead)) score += 256;
         if (score >= bestScore) return Double.POSITIVE_INFINITY;
         if (previous != null && !cut && !world.clear(previous.position(), point)) score += 256;
