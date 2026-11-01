@@ -50,17 +50,18 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     press(settings, "Enabled: ON");
                     require(!button(settings, "Start cinematic").active, "Disabled mod left Start enabled");
                     press(settings, "Enabled: OFF");
+                    press(settings, "Start when fishing: ON");
+                    require(!fixture.config().autoFishing, "Fishing start setting did not change");
+                    go(settings, "AFK");
                     field(settings, "seconds idle").setValue("45");
                     require(fixture.config().idleSeconds == 45, "Typed idle delay was lost");
-                    go(settings, "AFK details");
                     field(settings, "FPS while AFK").setValue("144");
                     require(fixture.config().cinematicFps == 144, "Exact FPS entry was lost");
                     int originalWidth = settings.width, originalHeight = settings.height;
                     settings.resize(220, 140);
                     field(settings, "FPS while AFK").setValue("30");
                     field(settings, "FPS while AFK").setValue("300");
-                    button(settings, "AFK details", value -> value.endsWith("  AFK details"))
-                        .onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
+                    go(settings, "General");
                     for (int i = 0; i < 30; i++) settings.mouseScrolled(0, 0, 0, 1);
                     var done = button(settings, "Done");
                     settings.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(done.getX() + 5, done.getY() + 5,
@@ -80,8 +81,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     require(settings.getFocused() == button(settings, "Subject: Player"), "Changing subject lost focus");
                     require(!button(settings, "Occasional wildlife: ON").active, "Player-only AFK retained wildlife");
                     button(settings, "Subject: Player").onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 1));
-                    go(settings, "Camera");
-                    press(settings, "Shot types: " + Shot.Type.values().length + " enabled");
+                    go(settings, "Shots");
                     for (Shot.Type type : Shot.Type.values()) {
                         if (type == Shot.Type.PAN) continue;
                         showShotSet(settings, type);
@@ -97,8 +97,8 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     press(settings, "Enable all");
                     showShotSet(settings, Shot.Type.ANGLER);
                     press(settings, "Enable all");
-                    press(settings, "Back");
-                    require(settings.getFocused() instanceof Button focused && focused.getMessage().getString().startsWith("Shot types:"), "Back lost its control focus");
+                    go(settings, "Camera");
+                    require(!button(settings, "Camera").active, "Sidebar did not mark the current category");
                 });
                 context.takeScreenshot(TestScreenshotOptions.of("camera-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
@@ -117,19 +117,17 @@ public final class SettingsGameTest implements FabricClientGameTest {
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
                     settings.resize(220, 140);
-                    for (String section : new String[]{"Camera", "AFK details", "Music"}) {
+                    for (String section : new String[]{"General", "Camera", "AFK", "Music", "Shots"}) {
                         go(settings, section);
                         for (int i = 0; i < 20; i++) { checkBounds(settings); settings.mouseScrolled(0, 0, 0, -1); }
                     }
-                    go(settings, "Camera");
-                    press(settings, "Shot types: " + Shot.Type.values().length + " enabled");
+                    go(settings, "Shots");
                     for (Shot.Type type : Shot.Type.values()) {
                         showShotSet(settings, type);
                         button(settings, Component.translatable("ohneb_afk_cinematics.shot." + type.name().toLowerCase(Locale.ROOT)).getString() + ": ON");
                         checkBounds(settings);
                     }
-                    settings.keyPressed(new KeyEvent(InputConstants.KEY_ESCAPE, 0, 0));
-                    require(AfkCinematics.screen() == settings, "Back closed settings");
+                    go(settings, "General");
                     var bindings = button(settings, "toggle binding", label -> label.startsWith("Start / stop:"));
                     settings.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(bindings.getX() + 5, bindings.getY() + 5,
                         new net.minecraft.client.input.MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0)), false);
@@ -173,7 +171,7 @@ public final class SettingsGameTest implements FabricClientGameTest {
             settings.setFocused(selector);
             selector.setFocused(true);
             selector.onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
-            require(settings.getFocused() instanceof Button focused && focused.getMessage().getString().startsWith("For: "),
+            require(settings.getFocused() instanceof AbstractButton focused && focused.getMessage().getString().startsWith("For: "),
                 "Switching sets lost keyboard focus");
         }
         throw new AssertionError("Missing shot set: " + target);
@@ -190,8 +188,9 @@ public final class SettingsGameTest implements FabricClientGameTest {
     }
 
     private static void go(SettingsScreen settings, String label) {
-        var header = button(settings, label, value -> value.endsWith("  " + label));
-        if (header.getMessage().getString().startsWith("+")) header.onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
+        var tab = button(settings, label);
+        if (tab.active) tab.onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
+        settings.tick();
     }
 
     private static void press(SettingsScreen settings, String label) {

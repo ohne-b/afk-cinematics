@@ -25,6 +25,7 @@ Put the jar for your Minecraft version and loader in `mods`.
 Fabric also needs [Fabric API](https://modrinth.com/mod/fabric-api). No server installation needed.
 
 Press **F6** to toggle a manual view with normal controls, or stay idle for 30 seconds for an AFK view.
+Fishing views start on casting and end when you reel in; turn this off in settings if you prefer.
 Change the key in **Options > Controls > Key Binds > AFK Cinematics**.
 Move or open inventory to leave an AFK view. Chat can stay open.
 F2 and supported Fabrishot versions capture the cinematic without ending it.

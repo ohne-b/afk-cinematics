@@ -45,7 +45,7 @@ final class SmokeProbe {
             AfkCinematics.showScreen(screen);
             for (int i = 0; i < 20; i++) {
                 var header = screen.children().stream().filter(net.minecraft.client.gui.components.Button.class::isInstance)
-                    .map(net.minecraft.client.gui.components.Button.class::cast).filter(button -> button.getMessage().getString().endsWith("  Music")).findFirst();
+                    .map(net.minecraft.client.gui.components.Button.class::cast).filter(button -> button.getMessage().getString().equals("Music")).findFirst();
                 if (header.isPresent()) { press(header.get()); break; }
                 screen.mouseScrolled(0, 0, 0, -1);
             }

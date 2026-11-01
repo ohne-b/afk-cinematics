@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- One F6 mode for walking, swimming, riding, flight and fishing, with normal controls and continuous music between casts. (#53)
-- A single settings page with expandable Camera, AFK details and Music controls; occasional wildlife views during AFK scenery. (#53)
+- One F6 mode for walking, swimming, riding, flight and fishing with normal controls. Automatic fishing still starts per cast and keeps music between quick casts. (#53)
+- Fixed settings categories with controls on the right, plus occasional wildlife views during AFK scenery. (#53)
 - Pull travel cameras closer around obstacles, retain usable takes when replacement shots fail, and use F6 as the default start key. (#52)
 - Keep minecart views through passive rider rotation and aim close tunnel views at the rider. (#51)
 - Keep fishing music between quick casts and keep minecart takes through ordinary bends. (#50)

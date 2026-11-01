@@ -151,10 +151,13 @@
   "ohneb_afk_cinematics.delay.input": "seconds idle",
   "ohneb_afk_cinematics.fps.input": "FPS while AFK",
   "ohneb_afk_cinematics.toggle.binding": "Start / stop: %s…",
-  "ohneb_afk_cinematics.section": "%s  %s",
-  "ohneb_afk_cinematics.section.camera": "Camera",
-  "ohneb_afk_cinematics.section.afk": "AFK details",
-  "ohneb_afk_cinematics.section.music": "Music",
   "ohneb_afk_cinematics.wildlife": "Occasional wildlife",
-  "ohneb_afk_cinematics.wildlife.help": "Brief views of nearby animals during AFK scenery shots. Rare, spaced apart, and never the same species twice in a row."
+  "ohneb_afk_cinematics.wildlife.help": "Brief views of nearby animals during AFK scenery shots. Rare, spaced apart, and never the same species twice in a row.",
+  "ohneb_afk_cinematics.page.general": "General",
+  "ohneb_afk_cinematics.page.afk": "AFK",
+  "ohneb_afk_cinematics.page.camera": "Camera",
+  "ohneb_afk_cinematics.page.shots": "Shots",
+  "ohneb_afk_cinematics.page.music": "Music",
+  "ohneb_afk_cinematics.autoFishing": "Start when fishing",
+  "ohneb_afk_cinematics.autoFishing.help": "Start once your bobber reaches water. Reel in normally to return; music carries over if you cast again soon."
 }
