@@ -18,12 +18,15 @@ final class TravelSearch {
 
     TravelSearch(Vec subject, Scene.Kind kind, CinematicConfig config, ShotHistory history, Random random) {
         this.subject = subject;
-        this.kind = kind;
+        this.kind = kind == Scene.Kind.FISHING ? Scene.Kind.FOLLOW : kind;
         this.config = config;
         this.random = random;
         firstSide = random.nextBoolean() ? 1 : -1;
         types = new ArrayList<>(config.shots);
         types.removeIf(type -> !type.travelOnly() || !config.frontTravel && type == Shot.Type.LEAD);
+        boolean following = types.stream().anyMatch(type -> !type.fixedTravel());
+        types.removeIf(type -> type.fixedTravel() && (!kind.travel()
+            || following && history.lastType() != null && history.lastType().fixedTravel()));
         if (types.isEmpty()) types.add(Shot.Type.STILL);
         Collections.shuffle(types, random);
         types.sort(Comparator.comparingInt(history::lastUse));
@@ -40,6 +43,17 @@ final class TravelSearch {
         boolean close = kind == Scene.Kind.FOLLOW || kind == Scene.Kind.SWIM;
         double side = (view % 2 == 0 ? 1 : -1) * firstSide;
         double scale = switch (view / 2) { case 0 -> 1; case 1 -> 0.75; default -> 0.5; };
+        if (type.fixedTravel()) {
+            if (!(geometry instanceof MovingGeometry moving)) return null;
+            double width = (type == Shot.Type.OVERLOOK ? 17 : 12) * (.65 + .35 * scale);
+            Vec start = subject.add(new Vec(side * width, type == Shot.Type.OVERLOOK ? 8 : 2.5,
+                config.frontTravel ? 5 * scale : -2));
+            if (!moving.fixedWindow(start)) return null;
+            double seconds = Math.min(8, config.pace.minimumSeconds);
+            Shot shot = new Shot(type, start, start, start, subject, subject, seconds);
+            Scene scene = new Scene(subject, start, kind, 0);
+            return geometry.valid(shot, start) ? new ShotPlanner.Plan(shot, scene, true, true) : null;
+        }
         double distance = switch (type) {
             case LOW_ESCORT -> flying ? 12 : 8;
             case HIGH_TRAIL -> 20;
