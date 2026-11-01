@@ -642,7 +642,9 @@ public final class AfkCinematics {
         if (player.getVehicle() instanceof AbstractMinecart) return Scene.Kind.MINECART;
         if (player.isPassenger()) return Scene.Kind.RIDE;
         if (player.isFallFlying() || player.getAbilities().flying) return Scene.Kind.FLIGHT;
-        if (manual) return player.isInWater() ? Scene.Kind.SWIM : Scene.Kind.FOLLOW;
+        // Surface hops belong to the same swim; dry land ends it, not each airborne frame.
+        if (manual) return player.isInWater() || activity == Scene.Kind.SWIM && !player.onGround()
+            ? Scene.Kind.SWIM : Scene.Kind.FOLLOW;
         return Scene.Kind.PLAYER;
     }
 

@@ -410,42 +410,44 @@ public final class TravelGameTest implements FabricClientGameTest {
             context.runOnClient(client -> {
                 client.player.setYRot(0);
                 client.player.setXRot(0);
-                AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL);
                 AfkCinematics.config().frontTravel = false;
                 AfkCinematics.config().letterbox = true;
                 AfkCinematics.config().useGameFov = false;
                 AfkCinematics.config().customFov = 70;
             });
-            manual(context);
-            key(context, InputConstants.KEY_W, InputConstants.PRESS);
-            context.waitTicks(12);
-            context.runOnClient(client -> {
-                AfkCinematics.config().shots = EnumSet.of(Shot.Type.PASS_BY);
-                AfkCinematics.nextShot();
-            });
-            context.waitFor(client -> ((CinematicSession)cameraOwner()).type() == Shot.Type.PASS_BY, 35);
-            context.waitTicks(2);
-            Vec3 planted = context.computeOnClient(client -> camera(client).position());
-            float plantedYaw = context.computeOnClient(client -> camera(client).yRot());
-            Vec3 passer = context.computeOnClient(client -> client.player.position());
-            context.waitTicks(8);
-            context.runOnClient(client -> {
-                require(AfkCinematics.showing(), "Roadside view ended while walking");
-                require(camera(client).position().distanceTo(planted) < .001, "Roadside camera followed instead of staying planted");
-                require(Math.abs(Math.IEEEremainder(camera(client).yRot() - plantedYaw, 360)) > 1, "Roadside camera did not pan");
-                require(client.player.position().distanceTo(passer) > 1, "Roadside view blocked real movement");
-                try {
-                    var rigField = AfkCinematics.class.getDeclaredField("movingGeometry");
-                    rigField.setAccessible(true);
-                    Object rig = rigField.get(null);
-                    var fovField = rig.getClass().getDeclaredField("fov");
-                    fovField.setAccessible(true);
-                    require(Math.abs(fovField.getDouble(rig) - 70) < .001,
-                        "Roadside framing retained its initial FOV instead of the applied world lens");
-                } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
-            });
-            key(context, InputConstants.KEY_W, InputConstants.RELEASE);
-            screenshot(context, "roadside-pass");
+            for (Shot.Type type : new Shot.Type[]{Shot.Type.PASS_BY, Shot.Type.OVERLOOK}) {
+                context.runOnClient(client -> {
+                    AfkCinematics.stop();
+                    AfkCinematics.config().shots = EnumSet.of(type);
+                });
+                context.waitTicks(5);
+                manual(context);
+                context.runOnClient(client -> require(((CinematicSession)cameraOwner()).type() == type,
+                    type + " could not start from rest without a following shot first"));
+                context.waitTicks(2);
+                Vec3 planted = context.computeOnClient(client -> camera(client).position());
+                float plantedYaw = context.computeOnClient(client -> camera(client).yRot());
+                Vec3 passer = context.computeOnClient(client -> client.player.position());
+                key(context, InputConstants.KEY_W, InputConstants.PRESS);
+                context.waitTicks(12);
+                context.runOnClient(client -> {
+                    require(AfkCinematics.showing(), type + " ended while walking");
+                    require(camera(client).position().distanceTo(planted) < .001, type + " followed instead of staying planted");
+                    require(Math.abs(Math.IEEEremainder(camera(client).yRot() - plantedYaw, 360)) > 1, type + " did not pan");
+                    require(client.player.position().distanceTo(passer) > 1, type + " blocked real movement");
+                    try {
+                        var rigField = AfkCinematics.class.getDeclaredField("movingGeometry");
+                        rigField.setAccessible(true);
+                        Object rig = rigField.get(null);
+                        var fovField = rig.getClass().getDeclaredField("fov");
+                        fovField.setAccessible(true);
+                        require(Math.abs(fovField.getDouble(rig) - 70) < .001,
+                            "Planted framing retained its initial FOV instead of the applied world lens");
+                    } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
+                });
+                key(context, InputConstants.KEY_W, InputConstants.RELEASE);
+                screenshot(context, type == Shot.Type.PASS_BY ? "roadside-pass" : "overlook-pass");
+            }
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
