@@ -1,6 +1,8 @@
 package dev.ohneb.afkcinematics.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.ohneb.afkcinematics.core.CinematicConfig;
+import dev.ohneb.afkcinematics.core.CinematicSession;
 import dev.ohneb.afkcinematics.core.Pose;
 import dev.ohneb.afkcinematics.core.Scene;
 import dev.ohneb.afkcinematics.core.Shot;
@@ -104,7 +106,58 @@ public final class ShorelineGameTest implements FabricClientGameTest {
                 require(player.position().distanceToSqr(WorldGeometry.vector(initial.position())) < 0.0001,
                     "Underwater take moved the server player");
             });
+            context.runOnClient(client -> {
+                AfkCinematics.stop();
+                checkWaterAudio = false;
+                AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL);
+                AfkCinematics.config().pace = CinematicConfig.Pace.LONG;
+            });
+            BlockPos surface = origin.get().offset(12, 0, 0);
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                player.teleportTo(surface.getX() + .5, surface.getY() + .2, surface.getZ() + .5);
+                player.setDeltaMovement(0, 0, 0);
+            });
+            context.waitFor(client -> client.player.isInWater() && !client.player.onGround());
+            manual(context);
+            var owner = (CinematicSession)context.computeOnClient(client -> cameraOwner());
+            long swimCut = context.computeOnClient(client -> AfkCinematics.cameraCut());
+            int swimTake = context.computeOnClient(client -> owner.take());
+            key(context, InputConstants.KEY_SPACE, InputConstants.PRESS);
+            for (int hop = 0; hop < 4; hop++) {
+                final double z = surface.getZ() + .5 + hop * .5;
+                for (boolean wet : new boolean[]{false, true}) {
+                    // Cross the real fluid boundary predictably without relying on a random jump phase.
+                    world.getServer().runOnServer(server -> {
+                        var player = server.getPlayerList().getPlayers().getFirst();
+                        player.teleportTo(surface.getX() + .5, surface.getY() + (wet ? .2 : 1.7), z);
+                        player.setDeltaMovement(0, 0, 0);
+                    });
+                    context.waitFor(client -> client.player.isInWater() == wet && !client.player.onGround(), 40);
+                    context.waitTicks(2);
+                    context.runOnClient(client -> {
+                        require(client.options.keyJump.isDown(), "Surface crossing lost the held jump input");
+                        require(AfkCinematics.showing() && cameraOwner() == owner, "A surface hop replaced the manual session");
+                        require(owner.take() == swimTake && AfkCinematics.cameraCut() == swimCut,
+                            "Crossing the water surface restarted a clear swim shot");
+                    });
+                }
+            }
+            key(context, InputConstants.KEY_SPACE, InputConstants.RELEASE);
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                for (BlockPos block : BlockPos.betweenClosed(surface.offset(-1, 0, -1), surface.offset(1, 0, 1)))
+                    player.level().setBlock(block, Blocks.GRASS_BLOCK.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                player.teleportTo(surface.getX() + .5, surface.getY() + 1, surface.getZ() + .5);
+                player.setDeltaMovement(0, 0, 0);
+            });
+            context.waitFor(client -> client.player.onGround() && !client.player.isInWater(), 60);
+            context.waitFor(client -> {
+                require(AfkCinematics.showing() && cameraOwner() == owner, "Reaching dry land replaced the manual session");
+                return owner.take() > swimTake;
+            }, 100);
         } finally {
+            key(context, InputConstants.KEY_SPACE, InputConstants.RELEASE);
             context.runOnClient(client -> { AfkCinematics.stop(); focused = null; checkWaterAudio = false; waterLoop = null; });
         }
     }
