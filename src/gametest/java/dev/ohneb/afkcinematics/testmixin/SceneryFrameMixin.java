@@ -52,6 +52,11 @@ public abstract class SceneryFrameMixin {
             double movement = pose.position().distance(afkCinematics$previous.position());
             double turn = Math.abs(Math.IEEEremainder(pose.yaw() - afkCinematics$previous.yaw(), 360));
             if (afkCinematics$take != session.take()) {
+                if (afkCinematics$take > 0 && session.fadeOpacity() > 0) {
+                    TestSupport.require(session.fadeOpacity() == 1 && TestSupport.opaqueTakes.contains(afkCinematics$take),
+                        "Faded cut was not covered on both sides");
+                    TestSupport.fadedCuts++;
+                }
                 if (movement >= 0.3 || turn >= 5) TestSupport.directCuts++;
             } else {
                 TestSupport.require(movement < 0.3, "Camera jumped position within a continuous take");
@@ -63,6 +68,12 @@ public abstract class SceneryFrameMixin {
             + "," + (shot == null ? "" : shot.type()) + "," + pose.yaw() + "," + pose.pitch());
         afkCinematics$previous = pose;
         afkCinematics$take = session.take();
+    }
+
+    @Inject(method = "coveredFrame", at = @At("HEAD"))
+    private void afkCinematics$recordOpaqueFrame(CallbackInfo ci) {
+        var session = (CinematicSession)(Object)this;
+        if (TestSupport.checkTransitions && session.fadeOpacity() == 1) TestSupport.opaqueTakes.add(session.take());
     }
 
     @Inject(method = "tick", at = @At("HEAD"))

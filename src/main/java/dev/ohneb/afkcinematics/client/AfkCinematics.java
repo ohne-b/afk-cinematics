@@ -119,6 +119,10 @@ public final class AfkCinematics {
     public static boolean hideHud() { return showing() && config().hideHud; }
     public static boolean hidePlayerNames() { return showing() && config().hidePlayerNames; }
     public static long cameraCut() { return cameraCut; }
+    public static double fadeOpacity() { return session == null ? 0 : session.fadeOpacity(); }
+    public static void coveredFrame(long cut) {
+        if (session != null && cameraCut == cut) session.coveredFrame();
+    }
     public static boolean capturing() { return session != null && session.capturing(); }
     public static boolean scenery() { return session != null && session.scenery(); }
     public static boolean underwater() { return session != null && session.underwater(); }

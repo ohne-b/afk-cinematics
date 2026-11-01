@@ -26,6 +26,8 @@ public final class TestSupport {
     public static Shot revealedShot;
     public static boolean checkTransitions;
     public static int directCuts;
+    public static final java.util.Set<Integer> opaqueTakes = new java.util.HashSet<>();
+    public static int fadedCuts;
     public static int playerNameFrames;
     public static boolean checkScreenshotView;
     public static int cinematicScreenshots;
@@ -49,6 +51,7 @@ public final class TestSupport {
             config.motion = CinematicConfig.Motion.GENTLE;
             config.subject = CinematicConfig.Subject.PLAYER;
             config.pace = CinematicConfig.Pace.RELAXED;
+            config.transition = CinematicConfig.Transition.CUT;
             config.shots = java.util.EnumSet.allOf(Shot.Type.class);
         });
     }

@@ -228,6 +228,8 @@ public final class SettingsScreen extends Screen {
                 widgets.add(toggle("unfocused", () -> config.unfocused, value -> config.unfocused = value));
             }
             case CAMERA -> {
+                widgets.add(choice("transition", config.transition, CinematicConfig.Transition.values(), value -> text("transition." + value.name().toLowerCase(Locale.ROOT)),
+                    value -> config.transition = value, value -> Tooltip.create(text("transition.help"))));
                 widgets.add(choice("motion", config.motion, CinematicConfig.Motion.values(), value -> text(value.name().toLowerCase(Locale.ROOT)),
                     value -> config.motion = value, value -> Tooltip.create(text("motion.help"))));
                 widgets.add(choice("pace", config.pace, CinematicConfig.Pace.values(), value -> text("pace.range", (int)value.minimumSeconds, (int)value.maximumSeconds),

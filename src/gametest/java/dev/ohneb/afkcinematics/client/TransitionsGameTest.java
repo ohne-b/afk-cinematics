@@ -30,6 +30,8 @@ public final class TransitionsGameTest implements FabricClientGameTest {
             sceneryFrames = new ArrayList<>();
             checkTransitions = true;
             directCuts = 0;
+            fadedCuts = 0;
+            opaqueTakes.clear();
         });
         try (var world = context.worldBuilder().create()) {
             world.getServer().runOnServer(server -> {
@@ -48,6 +50,7 @@ public final class TransitionsGameTest implements FabricClientGameTest {
                 if (!requested && System.nanoTime() - started > 8_000_000_000L) {
                     requested = true;
                     context.runOnClient(client -> {
+                        AfkCinematics.config().transition = CinematicConfig.Transition.FADE;
                         AfkCinematics.config().shots = EnumSet.of(Shot.Type.FLYOVER);
                         AfkCinematics.nextShot();
                     });
@@ -64,7 +67,10 @@ public final class TransitionsGameTest implements FabricClientGameTest {
                 });
                 context.waitTicks(1);
             }
-            context.runOnClient(client -> require(directCuts >= 2, "Transition fixture never exercised a changed viewpoint"));
+            context.runOnClient(client -> {
+                require(directCuts >= 2, "Transition fixture never exercised a changed viewpoint");
+                require(fadedCuts >= 1 && opaqueTakes.size() >= 2, "Fade never covered both rendered viewpoints");
+            });
             Path artifacts = Path.of(System.getProperty("afkcinematics.test.artifacts"));
             context.takeScreenshot(TestScreenshotOptions.of("camera-after-transition").withDestinationDir(artifacts));
             try { Files.write(artifacts.resolve("camera-trace.csv"), trace); }
@@ -73,6 +79,7 @@ public final class TransitionsGameTest implements FabricClientGameTest {
             context.runOnClient(client -> {
                 client.options.framerateLimit().set(limit.get());
                 AfkCinematics.config().cinematicFps = 60;
+                AfkCinematics.config().transition = CinematicConfig.Transition.CUT;
                 checkTransitions = false;
                 sceneryFrames = null;
                 focused = null;
