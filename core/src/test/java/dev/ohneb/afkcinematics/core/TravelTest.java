@@ -554,23 +554,37 @@ class TravelTest {
         assertNull(moving.apply(local, ZERO, 0, 1, true));
     }
 
-    @Test void minecartBendsKeepTheTakeButReversalsStillRequestCover() {
-        var moving = new MovingGeometry(OPEN, ZERO, 0);
-        moving.course(0);
-        Pose local = new Pose(new Vec(0, 2, -10), 0, 0);
-        Pose previous = moving.apply(local, ZERO, 0, 1, false);
-        moving.course(90);
-        for (long now = 20_000_000; now <= 6_000_000_000L; now += 20_000_000) {
-            assertFalse(moving.needsReframe(Scene.Kind.MINECART), "A normal rail bend must not request another shot");
-            assertTrue(moving.follow(ZERO, now, false, false));
-            Pose next = moving.apply(local, ZERO, 0, 1, false);
-            assertNotNull(next);
-            assertTrue(next.position().distance(previous.position()) < .08, "Rail bends still turn smoothly");
-            previous = next;
+    @Test void cornersTightenTheSameTakeThenWidenSmoothlyButReversalsStillRequestCover() {
+        for (Scene.Kind kind : new Scene.Kind[]{Scene.Kind.FOLLOW, Scene.Kind.BOAT, Scene.Kind.MINECART, Scene.Kind.FLIGHT}) {
+            var moving = new MovingGeometry(OPEN, ZERO, 0);
+            moving.framing(kind, true);
+            moving.course(0);
+            Pose local = new Pose(new Vec(0, 2, -10), 0, 0);
+            Pose previous = moving.apply(local, ZERO, 0, 1, false);
+            moving.course(90);
+            double minimum = 10;
+            long pause = 0;
+            for (long now = 20_000_000; now <= 14_000_000_000L; now += 20_000_000) {
+                assertFalse(moving.needsReframe(kind), "A normal corner must not request another shot");
+                assertTrue(moving.follow(ZERO, now + pause, false, false));
+                Pose next = moving.apply(local, ZERO, 0, 1, false);
+                assertNotNull(next);
+                assertTrue(next.position().distance(previous.position()) < .14, "Turning and widening must stay gradual: " + kind);
+                assertEquals(0, moving.fade(), "An open corner must not require a recovery cut");
+                minimum = Math.min(minimum, Math.hypot(next.position().x(), next.position().z()));
+                previous = next;
+                if (now == 1_000_000_000L) {
+                    pause = 2_000_000_000L;
+                    moving.follow(ZERO, now + pause, true, false);
+                    assertEquals(previous, moving.apply(local, ZERO, 0, 1, true));
+                }
+            }
+            assertTrue(minimum < 8, "The camera never tightened through the corner: " + kind);
+            assertEquals(10, Math.hypot(previous.position().x(), previous.position().z()), .1);
+            assertEquals(90, previous.yaw(), 1);
+            moving.course(-90);
+            assertTrue(moving.needsReframe(kind));
+            assertFalse(moving.needsReframe(kind));
         }
-        assertEquals(90, previous.yaw(), 1);
-        moving.course(-90);
-        assertTrue(moving.needsReframe(Scene.Kind.MINECART));
-        assertFalse(moving.needsReframe(Scene.Kind.MINECART));
     }
 }

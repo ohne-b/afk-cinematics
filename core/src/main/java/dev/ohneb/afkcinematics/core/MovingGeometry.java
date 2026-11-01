@@ -13,8 +13,8 @@ public final class MovingGeometry implements Geometry {
     private double previousFade;
     private int previousTake;
     private long updated;
-    private double heading, desiredHeading, turnVelocity;
-    private boolean followsCourse, reframeRequested;
+    private double heading, desiredHeading, turnVelocity, turnScale = 1, scaleVelocity;
+    private boolean followsCourse, reframeRequested, tightTurn;
     private double elapsed, extension = 1, reveal = 1;
     private Vec previousTarget, previousOrigin;
     private Vec adjustmentVelocity = new Vec(0, 0, 0);
@@ -62,22 +62,40 @@ public final class MovingGeometry implements Geometry {
     public Vec relative(Vec offset) { return rotate(offset, -heading); }
 
     public boolean needsReframe(Scene.Kind kind) {
-        double threshold = kind == Scene.Kind.MINECART ? 135 : 75;
-        if (!followsCourse || reframeRequested || Math.abs(Math.IEEEremainder(desiredHeading - heading, 360)) < threshold) return false;
+        if (!kind.travel() || !followsCourse || reframeRequested
+            || Math.abs(Math.IEEEremainder(desiredHeading - heading, 360)) < 155) return false;
         reframeRequested = true;
         return true;
     }
 
+    public boolean steadyCourse() {
+        return !reframeRequested && recovery == Recovery.NONE && !turning();
+    }
+
+    public boolean turning() { return tightTurn || Math.abs(Math.IEEEremainder(desiredHeading - heading, 360)) >= 20; }
+
     private void turn(double seconds) {
         if (!followsCourse || seconds <= 0) return;
         double change = Math.IEEEremainder(desiredHeading - heading, 360);
+        if (!activity.travel() || Math.abs(change) < 12) tightTurn = false;
+        else if (Math.abs(change) > 55) tightTurn = true;
+        // Keep the shorter boom through the corner, then ease back without an outward kick.
+        double scaleTarget = tightTurn ? .6 : 1;
+        double scaleSpring = tightTurn ? 3 : 1.5;
+        double scaleError = turnScale - scaleTarget;
+        double scaleChange = (scaleVelocity + scaleSpring * scaleError) * seconds;
+        double scaleDecay = Math.exp(-scaleSpring * seconds);
+        turnScale = Math.clamp(scaleTarget + (scaleError + scaleChange) * scaleDecay, .6, 1);
+        scaleVelocity = (scaleVelocity - scaleSpring * scaleChange) * scaleDecay;
+        double radius = previous == null ? 10 : Math.hypot(previous.position().x() - origin.x(), previous.position().z() - origin.z());
+        double speed = Math.min(22 / (turnScale * turnScale), Math.max(22, Math.toDegrees(4 / Math.max(1, radius))));
         double offset = -change;
         double spring = 3.5;
         double temporary = (turnVelocity + spring * offset) * seconds;
         double decay = Math.exp(-spring * seconds);
-        double step = Math.clamp(change + (offset + temporary) * decay, -22 * seconds, 22 * seconds);
+        double step = Math.clamp(change + (offset + temporary) * decay, -speed * seconds, speed * seconds);
         heading += step;
-        turnVelocity = Math.clamp((turnVelocity - spring * temporary) * decay, -22, 22);
+        turnVelocity = Math.clamp((turnVelocity - spring * temporary) * decay, -speed, speed);
     }
 
     public Pose local(Pose pose) {
@@ -93,8 +111,14 @@ public final class MovingGeometry implements Geometry {
             heading = desiredHeading;
             turnVelocity = 0;
             reframeRequested = false;
+            turnScale = 1;
+            scaleVelocity = 0;
+            tightTurn = false;
         }
-        Vec point = rotate(pose.position(), heading).add(origin);
+        Vec offset = pose.position();
+        double radius = Math.hypot(offset.x(), offset.z());
+        double scale = radius == 0 ? 1 : Math.max(turnScale, Math.min(1, 3 / radius));
+        Vec point = rotate(new Vec(offset.x() * scale, offset.y(), offset.z() * scale), heading).add(origin);
         Vec worldFocus = focus == null ? null : rotate(focus, heading).add(activity.travel() ? origin : target);
         Pose result = worldFocus == null ? new Pose(point, pose.yaw() + heading, pose.pitch()) : Pose.lookingAt(point, worldFocus);
         if (capture && previous != null) { result = previous; worldFocus = previousFocus; }

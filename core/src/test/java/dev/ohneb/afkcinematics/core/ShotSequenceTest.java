@@ -198,8 +198,8 @@ class ShotSequenceTest {
             frame(session, now += 50_000_000L);
             double fade = session.fade();
             if (take == session.take() && take > 0 && fade > 0 && fade < 1 && opacity > 0 && opacity < 1) {
-                assertTrue(session.current().position().distance(previous.position()) > 1e-8,
-                    "A visible fade froze the moving camera");
+                assertTrue(session.current().position().distance(previous.position()) > .001,
+                    "A visible fade reached the nearly stationary end of a take");
                 if (fade > opacity) {
                     movingOut++;
                     if (!captured) {
@@ -218,6 +218,73 @@ class ShotSequenceTest {
             take = session.take();
         }
         assertTrue(movingOut > 0 && movingIn > 0 && captured);
+    }
+
+    @Test void nearbyTravelAnglesBlendButAnObstructedBridgeUsesCoveredFrames() {
+        Vec zero = new Vec(0, 0, 0);
+        for (boolean obstruction : new boolean[]{false, true}) {
+            Geometry world = new Geometry() {
+                private boolean line(Vec a, Vec b, double m) {
+                    if (!obstruction) return true;
+                    int steps = Math.max(1, (int)Math.ceil(a.distance(b) * 50));
+                    for (int i = 0; i <= steps; i++) {
+                        Vec p = a.lerp(b, (double)i / steps);
+                        if (Math.abs(p.x()) <= .35 + m && p.y() >= 1.6 - m && p.y() <= 2.8 + m
+                            && p.z() >= -6.7 - m && p.z() <= -5.5 + m) return false;
+                    }
+                    return true;
+                }
+                public boolean clear(Vec a, Vec b, double m) { return line(a, b, m + .25); }
+                public boolean visible(Vec a, Vec b, double m) { return line(a, b, m); }
+            };
+            var moving = new MovingGeometry(world, zero, 0);
+            moving.framing(Scene.Kind.FOLLOW, true);
+            moving.course(0);
+            var config = new CinematicConfig();
+            config.pace = CinematicConfig.Pace.SHORT;
+            config.shots = EnumSet.of(Shot.Type.TRAIL);
+            Pose entry = Pose.lookingAt(new Vec(2, 2, -5), zero);
+            var session = new CinematicSession(zero, entry, 0, config, moving, new Random(4), Scene.Kind.FOLLOW);
+            int lastTake = 0, blends = 0, cuts = 0, intermediate = 0;
+            double previousFade = 0;
+            Pose previous = entry;
+            boolean held = false;
+            long now = 0;
+            for (int tick = 0; tick < 1800; tick++) {
+                now += 50_000_000L;
+                moving.follow(zero, now, false, true);
+                session.tick(now);
+                Pose local = session.frame(now);
+                assertNotNull(local);
+                Pose applied = moving.apply(local, session.focus(), session.fade(), session.take(), false);
+                assertNotNull(applied);
+                if (lastTake > 0 && session.fade() == 0 && previousFade == 0
+                    && local.position().distance(previous.position()) > .00001) {
+                    intermediate++;
+                    assertTrue(local.position().distance(previous.position()) < .25);
+                    if (!held) {
+                        session.beginCapture(now);
+                        assertEquals(local, session.frame(now + 2_000_000_000L));
+                        session.endCapture(now += 2_000_000_000L);
+                        assertEquals(local, session.frame(now), "Capture release skipped the travel blend");
+                        held = true;
+                    }
+                }
+                if (session.take() != lastTake && lastTake > 0) {
+                    if (session.fade() == 0) blends++;
+                    else { assertEquals(1, previousFade); assertEquals(1, session.fade()); cuts++; }
+                }
+                previous = local;
+                previousFade = session.fade();
+                lastTake = session.take();
+                session.coveredFrame();
+                moving.coveredFrame();
+            }
+            if (!obstruction) {
+                assertTrue(blends >= 2 && intermediate > 20 && held, "Nearby clear angles never blended");
+                assertEquals(0, cuts);
+            } else assertTrue(cuts >= 2, "The bridge through the wall must use opaque old and destination frames");
+        }
     }
 
     @Test void recentViewsPreventAnImmediateABACycleWithoutExhaustingTheScene() {
