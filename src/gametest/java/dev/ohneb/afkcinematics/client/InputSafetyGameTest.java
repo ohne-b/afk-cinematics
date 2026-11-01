@@ -139,7 +139,9 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
             });
             try {
                 key(context, InputConstants.KEY_LCONTROL, InputConstants.PRESS);
-                context.waitFor(client -> AfkCinematics.showing(), 120);
+                // Retain the consumed modifier, but exercise AFK wake behavior rather than manual controls.
+                start(context);
+                context.runOnClient(client -> require(!AfkCinematics.manualControl(), "Wake fixture started manual mode"));
                 mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS, 2);
                 context.runOnClient(client -> {
                     require(!AfkCinematics.showing(), "Control-click was treated as a left-button screenshot");
@@ -159,7 +161,7 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
                 context.runOnClient(client -> require(client.options.keyUse.isDown(), "A fresh right-click was suppressed"));
                 mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.RELEASE);
                 key(context, InputConstants.KEY_LCONTROL, InputConstants.PRESS);
-                context.waitFor(client -> AfkCinematics.showing(), 120);
+                start(context);
                 mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS, 2);
                 context.runOnClient(client -> focused = false);
                 mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE);
@@ -172,7 +174,7 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
                     require(!client.options.keyUse.isDown(), "Use stayed down after refocused Control-click release");
                 });
                 key(context, InputConstants.KEY_LCONTROL, InputConstants.PRESS);
-                context.waitFor(client -> AfkCinematics.showing(), 120);
+                start(context);
                 mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS, 2);
                 mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS, 2);
                 mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE);
@@ -190,7 +192,7 @@ public final class InputSafetyGameTest implements FabricClientGameTest {
                 mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE);
                 context.runOnClient(client -> { focused = true; AfkCinematics.stop(); });
                 key(context, InputConstants.KEY_LCONTROL, InputConstants.PRESS);
-                context.waitFor(client -> AfkCinematics.showing(), 120);
+                start(context);
                 mouse(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS, 2);
                 context.runOnClient(client -> {
                     require(!AfkCinematics.showing(), "Changed Control-click button inherited screenshot passthrough");
