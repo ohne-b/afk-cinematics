@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Lower following cameras beneath low cover to keep a wider, continuous view while walking or riding. (#63)
 - Keep swimming shots through surface hops; allow Roadside and Overlook from rest and at ordinary minecart speeds. (#62)
 - Keep scrolling from changing settings, add arrow-key choice controls and remove obsolete shot-planning code. (#61)
 - Retain clear travel angles around trees and check approaching obstructions before moving the camera. (#60)
