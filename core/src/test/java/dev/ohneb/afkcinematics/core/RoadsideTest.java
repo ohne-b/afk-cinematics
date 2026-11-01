@@ -13,6 +13,10 @@ class RoadsideTest {
     };
 
     @Test void plantedCameraPansHoldsCapturesAndUsesItsPreparedSuccessor() {
+        for (var transition : CinematicConfig.Transition.values()) plantedHandoff(transition);
+    }
+
+    private void plantedHandoff(CinematicConfig.Transition transition) {
         var moving = new MovingGeometry(OPEN, ZERO, 0);
         moving.course(0);
         moving.framing(Scene.Kind.FOLLOW, false);
@@ -21,6 +25,7 @@ class RoadsideTest {
         for (int frame = 1; frame <= 40; frame++)
             moving.follow(new Vec(0, 0, frame * .15), frame * 50_000_000L, false, true);
         var config = new CinematicConfig();
+        config.transition = transition;
         config.shots = EnumSet.of(Shot.Type.PASS_BY);
         config.frontTravel = false;
         var session = new CinematicSession(ZERO, new Pose(new Vec(0, 2, -5), 0, 0), 0,
@@ -48,7 +53,10 @@ class RoadsideTest {
         int take = session.take();
         // No tick/search follows this request: only the already-prepared successor can satisfy it.
         session.handoffSoon(now);
-        session.frame(now + 350_000_000L);
+        for (int frame = 1; frame <= 12 && session.take() == take; frame++) {
+            session.frame(now + frame * 50_000_000L);
+            if (session.fadeOpacity() == 1) session.coveredFrame();
+        }
         assertEquals(take + 1, session.take());
         assertFalse(session.ended());
     }

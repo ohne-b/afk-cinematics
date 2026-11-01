@@ -40,6 +40,8 @@ public final class TravelGameTest implements FabricClientGameTest {
             AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL);
         });
         boolean rotateWithCart = context.computeOnClient(client -> client.options.rotateWithMinecart().get());
+        boolean gameFov = context.computeOnClient(client -> AfkCinematics.config().useGameFov);
+        int customFov = context.computeOnClient(client -> AfkCinematics.config().customFov);
         context.runOnClient(client -> client.options.rotateWithMinecart().set(true));
         try (var world = context.worldBuilder().adjustSettings(settings -> {
             var previous = settings.getSettings();
@@ -449,6 +451,8 @@ public final class TravelGameTest implements FabricClientGameTest {
                 AfkCinematics.stop();
                 cameraTimings = null;
                 client.options.rotateWithMinecart().set(rotateWithCart);
+                AfkCinematics.config().useGameFov = gameFov;
+                AfkCinematics.config().customFov = customFov;
                 focused = null;
             });
         }
