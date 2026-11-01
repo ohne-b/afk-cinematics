@@ -4,6 +4,7 @@ import dev.ohneb.afkcinematics.core.Geometry;
 import dev.ohneb.afkcinematics.core.Pose;
 import dev.ohneb.afkcinematics.core.Scene;
 import dev.ohneb.afkcinematics.core.Vec;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -16,7 +17,6 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 public final class WorldGeometry implements Geometry {
-    private static final double RADIUS = 0.25;
     private enum Medium { DRY, SUBMERGED, PLAYER }
     private final ClientLevel level;
     private final Medium medium;
@@ -91,12 +91,15 @@ public final class WorldGeometry implements Geometry {
 
     @Override
     public boolean clear(Vec from, Vec to, double margin) {
+        var window = Minecraft.getInstance().getWindow();
+        double radius = AfkCinematics.config().cameraRadius((double)window.getWidth() / Math.max(1, window.getHeight()));
+        if (radius > 1) return false; // Avoid unbounded volume scans in an extremely flat window.
         int steps = Math.max(1, (int) Math.ceil(from.distance(to) / 0.25));
         if (steps > 64) return false;
         Vec previous = from;
         for (int i = 1; i <= steps; i++) {
             Vec next = from.lerp(to, (double) i / steps);
-            AABB box = new AABB(vector(previous), vector(next)).inflate(RADIUS + margin);
+            AABB box = new AABB(vector(previous), vector(next)).inflate(radius + margin);
             if (!level.getWorldBorder().isWithinBounds(box)) return false;
             var volume = Shapes.create(box);
             // Moving pistons and other shapes can extend beyond their owning block.

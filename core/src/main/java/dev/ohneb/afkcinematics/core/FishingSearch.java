@@ -74,11 +74,12 @@ final class FishingSearch {
         Vec end = start.add(drive.scale(amount));
         if (!Scene.inRange(start, subject) || !Scene.inRange(end, subject)) return null;
         double duration = config.pace.minimumSeconds + random.nextDouble() * (config.pace.maximumSeconds - config.pace.minimumSeconds);
-        Shot shot = new Shot(type, start, start.lerp(end, .5), end, focus, focus, duration);
+        Shot shot = new Shot(type, start, start.lerp(end, .5), end, focus, focus,
+            CinematicConfig.Pace.LONG.maximumSeconds).cutAfter(duration);
         Scene scene = new Scene(bobber, start, Scene.Kind.FISHING, 0);
         Geometry environment = geometry.forScene(scene);
-        Shot sightline = new Shot(type, start, shot.control(), end, bobber, bobber, duration);
-        Shot angler = new Shot(type, start, shot.control(), end, subject, subject, duration);
+        Shot sightline = new Shot(type, start, shot.control(), shot.end(), bobber, bobber, duration);
+        Shot angler = new Shot(type, start, shot.control(), shot.end(), subject, subject, duration);
         return environment.valid(shot, start) && environment.valid(sightline, start) && environment.valid(angler, start)
             ? new ShotPlanner.Plan(shot, scene, true, true) : null;
     }

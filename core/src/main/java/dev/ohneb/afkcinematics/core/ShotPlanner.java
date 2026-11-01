@@ -84,7 +84,7 @@ final class ShotPlanner {
             double drift = config.motion == CinematicConfig.Motion.REDUCED ? .25 : .8;
             Vec end = still ? start : start.add(new Vec(-offset.z(), 0, offset.x()).scale(drift / Math.max(1, offset.length())));
             Shot shot = new Shot(still ? Shot.Type.STILL : Shot.Type.DRIFT, start, start.lerp(end, .5), end,
-                animal.focus(), animal.focus(), config.pace.minimumSeconds
+                animal.focus(), animal.focus(), CinematicConfig.Pace.LONG.maximumSeconds).cutAfter(config.pace.minimumSeconds
                     + random.nextDouble() * (config.pace.maximumSeconds - config.pace.minimumSeconds));
             return Scene.inRange(end, anchor) && geometry.forScene(animal).valid(shot, start)
                 ? new Plan(shot, animal, true, true) : null;

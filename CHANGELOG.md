@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Keep camera movement calm at every shot length; use game FOV by default with an optional 30–140° slider. (#58)
 - Cut directly between shots, animate letterbox entry and exit, and add 6–10 second shots. (#57)
 - Tighten travel views through sharp turns, blend nearby angles and keep moving shots flowing through fades. (#56)
 - Keep walking views wider beside walls, ease hill adjustments and soften forward jump pulses. (#55)

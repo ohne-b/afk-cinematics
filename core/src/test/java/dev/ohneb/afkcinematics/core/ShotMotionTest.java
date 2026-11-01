@@ -36,7 +36,7 @@ class ShotMotionTest {
             var shot = new ShotSearch(scene, Pose.lookingAt(scene.vantage(), SUBJECT), 0, config,
                 null, true, true, new Random(seed)).next(OPEN);
             assertNotNull(shot);
-            assertTrue(shot.start().distance(shot.end()) > 2, "Outer-limit dolly lost its movement");
+            assertTrue(shot.start().distance(shot.end()) / shot.duration() > 2.0 / 46, "Outer-limit dolly lost its movement");
             assertTrue(shot.end().distance(SUBJECT) < shot.start().distance(SUBJECT));
         }
     }
@@ -65,7 +65,7 @@ class ShotMotionTest {
             Shot shot = new ShotSearch(scene, entry, 0, config, null, true, true, new Random(2)).next(OPEN);
             assertNotNull(shot);
             Vec travel = shot.end().subtract(shot.start());
-            assertTrue(travel.length() > 4, type + " did not create a substantial camera drive");
+            assertTrue(travel.length() / shot.duration() > 4.0 / 46, type + " did not create a substantial camera drive");
             for (int sample = 2; sample < 98; sample++) {
                 Vec step = shot.sample(shot.duration() * sample / 100).position()
                     .subtract(shot.sample(shot.duration() * (sample - 1) / 100).position());
@@ -78,7 +78,7 @@ class ShotMotionTest {
             }
             if (type == Shot.Type.LOW_PASS) assertEquals(SUBJECT.y() + 0.25, shot.start().y(), 1e-9);
             if (type == Shot.Type.REVEAL) {
-                assertTrue(shot.end().y() - shot.start().y() > 3);
+                assertTrue((shot.end().y() - shot.start().y()) / shot.duration() > 3.0 / 46);
                 assertTrue(shot.end().distance(SUBJECT) > shot.start().distance(SUBJECT));
             }
             config.motion = CinematicConfig.Motion.REDUCED;

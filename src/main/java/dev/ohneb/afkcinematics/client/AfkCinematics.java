@@ -169,8 +169,7 @@ public final class AfkCinematics {
     }
     public static double fieldOfView(Camera camera, double normal) {
         if (session == null || camera != appliedCamera) return normal;
-        var window = Minecraft.getInstance().getWindow();
-        return config().lens.blend(normal, (double)window.getWidth() / Math.max(1, window.getHeight()), session.lensStrength());
+        return normal + (config().fieldOfView(normal) - normal) * session.lensStrength();
     }
 
     public static void tick() {

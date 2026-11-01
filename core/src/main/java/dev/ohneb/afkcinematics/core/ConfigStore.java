@@ -33,7 +33,8 @@ public final class ConfigStore {
             config.playerShare = Math.clamp(integer("playerShare", 25), 0, 100);
             config.pace = enumeration("pace", CinematicConfig.Pace.RELAXED);
             config.shots = shots();
-            config.lens = enumeration("lens", CinematicConfig.Lens.CINEMATIC);
+            config.useGameFov = bool("useGameFov", true);
+            config.customFov = Math.clamp(integer("customFov", 90), 30, 140);
             config.cinematicFps = Math.clamp(integer("cinematicFps", 60), 20, 240);
             config.hideHud = bool("hideHud", true);
             config.hidePlayerNames = bool("hidePlayerNames", true);
@@ -116,7 +117,8 @@ public final class ConfigStore {
         var catalog = new JsonArray();
         for (Shot.Type type : Shot.Type.values()) catalog.add(type.name().toLowerCase(Locale.ROOT));
         updated.add("knownShots", catalog);
-        updated.addProperty("lens", config.lens.name().toLowerCase(Locale.ROOT));
+        updated.addProperty("useGameFov", config.useGameFov);
+        updated.addProperty("customFov", Math.clamp(config.customFov, 30, 140));
         updated.addProperty("cinematicFps", Math.clamp(config.cinematicFps, 20, 240));
         updated.addProperty("hideHud", config.hideHud);
         updated.addProperty("hidePlayerNames", config.hidePlayerNames);

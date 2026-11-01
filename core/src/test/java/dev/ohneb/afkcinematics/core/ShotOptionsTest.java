@@ -24,10 +24,10 @@ class ShotOptionsTest {
             Pose first = shot.sample(0), last = shot.sample(shot.duration());
             if (type == Shot.Type.PAN) {
                 assertEquals(first.position(), last.position());
-                assertTrue(Math.abs(Math.IEEEremainder(last.yaw() - first.yaw(), 360)) > 2);
+                assertTrue(Math.abs(Math.IEEEremainder(last.yaw() - first.yaw(), 360)) / shot.duration() > 2.0 / 46);
             } else if (type == Shot.Type.STILL) assertEquals(first, last);
             else assertTrue(first.position().distance(last.position()) > 0.1, type.name());
-            if (type == Shot.Type.CRANE) assertTrue(Math.abs(first.position().y() - last.position().y()) > 1);
+            if (type == Shot.Type.CRANE) assertTrue(Math.abs(first.position().y() - last.position().y()) / shot.duration() > 1.0 / 46);
         }
     }
 
@@ -77,11 +77,32 @@ class ShotOptionsTest {
     @Test void pacingControlsDurationAndAvailableStylesAvoidImmediateRepeats() {
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.ARC, Shot.Type.DOLLY);
+        Shot reference = null;
         for (var pace : CinematicConfig.Pace.values()) {
             config.pace = pace;
             Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, Shot.Type.ARC, true, false, new Random(2)).next(OPEN);
             assertEquals(Shot.Type.DOLLY, shot.type());
             assertTrue(shot.duration() >= pace.minimumSeconds && shot.duration() < pace.maximumSeconds);
+            if (reference != null) {
+                assertEquals(0, reference.sample(3).position().distance(shot.sample(3).position()), 1e-9);
+                assertEquals(0, reference.focus(3).distance(shot.focus(3)), 1e-9);
+            }
+            reference = shot;
+        }
+    }
+
+    @Test void aShortCutKeepsTheCurvedPathAndMovingFocusAtTheirOriginalSpeed() {
+        var full = new Shot(Shot.Type.ARC, new Vec(0, 3, -8), new Vec(8, 4, -8), new Vec(8, 3, 0),
+            SUBJECT, SUBJECT.add(new Vec(3, 0, 0)), CinematicConfig.Pace.LONG.maximumSeconds);
+        for (double duration : new double[]{6, 10, 18, 30, 46}) {
+            Shot take = full.cutAfter(duration);
+            assertEquals(duration, take.duration());
+            for (double time = 0; time <= duration; time += .5) {
+                assertEquals(0, full.sample(time).position().distance(take.sample(time).position()), 1e-9);
+                assertEquals(0, full.focus(time).distance(take.focus(time)), 1e-9);
+            }
+            assertTrue(take.sample(duration).position().distance(take.sample(duration - .1).position()) > .01,
+                "Long takes must still be moving when they cut");
         }
     }
 

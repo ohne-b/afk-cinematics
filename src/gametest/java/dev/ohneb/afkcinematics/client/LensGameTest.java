@@ -1,6 +1,5 @@
 package dev.ohneb.afkcinematics.client;
 
-import dev.ohneb.afkcinematics.core.CinematicConfig;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.Camera;
@@ -23,20 +22,28 @@ public final class LensGameTest implements FabricClientGameTest {
             context.waitTicks(20);
             context.runOnClient(client -> {
                 client.options.fov().set(100);
-                AfkCinematics.config().lens = CinematicConfig.Lens.CINEMATIC;
+                require(AfkCinematics.config().useGameFov, "Fresh settings did not use the game FOV");
             });
             double hand = context.computeOnClient(client -> fieldOfView(client, false));
             start(context);
             context.waitTicks(140);
             context.runOnClient(client -> {
                 require(AfkCinematics.showing(), "Cinematic stopped during lens entry");
-                require(Math.abs(fieldOfView(client, true) - 62) < 0.001, "World projection did not use the cinematic lens");
+                require(Math.abs(fieldOfView(client, true) - 100) < 0.001, "Default lens did not preserve the game FOV");
+                AfkCinematics.config().useGameFov = false;
+                AfkCinematics.config().customFov = 140;
+            });
+            context.waitTicks(20);
+            context.runOnClient(client -> {
+                require(AfkCinematics.showing(), "Cinematic stopped at the widest custom FOV");
+                require(Math.abs(fieldOfView(client, true) - 140) < 0.001, "Custom FOV did not exceed the vanilla slider range");
                 require(fieldOfView(client, false) == hand, "The lens changed the hand projection");
                 require(client.options.fov().get() == 100, "The lens changed the FOV option");
-                AfkCinematics.config().lens = CinematicConfig.Lens.GAME;
+                AfkCinematics.config().useGameFov = true;
                 require(Math.abs(fieldOfView(client, true) - 100) < 0.001, "Game lens did not preserve the normal FOV");
-                AfkCinematics.config().lens = CinematicConfig.Lens.WIDE;
-                require(Math.abs(fieldOfView(client, true) - 78) < 0.001, "Wide lens did not reach its fixed FOV");
+                AfkCinematics.config().useGameFov = false;
+                AfkCinematics.config().customFov = 30;
+                require(Math.abs(fieldOfView(client, true) - 30) < 0.001, "Custom FOV did not reach the slider minimum");
                 AfkCinematics.stop();
                 require(Math.abs(fieldOfView(client, true) - 100) < 0.001, "Stopping retained the cinematic lens");
                 require(client.options.fov().get() == 100, "Stopping changed the FOV option");
@@ -44,7 +51,8 @@ public final class LensGameTest implements FabricClientGameTest {
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
-                AfkCinematics.config().lens = CinematicConfig.Lens.CINEMATIC;
+                AfkCinematics.config().useGameFov = true;
+                AfkCinematics.config().customFov = 90;
                 client.options.fov().set(previousFov);
                 focused = null;
             });

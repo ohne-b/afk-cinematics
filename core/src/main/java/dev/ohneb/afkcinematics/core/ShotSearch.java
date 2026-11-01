@@ -219,7 +219,8 @@ public final class ShotSearch {
             case STILL -> focusEnd = focusStart;
         }
         double duration = pace.minimumSeconds + random.nextDouble() * (pace.maximumSeconds - pace.minimumSeconds);
-        Shot candidate = new Shot(type, start, limitDistance(control), limitDistance(end), focusStart, focusEnd, duration);
+        Shot candidate = new Shot(type, start, limitDistance(control), limitDistance(end), focusStart, focusEnd,
+            CinematicConfig.Pace.LONG.maximumSeconds).cutAfter(duration);
         if (type != Shot.Type.STILL && type != Shot.Type.PAN && candidate.start().distance(candidate.end()) < 0.01) return null;
         return geometry.valid(candidate, cut ? candidate.start() : previous.position()) ? candidate : null;
     }

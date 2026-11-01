@@ -232,8 +232,14 @@ public final class SettingsScreen extends Screen {
                     value -> config.motion = value, value -> Tooltip.create(text("motion.help"))));
                 widgets.add(choice("pace", config.pace, CinematicConfig.Pace.values(), value -> text("pace.range", (int)value.minimumSeconds, (int)value.maximumSeconds),
                     value -> config.pace = value, value -> Tooltip.create(text("pace.help", (int)value.minimumSeconds, (int)value.maximumSeconds))));
-                widgets.add(choice("lens", config.lens, CinematicConfig.Lens.values(), value -> text(value.name().toLowerCase(Locale.ROOT)),
-                    value -> config.lens = value, value -> Tooltip.create(text("lens.help"))));
+                widgets.add(toggle("useGameFov", () -> config.useGameFov, value -> {
+                    config.useGameFov = value;
+                    refreshControls();
+                }));
+                var fov = slider("customFov", buttonWidth, 30, 140, config.customFov, value -> config.customFov = value,
+                    value -> Component.literal(value + "\u00B0"));
+                fov.active = !config.useGameFov;
+                widgets.add(fov);
             }
             case MUSIC -> {
                 widgets.add(toggle("music", () -> config.music, value -> config.music = value));
@@ -320,6 +326,11 @@ public final class SettingsScreen extends Screen {
     }
 
     private AbstractSliderButton slider(String label, int width, int min, int max, int initial, java.util.function.IntConsumer set) {
+        return slider(label, width, min, max, initial, set, value -> Component.literal(value + "%"));
+    }
+
+    private AbstractSliderButton slider(String label, int width, int min, int max, int initial,
+                                        java.util.function.IntConsumer set, java.util.function.IntFunction<Component> display) {
         var slider = new AbstractSliderButton(0, 0, width, 18, Component.empty(), (double)(initial - min) / (max - min)) {
             { updateMessage(); setTooltip(Tooltip.create(text(label + ".help"))); }
             @Override protected void updateMessage() { setMessage(text(label, number())); }
@@ -334,7 +345,7 @@ public final class SettingsScreen extends Screen {
                 graphics.fill(x, y + 8, x + getWidth(), y + 10, 0xFF39434A);
                 graphics.fill(x, y + 8, handle + 4, y + 10, active ? 0xFF84D5BB : 0xFF66736D);
                 graphics.fill(handle, y + 5, handle + 8, y + 13, isHovered() || isFocused() && keyboardFocus ? 0xFF84D5BB : 0xFFB5C4BE);
-                graphics.drawString(font, Component.literal(number() + "%"), x + getWidth() + 8, y + 5, active ? 0xFFE6ECE9 : 0xFF7E8983);
+                graphics.drawString(font, display.apply(number()), x + getWidth() + 8, y + 5, active ? 0xFFE6ECE9 : 0xFF7E8983);
             }
             //? if >=1.21.9 {
             @Override public boolean keyPressed(KeyEvent event) {
