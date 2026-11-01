@@ -536,6 +536,10 @@ public final class SettingsScreen extends Screen {
             if (index >= 0 && index < navigation.size() && children().contains(navigation.get(index))) {
                 setFocused(navigation.get(index));
                 navigation.get(index).setFocused(true);
+            } else if (getFocused() instanceof AbstractWidget old) {
+                children().stream().filter(AbstractWidget.class::isInstance).map(AbstractWidget.class::cast)
+                    .filter(widget -> widget.active && widget.getMessage().equals(old.getMessage())).findFirst()
+                    .ifPresentOrElse(widget -> { setFocused(widget); widget.setFocused(true); }, () -> focusPage = true);
             }
         }
         return handled;
@@ -559,7 +563,8 @@ public final class SettingsScreen extends Screen {
     /*@Override public boolean keyPressed(int key, int scan, int modifiers) {
     *///?}
         if (maxOffset > 0 && (key == InputConstants.KEY_PAGEUP || key == InputConstants.KEY_PAGEDOWN)) {
-            offset = Math.clamp(offset + (key == InputConstants.KEY_PAGEUP ? -1 : 1), 0, maxOffset);
+            offset = Math.clamp(offset + (key == InputConstants.KEY_PAGEUP ? -visibleRows : visibleRows), 0, maxOffset);
+            focusPage = true;
             rebuildWidgets();
             return true;
         }
