@@ -76,7 +76,7 @@ class ShotSequenceTest {
         for (int tick = 0; tick < 20; tick++) frame(session, now += 50_000_000L);
         assertTrue(session.current().position().distance(before.position()) > 0.05,
             "Preparing the next take froze the current camera");
-        assertEquals(0, session.fade(), "The prepared take started before the current one finished");
+        assertEquals(1, session.take(), "The prepared take started before the current one finished");
     }
 
     @Test void rejectedPlayerViewsLeaveTimeToPrepareTheSceneryFallback() {
@@ -92,7 +92,7 @@ class ShotSequenceTest {
             }
         };
         var config = new CinematicConfig();
-        config.pace = CinematicConfig.Pace.SHORT;
+        config.pace = CinematicConfig.Pace.QUICK;
         var session = new CinematicSession(ANCHOR, ENTRY, 0, config, geometry, new Random(5));
         int stillFrames = 0;
         Vec previous = ENTRY.position();
@@ -121,7 +121,6 @@ class ShotSequenceTest {
             now += 50_000_000L;
             session.tick(now);
             session.frame(now);
-            session.coveredFrame();
         }
         assertTrue(session.ended(), "A stale prepared path was installed without revalidation");
     }
@@ -175,116 +174,82 @@ class ShotSequenceTest {
         assertTrue(accepted.size() >= 3, "Next shot reused a plan from a different starting pose");
     }
 
-    @Test void aChangeOfTakeUsesACutInsteadOfStoppingAndReversingInPlace() {
-        var session = session(geometry(new ArrayList<>(), new boolean[1]), Shot.Type.ARC, Shot.Type.PAN);
-        int covers = 0;
-        double previous = 0;
-        for (int tick = 0; tick < 500; tick++) {
-            frame(session, tick * 50_000_000L);
-            if (session.fade() == 1 && previous < 1) covers++;
-            previous = session.fade();
+    @Test void quickTakesCutAtTheirDeadlineWithoutIntermediateFrames() {
+        var accepted = new ArrayList<Shot>();
+        var config = new CinematicConfig();
+        config.subject = CinematicConfig.Subject.SCENERY;
+        config.pace = CinematicConfig.Pace.QUICK;
+        config.shots = EnumSet.of(Shot.Type.ARC);
+        var session = new CinematicSession(ANCHOR, ENTRY, 0, config, geometry(accepted, new boolean[1]), new Random(4));
+        int take = 0;
+        long started = 0;
+        for (int tick = 0; tick < 900; tick++) {
+            long now = tick * 50_000_000L;
+            frame(session, now);
+            if (take == session.take()) continue;
+            if (take > 0) assertEquals(accepted.get(take - 1).duration(), (now - started) / 1e9, .051);
+            take = session.take();
+            started = now;
+            assertEquals(accepted.get(take - 1).sample(0), session.current());
         }
-        assertTrue(covers >= 2, "Independent takes were joined into a stop-and-turn movement");
+        assertTrue(take >= 4);
     }
 
-    @Test void coveredTransitionsKeepBothTakesMovingAndRespectCaptureHolds() {
-        var session = session(geometry(new ArrayList<>(), new boolean[1]), Shot.Type.ARC);
-        long now = 0;
-        Pose previous = ENTRY;
-        double opacity = 0;
-        int take = 0, movingOut = 0, movingIn = 0;
-        boolean captured = false;
+    @Test void aReadyCutWaitsForNestedCaptureReleaseWithoutSkippingTime() {
+        var accepted = new ArrayList<Shot>();
+        var session = session(geometry(accepted, new boolean[1]), Shot.Type.ARC);
+        long now = reachSecondPlan(session, accepted);
+        session.nextShot();
+        for (int i = 0; i < 40; i++) session.tick(now += 50_000_000L);
+        Pose held = session.current();
+        int take = session.take();
+        session.beginCapture(now);
+        session.beginCapture(now);
+        session.tick(now + 2_000_000_000L);
+        assertEquals(held, session.frame(now + 2_000_000_000L));
+        session.endCapture(now + 2_000_000_000L);
+        assertEquals(held, session.frame(now + 3_000_000_000L));
+        assertEquals(take, session.take());
+        session.endCapture(now += 3_000_000_000L);
+        assertNotNull(session.frame(now));
+        assertEquals(take + 1, session.take());
+        Pose cut = session.current();
+        assertEquals(cut, session.frame(now));
+        assertTrue(session.frame(now + 50_000_000L).position().distance(cut.position()) > .001);
+    }
+
+    @Test void travelCutsUseTheDestinationWithoutSweepingBetweenUnrelatedAngles() {
+        Vec zero = new Vec(0, 0, 0);
+        Geometry world = new Geometry() {
+            public boolean clear(Vec a, Vec b, double m) { return a.distance(b) < .5; }
+            public boolean visible(Vec a, Vec b, double m) { return true; }
+        };
+        var moving = new MovingGeometry(world, zero, 0);
+        moving.course(0);
+        moving.framing(Scene.Kind.FOLLOW, true);
+        var config = new CinematicConfig();
+        config.pace = CinematicConfig.Pace.QUICK;
+        config.shots = EnumSet.of(Shot.Type.TRAIL, Shot.Type.ESCORT);
+        var session = new CinematicSession(zero, Pose.lookingAt(new Vec(2, 2, -5), zero), 0,
+            config, moving, new Random(4), Scene.Kind.FOLLOW);
+        Pose previous = null;
+        int take = 0, cuts = 0;
         for (int tick = 0; tick < 900; tick++) {
-            frame(session, now += 50_000_000L);
-            double fade = session.fade();
-            if (take == session.take() && take > 0 && fade > 0 && fade < 1 && opacity > 0 && opacity < 1) {
-                assertTrue(session.current().position().distance(previous.position()) > .001,
-                    "A visible fade reached the nearly stationary end of a take");
-                if (fade > opacity) {
-                    movingOut++;
-                    if (!captured) {
-                        Pose held = session.current();
-                        session.beginCapture(now);
-                        assertEquals(held, session.frame(now + 2_000_000_000L));
-                        session.endCapture(now += 2_000_000_000L);
-                        assertEquals(held, session.frame(now), "Releasing a capture skipped outgoing motion");
-                        assertEquals(fade, session.fade(), 1e-12);
-                        captured = true;
-                    }
-                } else movingIn++;
+            long now = tick * 50_000_000L;
+            moving.follow(zero, now, false, true);
+            session.tick(now);
+            Pose local = session.frame(now);
+            assertNotNull(local);
+            Pose applied = moving.apply(local, session.focus(), session.take(), false);
+            assertNotNull(applied);
+            if (previous != null && !world.clear(previous.position(), applied.position())) {
+                assertEquals(take + 1, session.take());
+                cuts++;
             }
-            previous = session.current();
-            opacity = session.fade();
+            previous = applied;
             take = session.take();
         }
-        assertTrue(movingOut > 0 && movingIn > 0 && captured);
-    }
-
-    @Test void nearbyTravelAnglesBlendButAnObstructedBridgeUsesCoveredFrames() {
-        Vec zero = new Vec(0, 0, 0);
-        for (boolean obstruction : new boolean[]{false, true}) {
-            Geometry world = new Geometry() {
-                private boolean line(Vec a, Vec b, double m) {
-                    if (!obstruction) return true;
-                    int steps = Math.max(1, (int)Math.ceil(a.distance(b) * 50));
-                    for (int i = 0; i <= steps; i++) {
-                        Vec p = a.lerp(b, (double)i / steps);
-                        if (Math.abs(p.x()) <= .35 + m && p.y() >= 1.6 - m && p.y() <= 2.8 + m
-                            && p.z() >= -6.7 - m && p.z() <= -5.5 + m) return false;
-                    }
-                    return true;
-                }
-                public boolean clear(Vec a, Vec b, double m) { return line(a, b, m + .25); }
-                public boolean visible(Vec a, Vec b, double m) { return line(a, b, m); }
-            };
-            var moving = new MovingGeometry(world, zero, 0);
-            moving.framing(Scene.Kind.FOLLOW, true);
-            moving.course(0);
-            var config = new CinematicConfig();
-            config.pace = CinematicConfig.Pace.SHORT;
-            config.shots = EnumSet.of(Shot.Type.TRAIL);
-            Pose entry = Pose.lookingAt(new Vec(2, 2, -5), zero);
-            var session = new CinematicSession(zero, entry, 0, config, moving, new Random(4), Scene.Kind.FOLLOW);
-            int lastTake = 0, blends = 0, cuts = 0, intermediate = 0;
-            double previousFade = 0;
-            Pose previous = entry;
-            boolean held = false;
-            long now = 0;
-            for (int tick = 0; tick < 1800; tick++) {
-                now += 50_000_000L;
-                moving.follow(zero, now, false, true);
-                session.tick(now);
-                Pose local = session.frame(now);
-                assertNotNull(local);
-                Pose applied = moving.apply(local, session.focus(), session.fade(), session.take(), false);
-                assertNotNull(applied);
-                if (lastTake > 0 && session.fade() == 0 && previousFade == 0
-                    && local.position().distance(previous.position()) > .00001) {
-                    intermediate++;
-                    assertTrue(local.position().distance(previous.position()) < .25);
-                    if (!held) {
-                        session.beginCapture(now);
-                        assertEquals(local, session.frame(now + 2_000_000_000L));
-                        session.endCapture(now += 2_000_000_000L);
-                        assertEquals(local, session.frame(now), "Capture release skipped the travel blend");
-                        held = true;
-                    }
-                }
-                if (session.take() != lastTake && lastTake > 0) {
-                    if (session.fade() == 0) blends++;
-                    else { assertEquals(1, previousFade); assertEquals(1, session.fade()); cuts++; }
-                }
-                previous = local;
-                previousFade = session.fade();
-                lastTake = session.take();
-                session.coveredFrame();
-                moving.coveredFrame();
-            }
-            if (!obstruction) {
-                assertTrue(blends >= 2 && intermediate > 20 && held, "Nearby clear angles never blended");
-                assertEquals(0, cuts);
-            } else assertTrue(cuts >= 2, "The bridge through the wall must use opaque old and destination frames");
-        }
+        assertTrue(cuts >= 3);
     }
 
     @Test void recentViewsPreventAnImmediateABACycleWithoutExhaustingTheScene() {
@@ -292,7 +257,7 @@ class ShotSequenceTest {
         var views = new ArrayList<Vec>();
         for (int tick = 0; tick < 1300; tick++) {
             frame(session, tick * 50_000_000L);
-            if (!session.scenery() || session.fade() != 1) continue;
+            if (!session.scenery()) continue;
             Vec point = session.current().position();
             if (views.isEmpty() || views.getLast().distance(point) > 2) views.add(point);
         }
@@ -317,7 +282,6 @@ class ShotSequenceTest {
         Pose pose = session.frame(now);
         if (session.showing()) assertNotNull(pose);
         assertFalse(session.ended());
-        session.coveredFrame();
     }
 
     private static CinematicSession session(Geometry geometry, Shot.Type... types) {

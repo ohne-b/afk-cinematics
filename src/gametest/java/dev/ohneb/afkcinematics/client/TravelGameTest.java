@@ -370,7 +370,7 @@ public final class TravelGameTest implements FabricClientGameTest {
             context.runOnClient(client -> AfkCinematics.nextShot());
             context.waitFor(client -> {
                 require(cameraOwner() == owner && AfkCinematics.showing(), "Changing travel angles replaced the manual session");
-                require(AfkCinematics.fade() == 0, "Nearby clear walking angles used a black cut");
+                require(AfkCinematics.showing(), "Walking view stopped during a shot change");
                 return walkingSession.take() > walkingTake;
             }, 140);
             world.getServer().runOnServer(server -> {

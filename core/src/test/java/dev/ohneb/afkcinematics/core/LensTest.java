@@ -14,14 +14,14 @@ class LensTest {
         }
     };
 
-    @Test void theLensEntersSmoothlyAndStaysFixedDuringATake() {
+    @Test void theLensCutsWithTheCameraAndStaysFixedDuringATake() {
         var config = new CinematicConfig();
         config.subject = CinematicConfig.Subject.PLAYER;
         config.shots = EnumSet.of(Shot.Type.STILL);
         var session = session(config);
         session.tick(0);
         session.frame(0);
-        assertEquals(100, config.lens.blend(100, 16.0 / 9, session.lensStrength()));
+        assertEquals(62, config.lens.blend(100, 16.0 / 9, session.lensStrength()), 0.00001);
         double previous = 100;
         for (int tick = 1; tick <= 180; tick++) {
             session.tick(tick * 50_000_000L);
@@ -37,7 +37,7 @@ class LensTest {
         assertEquals(Math.tan(Math.toRadians(62) / 2), Math.tan(Math.toRadians(tall) / 2) * 0.5, 0.00001);
     }
 
-    @Test void aSceneryLensChangesOnlyUnderCover() {
+    @Test void aSceneryLensChangesOnlyWithAnAppliedTake() {
         var config = new CinematicConfig();
         config.subject = CinematicConfig.Subject.SCENERY;
         var session = session(config);
@@ -46,9 +46,8 @@ class LensTest {
             long now = tick * 50_000_000L;
             session.tick(now);
             session.frame(now);
-            if (session.lensStrength() != previous) assertEquals(1, session.fade());
+            if (session.lensStrength() != previous) assertEquals(1, session.take());
             previous = session.lensStrength();
-            session.coveredFrame();
         }
         assertTrue(session.settled());
         assertEquals(1, session.lensStrength());

@@ -112,7 +112,7 @@ final class JourneyCapture {
                 });
                 key(context, InputConstants.KEY_W, InputConstants.PRESS);
             manual(context);
-                context.waitFor(client -> AfkCinematics.fade() == 0, 100);
+                context.waitFor(client -> AfkCinematics.showing(), 100);
                 org.slf4j.LoggerFactory.getLogger("JourneyCapture").info("Journey capture started: {}", label);
                 long started = System.nanoTime();
                 boolean left = false;
@@ -130,7 +130,7 @@ final class JourneyCapture {
                         var subject = WorldGeometry.point(client.player.position());
                         require(Scene.inRange(point, subject), "Journey view left its player range");
                         rows.add(System.nanoTime() + "," + point.x() + "," + point.y() + "," + point.z()
-                            + "," + camera.yRot() + "," + camera.xRot() + "," + AfkCinematics.fade()
+                            + "," + camera.yRot() + "," + camera.xRot() + "," + AfkCinematics.cameraCut()
                             + "," + subject.x() + "," + subject.y() + "," + subject.z()
                             + "," + (revealedShot == null ? "" : revealedShot.type()));
                     });

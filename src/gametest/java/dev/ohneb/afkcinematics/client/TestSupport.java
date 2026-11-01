@@ -19,14 +19,13 @@ public final class TestSupport {
     public static Boolean focused;
     public static int heldKey = -1;
     public static boolean simulateControlClick;
-    public static Boolean holdCoveredScenery;
     public static java.util.List<String> sceneryFrames;
     public static java.util.List<String> cameraTimings;
     public static boolean recordingFrames;
     public static String cameraStop;
     public static Shot revealedShot;
     public static boolean checkTransitions;
-    public static int coveredCuts;
+    public static int directCuts;
     public static int playerNameFrames;
     public static boolean checkScreenshotView;
     public static int cinematicScreenshots;

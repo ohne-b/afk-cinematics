@@ -26,7 +26,6 @@ class ShotControlTest {
             }
             session.tick(now);
             assertNotNull(session.frame(now));
-            session.coveredFrame();
         }
         assertTrue(session.settled());
         assertEquals(2, accepted.size(), "Repeated presses queued more than one next shot");
@@ -45,7 +44,7 @@ class ShotControlTest {
         Pose before = session.current();
         rejected[0] = 4;
         session.nextShot();
-        for (int tick = 141; tick <= 143; tick++) {
+        for (int tick = 141; tick <= 142; tick++) {
             long now = tick * 50_000_000L;
             session.tick(now);
             Pose pose = session.frame(now);
@@ -55,7 +54,11 @@ class ShotControlTest {
             assertTrue(Math.abs(pose.pitch() - before.pitch()) < .1, "Preparing the next take jumped its pitch");
             session.nextShot();
         }
+        assertEquals(1, accepted.size());
+        session.tick(7_150_000_000L);
+        session.frame(7_150_000_000L);
         assertEquals(2, accepted.size());
+        assertEquals(2, session.take());
 
         boolean[] occupied = {false};
         var blocked = new CinematicSession(SUBJECT, ENTRY, 0, config(), new Geometry() {
@@ -73,19 +76,19 @@ class ShotControlTest {
         assertTrue(blocked.ended());
     }
 
-    @Test void aLargePitchChangeGetsTheSameGentleEntryAsALargeYawChange() {
+    @Test void entryCutsToTheValidatedPoseWithoutAnAimSweep() {
         var config = config();
         config.shots = EnumSet.of(Shot.Type.FLYOVER);
+        var accepted = new ArrayList<Shot>();
         var session = new CinematicSession(SUBJECT, new Pose(ENTRY.position(), 0, -90), 0, config,
-            geometry(new ArrayList<>(), new int[]{0}), new Random(2));
+            geometry(accepted, new int[]{0}), new Random(2));
         session.tick(0);
-        for (int tick = 0; tick <= 60; tick++) assertNotNull(session.frame(tick * 50_000_000L));
-        assertFalse(session.settled(), "A near-vertical turn completed too quickly");
-        for (int tick = 61; tick <= 120; tick++) assertNotNull(session.frame(tick * 50_000_000L));
+        assertEquals(0, session.take());
+        assertEquals(accepted.getFirst().sample(0), session.frame(0));
         assertTrue(session.settled());
     }
 
-    @Test void advancingDuringACoveredCutKeepsBothCoveredFrames() {
+    @Test void repeatedNextRequestsPrepareOnlyOneReplacement() {
         int[] probes = {0};
         var config = config();
         config.subject = CinematicConfig.Subject.SCENERY;
@@ -99,26 +102,24 @@ class ShotControlTest {
             }
         }, new Random(2));
         Pose previous = ENTRY;
-        double opacity = 0;
-        int fades = 0;
+        int take = 0;
+        int cuts = 0;
         for (int tick = 0; tick < 200; tick++) {
             long now = tick * 50_000_000L;
             session.tick(now);
             Pose pose = session.frame(now);
             if (pose == null) continue;
-            if (session.fade() == 1 && opacity < 1) {
-                fades++;
-                if (fades == 1) { session.nextShot(); session.nextShot(); }
+            if (session.take() != take) {
+                cuts++;
+                if (cuts == 1) { session.nextShot(); session.nextShot(); }
             }
             if (pose.position().distance(previous.position()) > 2) {
-                assertEquals(1, opacity);
-                assertEquals(1, session.fade());
+                assertEquals(take + 1, session.take());
             }
             previous = pose;
-            opacity = session.fade();
-            session.coveredFrame();
+            take = session.take();
         }
-        assertEquals(2, fades);
+        assertEquals(2, cuts);
         assertEquals(Scene.PROBES * 2, probes[0]);
         assertTrue(session.settled());
     }

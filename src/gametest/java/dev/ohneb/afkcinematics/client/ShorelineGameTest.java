@@ -69,7 +69,7 @@ public final class ShorelineGameTest implements FabricClientGameTest {
             });
             start(context);
             context.runOnClient(client -> { checkWaterAudio = true; waterLoops = 0; waterTransitions = 0; waterLoop = null; });
-            context.waitFor(client -> AfkCinematics.scenery() && AfkCinematics.fade() == 0, 160);
+            context.waitFor(client -> AfkCinematics.scenery(), 160);
             for (int view = 0; view < 8 && !context.computeOnClient(client -> AfkCinematics.underwater()); view++) next(context);
             context.runOnClient(client -> {
                 require(AfkCinematics.underwater(), "Submerged views never entered the shoreline sequence");
@@ -110,8 +110,8 @@ public final class ShorelineGameTest implements FabricClientGameTest {
     }
 
     private static void next(ClientGameTestContext context) {
+        long cut = context.computeOnClient(client -> AfkCinematics.cameraCut());
         context.runOnClient(client -> AfkCinematics.nextShot());
-        context.waitFor(client -> AfkCinematics.fade() > 0, 200);
-        context.waitFor(client -> AfkCinematics.showing() && AfkCinematics.fade() == 0, 100);
+        context.waitFor(client -> AfkCinematics.showing() && AfkCinematics.cameraCut() > cut, 200);
     }
 }

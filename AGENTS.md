@@ -32,20 +32,19 @@ Check the client chunk cache directly; `ClientLevel.hasChunk` does not prove loa
 Planning must bound the camera curve and moving sightline between samples.
 Apply the pose before culling and render extraction. Keep world access on the client
 thread; rendering consumes an immutable pose. Travel views adjust angle and distance around obstacles;
-disconnected recovery views require opaque origin and destination frames. Stop on
+disconnected recovery views use explicit, destination-validated cuts. Stop on
 invalid state or when no clear view remains. Every stop path uses the same cleanup.
 Apply the transient lens only to the world projection paired with that pose, before
 culling. Preserve the hand projection, panorama mode and the user's FOV option.
 Override the frame cap only for automatically started AFK sessions; preserve normal options and
 minimized-window throttling. Do not simulate activity to avoid idle limits.
-Separate scenery viewpoints use covered cuts: render a fully opaque old frame,
-then a fully opaque destination frame, and revalidate before revealing it. Keep all
+Commit a prepared shot only in its first rendered frame, revalidating its path and
+destination then. Cuts have no connecting sweep; continuous movement still does. Keep all
 viewpoints within the player-centered range; never interpolate through terrain.
 Underwater takes require a fully submerged camera volume. Use each view's environment
-for planning and covered handoffs; water may be passable, lava and solid shapes are not.
-Prepare the next take without freezing the current shot. Nearby travel angles may blend
-along a validated path; cover disconnected viewpoints and direction resets. Revalidate
-at handoff. Manual Next discards the prepared plan.
+for planning and handoffs; water may be passable, lava and solid shapes are not.
+Prepare the next take without freezing the current shot. Cut pose, lens and environment
+together; animate letterboxes separately from shot timing. Manual Next discards the prepared plan.
 Screenshot holds pause the take's timing, not terrain validation. Release each hold
 only for its owning session; a finished capture must not resume a newer session.
 Wildlife belongs only to automatic scenery selection. Keep it occasional, check the

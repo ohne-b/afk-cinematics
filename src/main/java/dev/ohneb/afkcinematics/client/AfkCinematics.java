@@ -83,6 +83,7 @@ public final class AfkCinematics {
     private static float lastYaw, lastPitch;
     private static Pose vanillaPose;
     private static Camera appliedCamera;
+    private static long cameraCut;
     private static boolean audioReady, cameraUnderwater;
     private static Vec3 audioPosition;
     private static FluidState audioFluid;
@@ -117,7 +118,8 @@ public final class AfkCinematics {
     }
     public static boolean hideHud() { return showing() && config().hideHud; }
     public static boolean hidePlayerNames() { return showing() && config().hidePlayerNames; }
-    public static double fade() { return session == null ? 0 : Math.max(session.fade(), movingGeometry == null ? 0 : movingGeometry.fade()); }
+    public static long cameraCut() { return cameraCut; }
+    public static boolean capturing() { return session != null && session.capturing(); }
     public static boolean scenery() { return session != null && session.scenery(); }
     public static boolean underwater() { return session != null && session.underwater(); }
     public static void cameraApplied(Camera camera) {
@@ -169,10 +171,6 @@ public final class AfkCinematics {
         if (session == null || camera != appliedCamera) return normal;
         var window = Minecraft.getInstance().getWindow();
         return config().lens.blend(normal, (double)window.getWidth() / Math.max(1, window.getHeight()), session.lensStrength());
-    }
-    public static void coveredFrame() {
-        if (session != null) session.coveredFrame();
-        if (movingGeometry != null) movingGeometry.coveredFrame();
     }
 
     public static void tick() {
@@ -448,15 +446,20 @@ public final class AfkCinematics {
                 session.fishing(bobber);
             }
         }
+        int take = session.take();
+        int recoveryCuts = movingGeometry == null ? 0 : movingGeometry.cuts();
         Pose pose = session.frame(now);
         if (pose != null && movingGeometry != null) {
-            pose = movingGeometry.apply(pose, session.focus(), session.fade(), session.take(), session.capturing());
+            pose = movingGeometry.apply(pose, session.focus(), session.take(), session.capturing());
             if (pose != null && bobber != null && session.fishingView() && (!movingGeometry.sees(pose, bobber)
                 || !movingGeometry.sees(pose, new Vec(0, 0, 0)))) pose = null;
             if (pose == null) { stop(); return null; }
         }
         if (session.ended()) stop();
-        if (pose != null && session != null) appliedCamera = camera;
+        if (pose != null && session != null) {
+            if (take != session.take() || movingGeometry != null && recoveryCuts != movingGeometry.cuts()) cameraCut++;
+            appliedCamera = camera;
+        }
         return pose;
     }
 

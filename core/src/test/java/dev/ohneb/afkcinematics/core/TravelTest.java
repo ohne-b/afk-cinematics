@@ -17,21 +17,21 @@ class TravelTest {
         moving.framing(Scene.Kind.FOLLOW, true);
         moving.course(0);
         Pose local = new Pose(new Vec(2, 1, -6), 0, 0);
-        Pose initial = moving.apply(local, new Vec(0, 0, 1), 0, 1, false);
+        Pose initial = moving.apply(local, new Vec(0, 0, 1), 1, false);
         for (int frame = 1; frame <= 240; frame++) {
             double phase = (frame % 40) / 40.0;
             double jump = phase < .9 ? 1.25 * Math.sin(phase / .9 * Math.PI) : 0;
             assertTrue(moving.follow(new Vec(0, jump, frame / 15.0), frame * 16_666_667L, false, jump == 0));
-            Pose next = moving.apply(local, new Vec(0, 0, 1), 0, 1, false);
+            Pose next = moving.apply(local, new Vec(0, 0, 1), 1, false);
             assertNotNull(next);
             assertEquals(initial.position().y(), next.position().y(), .01, "Short jumps must not lift the whole camera rig");
             assertEquals(initial.pitch(), next.pitch(), .01, "Camera and aim must share the filtered height");
         }
-        Pose previous = moving.apply(local, new Vec(0, 0, 1), 0, 1, false);
+        Pose previous = moving.apply(local, new Vec(0, 0, 1), 1, false);
         for (int frame = 241; frame <= 420; frame++) {
             double ground = Math.min(3, (frame - 241) / 30);
             moving.follow(new Vec(0, ground, frame / 15.0), frame * 16_666_667L, false, true);
-            Pose next = moving.apply(local, new Vec(0, 0, 1), 0, 1, false);
+            Pose next = moving.apply(local, new Vec(0, 0, 1), 1, false);
             assertNotNull(next);
             assertTrue(Math.abs(next.position().y() - previous.position().y()) < .13, "A new landing must ease into the next height");
             previous = next;
@@ -39,7 +39,7 @@ class TravelTest {
         assertEquals(initial.position().y() + 3, previous.position().y(), .01);
         for (int frame = 421; frame <= 600; frame++) {
             moving.follow(new Vec(0, -5, frame / 15.0), frame * 16_666_667L, false, false);
-            previous = moving.apply(local, new Vec(0, 0, 1), 0, 1, false);
+            previous = moving.apply(local, new Vec(0, 0, 1), 1, false);
             assertNotNull(previous);
         }
         assertEquals(initial.position().y() - 5, previous.position().y(), .01, "A sustained fall must not leave the camera at the old height");
@@ -94,29 +94,27 @@ class TravelTest {
             moving.framing(Scene.Kind.FOLLOW, false);
             moving.course(0);
             Pose local = new Pose(new Vec(2.22, 2.275, -6.1), 0, 0), previous = null;
-            double oldFade = 0;
+            int oldCuts = 0;
             for (int frame = 0; frame <= 360; frame++) {
                 double z = -4 + frame / 20.0;
                 Vec rider = new Vec(0, direction * Math.clamp(Math.floor(z / 2), 0, 5) + 1.2, z);
                 assertTrue(moving.follow(rider, frame * 16_666_667L, false, true));
-                Pose view = moving.apply(local, new Vec(0, .2, 1.25), 0, 1, false);
+                Pose view = moving.apply(local, new Vec(0, .2, 1.25), 1, false);
                 assertNotNull(view, "Lost the wall-side route at " + frame);
                 assertTrue(hillside.clear(view.position(), view.position()));
-                assertEquals(0, moving.fade(), "A usable rear corridor should not require a cut at " + frame);
-                if (moving.fade() == 0) {
+                assertEquals(1, moving.cuts(), "A usable rear corridor should not require a cut at " + frame);
+                {
                     assertTrue(hillside.visible(view.position(), rider));
                     assertTrue(rider.z() - view.position().z() > 3,
                         "An angled view collapsed into a close-up despite a clear rear corridor at " + frame);
                 }
                 if (previous != null && !hillside.clear(previous.position(), view.position())) {
-                    assertEquals(1, oldFade);
-                    assertEquals(1, moving.fade());
+                    assertEquals(oldCuts + 1, moving.cuts());
                 }
                 if (previous != null) assertTrue(previous.position().distance(view.position()) < .35,
                     "Wall-side framing jumped at " + frame);
                 previous = view;
-                oldFade = moving.fade();
-                moving.coveredFrame();
+                oldCuts = moving.cuts();
             }
         }
     }
@@ -133,7 +131,7 @@ class TravelTest {
                 double fall = t < 2 ? 19.5 * t * t : 78 + (t - 2) * 78;
                 Vec rider = new Vec(0, -fall, t * 4);
                 assertTrue(moving.follow(rider, Math.round(t * 1e9), false, frame == 0));
-                Pose view = moving.apply(local, new Vec(0, .2, 1.25), 0, 1, false);
+                Pose view = moving.apply(local, new Vec(0, .2, 1.25), 1, false);
                 assertNotNull(view);
                 double subjectPitch = Pose.lookingAt(view.position(), rider).pitch();
                 assertTrue(Math.abs(subjectPitch - view.pitch()) < 25,
@@ -157,16 +155,15 @@ class TravelTest {
             double heading = frame < 60 ? 0 : frame < 120 ? 110 : -70;
             moving.course(heading);
             moving.follow(ZERO, frame * 16_666_667L, false, true);
-            Pose view = moving.apply(plan.shot().sample(0), plan.shot().focus(0), 0, 1, false);
+            Pose view = moving.apply(plan.shot().sample(0), plan.shot().focus(0), 1, false);
             assertNotNull(view);
-            if (moving.fade() < 1) {
+            {
                 double radians = Math.toRadians(heading);
                 assertTrue(-Math.sin(radians) * view.position().x() + Math.cos(radians) * view.position().z() <= .05,
                     "A recovery or turn revealed a front-facing camera");
             }
-            moving.coveredFrame();
         }
-        assertEquals(0, moving.fade());
+        assertTrue(moving.cuts() >= 1);
     }
 
     @Test void walkingDownTerracesRaisesTheCameraInsteadOfCuttingAtEachStep() {
@@ -191,9 +188,9 @@ class TravelTest {
             double z = -4 + frame / 15.0;
             Vec rider = new Vec(0, Math.clamp(Math.ceil(6 - z / 2), 0, 6) + 1.5, z);
             moving.follow(rider, frame * 16_666_667L, false, true);
-            Pose view = moving.apply(local, ZERO, 0, 1, false);
+            Pose view = moving.apply(local, ZERO, 1, false);
             assertNotNull(view);
-            assertEquals(0, moving.fade(), "A clear hillside should not need repeated blackouts at " + frame + ": " + view + ", rider=" + rider);
+            assertEquals(1, moving.cuts(), "A clear hillside should not need repeated blackouts at " + frame + ": " + view + ", rider=" + rider);
             assertTrue(terraces.visible(view.position(), rider));
             if (previous != null) assertTrue(terraces.clear(previous.position(), view.position()));
             previous = view;
@@ -220,9 +217,9 @@ class TravelTest {
         double previousDrop = 0;
         for (int frame = 0; frame <= 480; frame++) {
             moving.follow(new Vec(0, 1.2, 5.5 + frame / 20.0), frame * 16_666_667L, false, true);
-            Pose view = moving.apply(local, ZERO, 0, 1, false);
+            Pose view = moving.apply(local, ZERO, 1, false);
             assertNotNull(view);
-            assertEquals(0, moving.fade());
+            assertEquals(1, moving.cuts());
             if (frame == 0) assertTrue(view.position().y() > 7, "Fixture did not establish the raised view");
             if (previous != null) {
                 assertTrue(view.position().distance(previous.position()) < .17,
@@ -245,7 +242,7 @@ class TravelTest {
         for (Scene.Kind kind : new Scene.Kind[]{Scene.Kind.FOLLOW, Scene.Kind.RIDE, Scene.Kind.SWIM, Scene.Kind.FLIGHT, Scene.Kind.FISHING, Scene.Kind.FOLLOW}) {
             for (int i = 0; i < 200 && !session.settled(); i++) {
                 now += 50_000_000L;
-                session.tick(now); session.frame(now); session.coveredFrame();
+                session.tick(now); session.frame(now);
             }
             assertTrue(session.settled());
             int take = session.take();
@@ -258,7 +255,7 @@ class TravelTest {
             session.activity(kind, kind == Scene.Kind.FISHING ? new Vec(0, 0, 8) : null);
             for (int i = 0; i < 200 && session.take() == take; i++) {
                 now += 50_000_000L;
-                session.tick(now); session.frame(now); session.coveredFrame();
+                session.tick(now); session.frame(now);
                 assertFalse(session.ended());
             }
             assertTrue(session.take() > take, "Activity framing never changed to " + kind);
@@ -285,7 +282,7 @@ class TravelTest {
         assertFalse(corner.visible(camera, rider, .3));
         var moving = new MovingGeometry(corner, rider, 0);
         moving.course(0);
-        Pose view = moving.apply(Pose.lookingAt(camera.subtract(rider), ZERO), ZERO, 0, 1, false);
+        Pose view = moving.apply(Pose.lookingAt(camera.subtract(rider), ZERO), ZERO, 1, false);
         assertNotNull(view, "Optional clearance around the rider must not end an otherwise clear travel view");
         assertTrue(corner.clear(view.position(), view.position()));
         assertTrue(corner.visible(view.position(), rider));
@@ -309,30 +306,28 @@ class TravelTest {
         moving.course(0);
         Pose local = new Pose(new Vec(0, 0, -5), 0, 0);
         Pose previous = null;
-        double previousFade = 0;
+        int previousCuts = 0;
         boolean close = false;
         for (int frame = 0; frame < 110; frame++) {
             Vec rider = frame < 35 ? new Vec(0, 0, -7 + frame * .2) : new Vec((frame - 35) * .2, 0, 0);
             if (frame >= 35) moving.course(-90);
             assertTrue(moving.follow(rider, frame * 50_000_000L, false, false));
-            Pose next = moving.apply(local, ZERO, 0, 1, false);
+            Pose next = moving.apply(local, ZERO, 1, false);
             assertNotNull(next, "Corner ended the view at frame " + frame);
             assertTrue(corridor.clear(next.position(), next.position()));
-            if (moving.fade() < 1) assertTrue(corridor.visible(next.position(), rider));
+            assertTrue(corridor.visible(next.position(), rider));
             if (previous != null && !corridor.clear(previous.position(), next.position())) {
-                assertEquals(1, previousFade, "Disconnected move revealed its origin");
-                assertEquals(1, moving.fade(), "Disconnected move revealed its destination");
+                assertEquals(previousCuts + 1, moving.cuts(), "Disconnected move was not marked as a cut");
             }
             close |= next.position().distance(rider) < 2;
             previous = next;
-            previousFade = moving.fade();
-            moving.coveredFrame();
+            previousCuts = moving.cuts();
         }
         assertTrue(close, "The wide trail never shortened for the corner");
-        assertEquals(0, moving.fade(), "Recovery remained black after rounding the corner");
+        assertTrue(moving.cuts() >= 1);
     }
 
-    @Test void obstructionRecoveryWaitsForBothCoveredFramesAndThenWidens() {
+    @Test void obstructionRecoveryCutsToAClearDestinationAndThenWidens() {
         boolean[] wall = {false};
         Geometry world = new Geometry() {
             public boolean clear(Vec a, Vec b, double margin) {
@@ -347,30 +342,26 @@ class TravelTest {
         var moving = new MovingGeometry(world, ZERO, 0);
         moving.course(0);
         Pose local = new Pose(new Vec(0, 1, -10), 0, 0);
-        Pose original = moving.apply(local, ZERO, 0, 1, false);
+        Pose original = moving.apply(local, ZERO, 1, false);
         wall[0] = true;
         moving.follow(ZERO, 50_000_000, false, false);
-        assertEquals(original, moving.apply(local, ZERO, 0, 1, false));
-        assertEquals(1, moving.fade());
-        assertEquals(original, moving.apply(local, ZERO, 0, 1, false), "Moved before the origin was covered");
-        moving.coveredFrame();
-        Pose close = moving.apply(local, ZERO, 0, 1, false);
+        Pose close = moving.apply(local, ZERO, 1, false);
         assertNotNull(close);
         assertTrue(close.position().z() > -4);
-        assertEquals(1, moving.fade());
-        assertEquals(close, moving.apply(local, ZERO, 0, 1, false));
-        assertEquals(1, moving.fade(), "Revealed before the destination was covered");
-        moving.coveredFrame();
+        assertTrue(world.clear(close.position(), close.position()));
+        assertTrue(world.visible(close.position(), ZERO));
+        assertEquals(2, moving.cuts());
+        assertTrue(close.position().distance(moving.apply(local, ZERO, 1, false).position()) < .01);
         wall[0] = false;
         Pose previous = close;
         for (int frame = 2; frame < 100; frame++) {
             moving.follow(ZERO, frame * 50_000_000L, false, false);
-            Pose next = moving.apply(local, ZERO, 0, 1, false);
+            Pose next = moving.apply(local, ZERO, 1, false);
             assertNotNull(next);
             assertTrue(next.position().distance(previous.position()) <= .101, "Widening snapped back to the original distance");
             previous = next;
         }
-        assertEquals(0, moving.fade());
+        assertEquals(2, moving.cuts());
         assertEquals(original.position().x(), previous.position().x(), 1e-6);
         assertEquals(original.position().z(), previous.position().z(), 1e-6);
         assertFalse(moving.follow(new Vec(40, 0, 0), 5_000_000_000L, false, false), "Recovery excused a teleport");
@@ -404,9 +395,7 @@ class TravelTest {
             session.tick(now);
             Pose local = session.frame(now);
             assertNotNull(local, "Session rejected the unadjusted travel pose at " + frame);
-            assertNotNull(moving.apply(local, session.focus(), session.fade(), session.take(), false), "Applied travel view failed at " + frame);
-            session.coveredFrame();
-            moving.coveredFrame();
+            assertNotNull(moving.apply(local, session.focus(), session.take(), false), "Applied travel view failed at " + frame);
             assertFalse(session.ended());
         }
     }
@@ -461,10 +450,10 @@ class TravelTest {
         };
         var moving = new MovingGeometry(wall, ZERO, 0);
         Pose left = new Pose(new Vec(-1, 2, -3), 0, 0);
-        assertNotNull(moving.apply(left, ZERO, 1, 1, false));
+        assertNotNull(moving.apply(left, ZERO, 1, false));
         assertTrue(moving.follow(new Vec(3, 0, 0), 100_000_000, false, false));
-        assertNull(moving.apply(left, ZERO, 1, 1, false), "A black frame cannot excuse travel through a wall");
-        assertNotNull(moving.apply(left, ZERO, 1, 2, false), "An explicit covered cut may change sides");
+        assertNull(moving.apply(left, ZERO, 1, false), "A black frame cannot excuse travel through a wall");
+        assertNotNull(moving.apply(left, ZERO, 2, false), "An explicit covered cut may change sides");
         assertFalse(moving.follow(new Vec(50, 0, 0), 200_000_000, false, false), "Covered cuts cannot excuse a teleport");
     }
 
@@ -499,18 +488,18 @@ class TravelTest {
         var plan = search.next(moving);
         assertNotNull(plan);
         assertTrue(moving.follow(new Vec(0, 0, 2), 1, false, false));
-        assertNotNull(moving.apply(plan.shot().sample(0), plan.shot().focus(0), 0, 1, false),
+        assertNotNull(moving.apply(plan.shot().sample(0), plan.shot().focus(0), 1, false),
             "Acceleration in open air must not immediately exhaust the sightline range");
     }
 
     @Test void screenshotsHoldTheWorldPoseAndResumeSmoothly() {
         var moving = new MovingGeometry(OPEN, ZERO, 0);
         Pose local = new Pose(new Vec(3, 2, -7), 0, 0);
-        Pose before = moving.apply(local, ZERO, 0, 1, false);
+        Pose before = moving.apply(local, ZERO, 1, false);
         assertTrue(moving.follow(new Vec(4, 0, 0), 100_000_000, true, false));
-        assertEquals(before, moving.apply(local, ZERO, 0, 1, true));
+        assertEquals(before, moving.apply(local, ZERO, 1, true));
         assertTrue(moving.follow(new Vec(4, 0, 0), 110_000_000, false, false));
-        Pose resumed = moving.apply(local, ZERO, 0, 1, false);
+        Pose resumed = moving.apply(local, ZERO, 1, false);
         assertTrue(resumed.position().distance(before.position()) < 0.5);
         assertTrue(resumed.position().distance(before.position()) > 0);
     }
@@ -519,12 +508,12 @@ class TravelTest {
         var moving = new MovingGeometry(OPEN, ZERO, 0);
         moving.course(170);
         Pose local = new Pose(new Vec(0, 2, -10), 0, 0);
-        Pose previous = moving.apply(local, ZERO, 0, 1, false);
+        Pose previous = moving.apply(local, ZERO, 1, false);
         moving.course(-170);
         assertFalse(moving.needsReframe(Scene.Kind.BOAT), "Crossing north must take the short turn");
         for (long now = 20_000_000; now <= 3_000_000_000L; now += 20_000_000) {
             assertTrue(moving.follow(ZERO, now, false, false));
-            Pose next = moving.apply(local, ZERO, 0, 1, false);
+            Pose next = moving.apply(local, ZERO, 1, false);
             assertTrue(next.position().distance(previous.position()) < .08, "The following view must turn gradually");
             previous = next;
         }
@@ -533,10 +522,10 @@ class TravelTest {
         assertTrue(moving.needsReframe(Scene.Kind.BOAT));
         assertFalse(moving.needsReframe(Scene.Kind.BOAT), "A reversal requests one cut, not a queue of cuts");
         assertTrue(moving.follow(ZERO, 3_020_000_000L, true, false));
-        assertEquals(previous, moving.apply(local, ZERO, 0, 1, true));
-        Pose covered = moving.apply(local, ZERO, 1, 1, false);
+        assertEquals(previous, moving.apply(local, ZERO, 1, true));
+        Pose covered = moving.apply(local, ZERO, 1, false);
         assertEquals(previous.position(), covered.position());
-        Pose destination = moving.apply(local, ZERO, 1, 2, false);
+        Pose destination = moving.apply(local, ZERO, 2, false);
         assertTrue(destination.position().distance(covered.position()) > 19);
         assertEquals(10, destination.yaw(), .001);
         assertFalse(moving.needsReframe(Scene.Kind.BOAT));
@@ -549,9 +538,9 @@ class TravelTest {
         };
         var moving = new MovingGeometry(hidden, ZERO, 0);
         Pose local = new Pose(new Vec(0, 2, -10), 0, 0);
-        assertNotNull(moving.apply(local, ZERO, 0, 1, false));
+        assertNotNull(moving.apply(local, ZERO, 1, false));
         assertTrue(moving.follow(new Vec(1, 0, 0), 100_000_000L, true, false));
-        assertNull(moving.apply(local, ZERO, 0, 1, true));
+        assertNull(moving.apply(local, ZERO, 1, true));
     }
 
     @Test void cornersTightenTheSameTakeThenWidenSmoothlyButReversalsStillRequestCover() {
@@ -560,23 +549,23 @@ class TravelTest {
             moving.framing(kind, true);
             moving.course(0);
             Pose local = new Pose(new Vec(0, 2, -10), 0, 0);
-            Pose previous = moving.apply(local, ZERO, 0, 1, false);
+            Pose previous = moving.apply(local, ZERO, 1, false);
             moving.course(90);
             double minimum = 10;
             long pause = 0;
             for (long now = 20_000_000; now <= 14_000_000_000L; now += 20_000_000) {
                 assertFalse(moving.needsReframe(kind), "A normal corner must not request another shot");
                 assertTrue(moving.follow(ZERO, now + pause, false, false));
-                Pose next = moving.apply(local, ZERO, 0, 1, false);
+                Pose next = moving.apply(local, ZERO, 1, false);
                 assertNotNull(next);
                 assertTrue(next.position().distance(previous.position()) < .14, "Turning and widening must stay gradual: " + kind);
-                assertEquals(0, moving.fade(), "An open corner must not require a recovery cut");
+                assertEquals(1, moving.cuts(), "An open corner must not require a recovery cut");
                 minimum = Math.min(minimum, Math.hypot(next.position().x(), next.position().z()));
                 previous = next;
                 if (now == 1_000_000_000L) {
                     pause = 2_000_000_000L;
                     moving.follow(ZERO, now + pause, true, false);
-                    assertEquals(previous, moving.apply(local, ZERO, 0, 1, true));
+                    assertEquals(previous, moving.apply(local, ZERO, 1, true));
                 }
             }
             assertTrue(minimum < 8, "The camera never tightened through the corner: " + kind);

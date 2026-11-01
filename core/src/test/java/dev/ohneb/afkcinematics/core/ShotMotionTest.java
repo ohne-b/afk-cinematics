@@ -12,15 +12,13 @@ class ShotMotionTest {
         public boolean visible(Vec from, Vec to, double margin) { return true; }
     };
 
-    @Test void motionHasShortSoftRampsAndASteadyMiddle() {
+    @Test void motionKeepsItsSpeedThroughBothEndsOfACut() {
         var shot = new Shot(Shot.Type.DRIFT, new Vec(0, 2, -8), new Vec(1.5, 2, -8),
             new Vec(3, 2, -8), new Vec(0, 1, 0), new Vec(3, 1, 0), 24);
         assertTrue(shot.sample(4.8).position().x() > 0.45, "The opening fifth barely travels");
         double step = shot.sample(12.5).position().distance(shot.sample(12).position());
-        for (double seconds = 2; seconds <= 21.5; seconds += 0.5)
+        for (double seconds = 0; seconds <= 23.5; seconds += 0.5)
             assertEquals(step, shot.sample(seconds + 0.5).position().distance(shot.sample(seconds).position()), 1e-9);
-        assertTrue(shot.sample(0.5).position().distance(shot.start()) < step * 0.15);
-        assertTrue(shot.sample(23.5).position().distance(shot.end()) < step * 0.15);
         for (int frame = 0; frame <= 240; frame++) {
             double seconds = frame / 10.0;
             assertEquals(shot.sample(seconds).position().x(), shot.focus(seconds).x(), 1e-12,

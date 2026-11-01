@@ -94,7 +94,7 @@ public final class ViewQualityGameTest implements FabricClientGameTest {
                 } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
                 AfkCinematics.nextShot();
             });
-            context.waitFor(client -> scene() != null && scene().animal() != null && AfkCinematics.fade() == 0, 240);
+            context.waitFor(client -> scene() != null && scene().animal() != null, 240);
             Scene wildlife = context.computeOnClient(client -> scene());
             context.runOnClient(client -> {
                 var geometry = new WorldGeometry(client.level);

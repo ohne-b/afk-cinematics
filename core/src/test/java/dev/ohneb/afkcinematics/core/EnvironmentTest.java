@@ -11,11 +11,11 @@ class EnvironmentTest {
     private static final Scene WATER = new Scene(new Vec(8, -3, 0), new Vec(8, -1.5, -6), Scene.Kind.WATER, 5);
     private static final Scene LAND = new Scene(new Vec(-8, 1, 0), new Vec(-8, 3, -6), Scene.Kind.GROUND, 5);
 
-    @Test void coveredCutsUseTheEnvironmentOfEachView() {
+    @Test void directCutsUseTheEnvironmentOfEachView() {
         boolean[] chooseWater = {true}, present = {true};
         var session = session(environment(chooseWater, present));
         Pose previous = ENTRY;
-        double opacity = 0;
+        int take = 0;
         int cuts = 0;
         boolean returned = false;
         for (int tick = 0; tick < 180; tick++) {
@@ -25,8 +25,7 @@ class EnvironmentTest {
             assertFalse(session.ended(), "The old and destination views used the same environment");
             if (pose == null) continue;
             if (pose.position().distance(previous.position()) > 2) {
-                assertEquals(1, opacity);
-                assertEquals(1, session.fade());
+                assertEquals(take + 1, session.take());
                 cuts++;
             }
             if (session.underwater() && session.settled() && chooseWater[0]) {
@@ -35,28 +34,21 @@ class EnvironmentTest {
             }
             if (!chooseWater[0] && !session.underwater() && session.settled()) returned = true;
             previous = pose;
-            opacity = session.fade();
-            session.coveredFrame();
+            take = session.take();
         }
         assertTrue(returned);
         assertEquals(2, cuts);
     }
 
-    @Test void drainedWaterIsRejectedBeforeTheCoveredHandoff() {
+    @Test void drainedWaterIsRejectedBetweenPlanningAndApplication() {
         boolean[] present = {true};
         var session = session(environment(new boolean[]{true}, present));
-        long now = 0;
-        while (session.fade() != 1 && now < 5_000_000_000L) {
-            session.tick(now);
-            session.frame(now);
-            now += 50_000_000L;
-        }
-        assertEquals(1, session.fade());
-        assertEquals(ENTRY, session.current());
+        for (int tick = 0; tick < 45; tick++) session.tick(tick * 50_000_000L);
+        assertFalse(session.showing());
         present[0] = false;
-        session.coveredFrame();
-        assertNull(session.frame(now));
+        assertNull(session.frame(2_250_000_000L));
         assertTrue(session.ended());
+        assertEquals(0, session.take());
         assertEquals(ENTRY, session.current());
     }
 

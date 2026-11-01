@@ -53,7 +53,6 @@ class FishingTest {
         for (long now = 0; now <= 3_000_000_000L; now += 50_000_000L) {
             session.tick(now);
             session.frame(now);
-            session.coveredFrame();
         }
         assertTrue(session.settled());
         blocked.set(session.focus());
@@ -72,7 +71,6 @@ class FishingTest {
             session.tick(now);
             session.fishing(BOBBER.add(new Vec(4, 0, 0)));
             assertNotNull(session.frame(now));
-            session.coveredFrame();
         }
         assertTrue(session.take() > previous);
         assertFalse(session.ended());

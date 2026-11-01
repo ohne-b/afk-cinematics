@@ -2,7 +2,6 @@ package dev.ohneb.afkcinematics.core;
 
 /** Plans in subject coordinates, then validates the actual world-space camera movement. */
 public final class MovingGeometry implements Geometry {
-    private enum Recovery { NONE, ORIGIN, DESTINATION }
     private final Geometry world;
     private final FollowMotion motion;
     private Scene.Kind activity = Scene.Kind.FLIGHT;
@@ -10,16 +9,14 @@ public final class MovingGeometry implements Geometry {
     private Vec origin, target;
     private Pose previous;
     private Vec previousFocus;
-    private double previousFade;
+    private int cuts;
     private int previousTake;
     private long updated;
     private double heading, desiredHeading, turnVelocity, turnScale = 1, scaleVelocity;
     private boolean followsCourse, reframeRequested, tightTurn;
-    private double elapsed, extension = 1, reveal = 1;
+    private double elapsed, extension = 1;
     private Vec previousTarget, previousOrigin;
     private Vec adjustmentVelocity = new Vec(0, 0, 0);
-    private Recovery recovery = Recovery.NONE;
-    private boolean recoveryCovered;
 
     public MovingGeometry(Geometry world, Vec origin, long now) {
         this.world = world;
@@ -68,10 +65,6 @@ public final class MovingGeometry implements Geometry {
         return true;
     }
 
-    public boolean steadyCourse() {
-        return !reframeRequested && recovery == Recovery.NONE && !turning();
-    }
-
     public boolean turning() { return tightTurn || Math.abs(Math.IEEEremainder(desiredHeading - heading, 360)) >= 20; }
 
     private void turn(double seconds) {
@@ -104,9 +97,9 @@ public final class MovingGeometry implements Geometry {
 
     public boolean sees(Pose pose, Vec focus) { return world.visible(pose.position(), rotate(focus, heading).add(target)); }
 
-    public Pose apply(Pose pose, Vec focus, double fade, int take, boolean capture) {
+    public Pose apply(Pose pose, Vec focus, int take, boolean capture) {
         if (pose == null) return null;
-        boolean cut = take != previousTake && fade == 1 && previousFade == 1;
+        boolean cut = take != previousTake && !capture;
         if (cut && followsCourse && !capture) {
             heading = desiredHeading;
             turnVelocity = 0;
@@ -122,20 +115,20 @@ public final class MovingGeometry implements Geometry {
         Vec worldFocus = focus == null ? null : rotate(focus, heading).add(activity.travel() ? origin : target);
         Pose result = worldFocus == null ? new Pose(point, pose.yaw() + heading, pose.pitch()) : Pose.lookingAt(point, worldFocus);
         if (capture && previous != null) { result = previous; worldFocus = previousFocus; }
-        else if (followsCourse && focus != null) return travel(point, worldFocus, fade, take, cut);
+        else if (followsCourse && focus != null) return travel(point, worldFocus, take, cut);
         Vec from = previous == null || cut ? result.position() : previous.position();
         if (!Scene.inRange(result.position(), target) || !world.clear(from, result.position())
             || !world.visible(result.position(), target)
             || worldFocus != null && !worldFocus.equals(target) && !world.visible(result.position(), worldFocus)) return null;
         previous = result;
         previousFocus = worldFocus;
-        previousFade = fade;
+        if (cut) cuts++;
         previousTake = take;
         return result;
     }
 
-    /** Travel framing may shorten, but every revealed position still has a clear rider sightline. */
-    private Pose travel(Vec desired, Vec focus, double fade, int take, boolean cut) {
+    /** Travel framing may shorten, but every applied position still has a clear rider sightline. */
+    private Pose travel(Vec desired, Vec focus, int take, boolean cut) {
         boolean walking = walking();
         if (walking) desired = walkingView(desired, cut);
         Vec offset = desired.subtract(target);
@@ -152,15 +145,8 @@ public final class MovingGeometry implements Geometry {
         if (point == null) return null;
 
         Vec from = previous == null || cut ? point : previous.position();
-        if (recovery == Recovery.ORIGIN && !recoveryCovered) return coveredOrigin();
-        boolean destination = recovery == Recovery.ORIGIN;
-        if (recovery == Recovery.DESTINATION && !recoveryCovered) {
-            // The destination must itself be submitted fully covered before revealing it.
-            return coveredOrigin();
-        }
-        if (recovery == Recovery.DESTINATION) { recovery = Recovery.NONE; reveal = 0; recoveryCovered = false; }
         Vec nextVelocity = new Vec(0, 0, 0);
-        if (!destination && !cut && previous != null) {
+        if (!cut && previous != null) {
             Vec carried = previousOrigin == null ? from : from.add(origin.subtract(previousOrigin));
             double movement = walking ? carried.distance(from) : previousTarget == null ? 0 : target.distance(previousTarget);
             double limit = Math.max(.001, movement * (walking ? 1 : 1.5) + elapsed * (walking ? 6 : 12));
@@ -189,11 +175,9 @@ public final class MovingGeometry implements Geometry {
             }
             if (usable(step, 0) && world.clear(from, step)) point = step;
             else {
-                // Do not jump through a trunk. Cover the old view, then recheck a close destination.
-                recovery = Recovery.ORIGIN;
-                recoveryCovered = false;
-                adjustmentVelocity = new Vec(0, 0, 0);
-                return coveredOrigin();
+                // The continuous path is blocked. Cut directly to the validated clear destination.
+                cut = true;
+                nextVelocity = new Vec(0, 0, 0);
             }
         }
         adjustmentVelocity = nextVelocity;
@@ -206,10 +190,8 @@ public final class MovingGeometry implements Geometry {
         previousFocus = aim;
         previousTarget = target;
         previousOrigin = origin;
-        previousFade = fade;
+        if (cut) cuts++;
         previousTake = take;
-        if (destination) { recovery = Recovery.DESTINATION; recoveryCovered = false; }
-        else if (recovery == Recovery.NONE) reveal = Math.min(1, reveal + elapsed / .3);
         return result;
     }
 
@@ -296,13 +278,7 @@ public final class MovingGeometry implements Geometry {
         return Scene.inRange(point, target) && world.clear(point, point, margin) && world.visible(point, target, walking() ? 0 : margin);
     }
 
-    private Pose coveredOrigin() {
-        return previous != null && Scene.inRange(previous.position(), target)
-            && world.clear(previous.position(), previous.position()) ? previous : null;
-    }
-
-    public double fade() { return recovery != Recovery.NONE ? 1 : 1 - Pose.ease(reveal); }
-    public void coveredFrame() { if (recovery != Recovery.NONE) recoveryCovered = true; }
+    public int cuts() { return cuts; }
 
     public boolean adaptsTravel() { return followsCourse; }
 

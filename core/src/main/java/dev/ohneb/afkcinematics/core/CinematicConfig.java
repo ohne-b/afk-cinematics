@@ -21,7 +21,7 @@ public final class CinematicConfig {
         }
     }
     public enum Pace {
-        SHORT(12, 18), RELAXED(20, 30), LONG(32, 46);
+        QUICK(6, 10), SHORT(12, 18), RELAXED(20, 30), LONG(32, 46);
         public final double minimumSeconds, maximumSeconds;
         Pace(double minimumSeconds, double maximumSeconds) {
             this.minimumSeconds = minimumSeconds;
