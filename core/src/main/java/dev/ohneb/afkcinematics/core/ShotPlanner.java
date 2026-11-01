@@ -73,14 +73,14 @@ final class ShotPlanner {
         if (travel != null) return travel.next(geometry);
         if (tryWildlife && animalProbe < 8) {
             Scene animal = geometry.wildlife(anchor, sceneryBearing, history.lastSpecies(), animalProbe++);
-            if (animal == null || !animal.near(anchor) || !geometry.available(animal)) return null;
+            if (animal == null || !animal.near(anchor) || !geometry.available(animal, animal.vantage())) return null;
             Vec start = animal.vantage();
             Vec offset = start.subtract(animal.focus());
             boolean still = config.motion == CinematicConfig.Motion.STILL || !config.shots.contains(Shot.Type.DRIFT);
             double drift = config.motion == CinematicConfig.Motion.REDUCED ? .25 : .8;
             Vec end = still ? start : start.add(new Vec(-offset.z(), 0, offset.x()).scale(drift / Math.max(1, offset.length())));
             Shot shot = new Shot(still ? Shot.Type.STILL : Shot.Type.DRIFT, start, start.lerp(end, .5), end,
-                animal.focus(), animal.focus(), 10);
+                animal.focus(), animal.focus(), Math.max(10, preparationSeconds(config) + .85));
             return Scene.inRange(end, anchor) && geometry.forScene(animal).valid(shot, start)
                 ? new Plan(shot, animal, true, true) : null;
         }

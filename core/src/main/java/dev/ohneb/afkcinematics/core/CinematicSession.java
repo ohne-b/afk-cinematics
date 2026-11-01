@@ -64,7 +64,7 @@ public final class CinematicSession {
         now = timeline(now);
         if (ended) return;
         if (shot != null && phase == Phase.SHOT) {
-            if (scene.animal() != null && !geometry.available(scene))
+            if (scene.animal() != null && !geometry.available(scene, current.position()))
                 advanceRequested = true;
             if (advanceRequested && !manualAdvance) {
                 planner = planner(current);
@@ -106,7 +106,7 @@ public final class CinematicSession {
             currentFocus = focus;
         }
         var plan = pending;
-        if (!geometry.available(plan.scene())) {
+        if (!geometry.available(plan.scene(), plan.shot().start())) {
             pending = null;
             planner = planner(current);
             return;
@@ -168,7 +168,7 @@ public final class CinematicSession {
         }
         if (phase == Phase.CUT) {
             if (!covered) return adaptiveTravel() || geometry.forScene(scene).clear(current.position(), current.position()) ? current : end();
-            if (!geometry.available(pending.scene())) {
+            if (!geometry.available(pending.scene(), pending.shot().start())) {
                 // Reveal the previous take again if the animal left during the cover.
                 // Continue from its endpoint rather than rewinding its movement.
                 pending = null;

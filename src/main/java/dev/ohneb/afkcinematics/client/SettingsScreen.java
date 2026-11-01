@@ -77,6 +77,7 @@ public final class SettingsScreen extends Screen {
         shotButtons.clear();
         numericLabels.clear();
         invalidNumbers.clear();
+        if (error.equals(text("number.invalid"))) error = Component.empty();
         List<AbstractWidget> widgets = controls(config, buttonWidth);
         navigation.clear();
         navigation.addAll(widgets);
@@ -257,7 +258,11 @@ public final class SettingsScreen extends Screen {
             catch (NumberFormatException ignored) { number = 0; }
             boolean valid = number >= min && number <= max;
             input.setTextColor(valid ? 0xFFFFFFFF : 0xFFFF7777);
-            if (valid) { invalidNumbers.remove(input); set.accept(number); }
+            if (valid) {
+                invalidNumbers.remove(input);
+                if (invalidNumbers.isEmpty() && error.equals(text("number.invalid"))) error = Component.empty();
+                set.accept(number);
+            }
             else invalidNumbers.add(input);
         });
         return input;

@@ -2,6 +2,10 @@ package dev.ohneb.afkcinematics.client;
 
 import dev.ohneb.afkcinematics.core.Vec;
 import dev.ohneb.afkcinematics.core.ViewQuality;
+import dev.ohneb.afkcinematics.core.CinematicConfig;
+import dev.ohneb.afkcinematics.core.CinematicSession;
+import dev.ohneb.afkcinematics.core.Scene;
+import dev.ohneb.afkcinematics.core.Shot;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.world.level.block.Blocks;
@@ -53,8 +57,71 @@ public final class ViewQualityGameTest implements FabricClientGameTest {
                 require(!geometry.visible(border, border.add(new Vec(0, 0, 2)), 0.2),
                     "Expanded sightline accepted an unloaded neighboring shape origin");
             });
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                floor(player);
+                //? if >=26.2 {
+                /*var cow = net.minecraft.world.entity.EntityTypes.COW.create(player.level(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                *///?} else {
+                var cow = net.minecraft.world.entity.EntityType.COW.create(player.level(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                //?}
+                require(cow != null, "Missing wildlife fixture");
+                cow.snapTo(player.getX() + 4, player.getY(), player.getZ() + 3, 110, 0);
+                cow.setNoAi(true);
+                player.level().addFreshEntity(cow);
+            });
+            context.waitTicks(30);
+            context.runOnClient(client -> {
+                var config = AfkCinematics.config();
+                config.subject = CinematicConfig.Subject.SCENERY;
+                config.shots = java.util.EnumSet.of(Shot.Type.DRIFT);
+                config.wildlife = false;
+            });
+            start(context);
+            for (int i = 0; i < 3; i++) {
+                context.waitFor(client -> cameraOwner() instanceof CinematicSession session && session.settled(), 240);
+                if (i == 2) break;
+                int take = context.computeOnClient(client -> ((CinematicSession)cameraOwner()).take());
+                context.runOnClient(client -> AfkCinematics.nextShot());
+                context.waitFor(client -> cameraOwner() instanceof CinematicSession session && session.take() > take, 240);
+            }
+            context.runOnClient(client -> {
+                AfkCinematics.config().wildlife = true;
+                try {
+                    var field = AfkCinematics.class.getDeclaredField("RANDOM");
+                    field.setAccessible(true);
+                    ((java.util.Random)field.get(null)).setSeed(3);
+                } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
+                AfkCinematics.nextShot();
+            });
+            context.waitFor(client -> scene() != null && scene().animal() != null && AfkCinematics.fade() == 0, 240);
+            Scene wildlife = context.computeOnClient(client -> scene());
+            context.runOnClient(client -> {
+                var geometry = new WorldGeometry(client.level);
+                require(geometry.available(wildlife, WorldGeometry.point(camera(client).position())), "Revealed wildlife has no live visible animal");
+                Vec anchor = WorldGeometry.point(client.player.position().add(0, client.player.getBbHeight() * .65, 0));
+                for (int probe = 0; probe < 8; probe++) require(geometry.wildlife(anchor, 0, wildlife.animal().species(), probe) == null,
+                    "The same species remained eligible for the next wildlife view");
+            });
+            context.takeScreenshot(net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions.of("afk-wildlife")
+                .withDestinationDir(java.nio.file.Path.of(System.getProperty("afkcinematics.test.artifacts"))));
+            world.getServer().runOnServer(server -> {
+                var animal = server.overworld().getEntity(wildlife.animal().uuid());
+                require(animal != null, "Wildlife fixture lost its server animal");
+                animal.discard();
+            });
+            context.waitFor(client -> scene() != null && scene().animal() == null && AfkCinematics.showing(), 240);
         } finally {
-            context.runOnClient(client -> focused = null);
+            context.runOnClient(client -> { AfkCinematics.stop(); focused = null; });
         }
+    }
+
+    private static Scene scene() {
+        if (cameraOwner() == null) return null;
+        try {
+            var field = CinematicSession.class.getDeclaredField("scene");
+            field.setAccessible(true);
+            return (Scene)field.get(cameraOwner());
+        } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
     }
 }
