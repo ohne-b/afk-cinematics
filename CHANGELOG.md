@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Retain clear travel angles around trees and check approaching obstructions before moving the camera. (#60)
+- Add planted Roadside and Overlook travel shots with panning and early handoffs. (#60)
+- Ease black bars in more smoothly; remove them immediately on exit. (#60)
 - Choose instant cuts or brief fades between shots; keep camera speed and animated bars independent. (#59)
 - Keep camera movement calm at every shot length; use game FOV by default with an optional 30–140° slider. (#58)
 - Cut directly between shots, animate letterbox entry and exit, and add 6–10 second shots. (#57)

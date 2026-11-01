@@ -322,13 +322,6 @@ public final class AfkCinematics {
         } else {
             movingGeometry = new MovingGeometry(new WorldGeometry(world).forScene(null), subject, System.nanoTime());
             movingGeometry.framing(activity, config().frontTravel);
-            var client = Minecraft.getInstance();
-            var window = client.getWindow();
-            var vehicle = player.getVehicle();
-            double width = Math.max(player.getBbWidth(), vehicle == null ? 0 : vehicle.getBbWidth()) * .6;
-            double height = Math.max(player.getBbHeight() * .7, vehicle == null ? 0 : vehicle.getBbHeight() + .5);
-            movingGeometry.viewport(config().fieldOfView(client.options.fov().get()) * (config().useGameFov ? .85 : 1),
-                (double)window.getWidth() / Math.max(1, window.getHeight()), config().letterbox, width, height);
             if (activity.travel() || manual) movingGeometry.course(travelBearing());
             Vec bobber = fishingHook == null ? null : FishingActivity.target(fishingHook, 1, subject);
             if (bobber != null) bobber = movingGeometry.relative(bobber);
@@ -450,6 +443,13 @@ public final class AfkCinematics {
                 player.yOld + (player.getY() - player.yOld) * partial + player.getBbHeight() * 0.65,
                 player.zOld + (player.getZ() - player.zOld) * partial);
             movingGeometry.framing(activity, config().frontTravel);
+            var client = Minecraft.getInstance();
+            var window = client.getWindow();
+            var vehicle = player.getVehicle();
+            double width = Math.max(player.getBbWidth(), vehicle == null ? 0 : vehicle.getBbWidth()) * .6;
+            double height = Math.max(player.getBbHeight() * .7, vehicle == null ? 0 : vehicle.getBbHeight() + .5);
+            movingGeometry.viewport(config().fieldOfView(client.options.fov().get()) * (config().useGameFov ? .85 : 1),
+                (double)window.getWidth() / Math.max(1, window.getHeight()), config().letterbox, width, height);
             boolean grounded = player.isPassenger() ? player.getVehicle().onGround() : player.onGround();
             if (!movingGeometry.follow(subject, now, session.capturing(), grounded)) { stop(); return null; }
             if (!session.capturing() && session.settled() && movingGeometry.needsReframe(activity)) session.handoffSoon(now);

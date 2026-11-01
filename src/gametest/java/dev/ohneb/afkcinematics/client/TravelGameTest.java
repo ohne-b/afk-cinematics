@@ -411,6 +411,8 @@ public final class TravelGameTest implements FabricClientGameTest {
                 AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL);
                 AfkCinematics.config().frontTravel = false;
                 AfkCinematics.config().letterbox = true;
+                AfkCinematics.config().useGameFov = false;
+                AfkCinematics.config().customFov = 70;
             });
             manual(context);
             key(context, InputConstants.KEY_W, InputConstants.PRESS);
@@ -430,6 +432,15 @@ public final class TravelGameTest implements FabricClientGameTest {
                 require(camera(client).position().distanceTo(planted) < .001, "Roadside camera followed instead of staying planted");
                 require(Math.abs(Math.IEEEremainder(camera(client).yRot() - plantedYaw, 360)) > 1, "Roadside camera did not pan");
                 require(client.player.position().distanceTo(passer) > 1, "Roadside view blocked real movement");
+                try {
+                    var rigField = AfkCinematics.class.getDeclaredField("movingGeometry");
+                    rigField.setAccessible(true);
+                    Object rig = rigField.get(null);
+                    var fovField = rig.getClass().getDeclaredField("fov");
+                    fovField.setAccessible(true);
+                    require(Math.abs(fovField.getDouble(rig) - 70) < .001,
+                        "Roadside framing retained its initial FOV instead of the applied world lens");
+                } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
             });
             key(context, InputConstants.KEY_W, InputConstants.RELEASE);
             screenshot(context, "roadside-pass");
