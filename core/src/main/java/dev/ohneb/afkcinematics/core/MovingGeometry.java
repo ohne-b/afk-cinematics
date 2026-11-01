@@ -178,14 +178,17 @@ public final class MovingGeometry implements Geometry {
         Vec ahead = previousOrigin == null || elapsed <= 0 ? new Vec(0, 0, 0) : origin.subtract(previousOrigin).scale(.3 / elapsed);
         ahead = new Vec(ahead.x(), 0, ahead.z());
         if (ahead.length() > 1.5) ahead = ahead.scale(1.5 / ahead.length());
-        if (usable(desired, .3) && bodyVisible(desired) && world.clear(desired, desired.add(ahead), .3)
+        // Reserve lower-body visibility on descents, without aiming that preference into a rising step.
+        Vec body = new Vec(target.x(), Math.min(target.y(), origin.y()) - .65, target.z());
+        if (!world.visible(target, body)) body = target.add(new Vec(0, -.65, 0));
+        if (usable(desired, .3) && world.visible(desired, body) && world.clear(desired, desired.add(ahead), .3)
             && (previous == null || cut || world.clear(previous.position(), desired))) return desired;
 
         Vec best = null;
         double bestScore = Double.POSITIVE_INFINITY;
         // Keep an established roomy view when a wall or stair edge makes nearby choices alternate.
         if (carried.distance(target) >= Math.min(3.5, desired.distance(target) * .7)) {
-            bestScore = walkingScore(carried, desired, carried, ahead, cut, bestScore);
+            bestScore = walkingScore(carried, desired, carried, ahead, body, cut, bestScore);
             if (Double.isFinite(bestScore)) best = carried;
         }
         Vec offset = desired.subtract(origin);
@@ -195,29 +198,24 @@ public final class MovingGeometry implements Geometry {
         for (double lift : new double[]{0, .75, 1.5, 3, 4.5, 6}) {
             for (Vec arm : arms) {
                 Vec candidate = origin.add(arm).add(new Vec(0, lift, 0));
-                double score = walkingScore(candidate, desired, carried, ahead, cut, bestScore);
+                double score = walkingScore(candidate, desired, carried, ahead, body, cut, bestScore);
                 if (score < bestScore) { best = candidate; bestScore = score; }
             }
         }
         return best == null ? desired : best;
     }
 
-    private double walkingScore(Vec point, Vec desired, Vec carried, Vec ahead, boolean cut, double bestScore) {
+    private double walkingScore(Vec point, Vec desired, Vec carried, Vec ahead, Vec body, boolean cut, double bestScore) {
         double deviation = point.distance(desired), change = point.distance(carried);
         double score = deviation * deviation + change * change * .5;
         if (score >= bestScore || !usable(point, .15)) return Double.POSITIVE_INFINITY;
-        if (!bodyVisible(point)) score += 64;
+        if (!world.visible(point, body)) score += 64;
         if (score >= bestScore) return Double.POSITIVE_INFINITY;
         // Look a short distance ahead so the rig starts lifting or moving sideways before impact.
         if (!world.clear(point, point.add(ahead), .15)) score += 64;
         if (score >= bestScore) return Double.POSITIVE_INFINITY;
         if (previous != null && !cut && !world.clear(previous.position(), point)) score += 256;
         return score;
-    }
-
-    private boolean bodyVisible(Vec point) {
-        // Prefer room for the lower body too, so descending one step does not suddenly hide the rider.
-        return world.visible(point, new Vec(target.x(), Math.min(target.y(), origin.y()) - .65, target.z()));
     }
 
     private Vec nearby(Vec direction, double maximum, double margin) {
