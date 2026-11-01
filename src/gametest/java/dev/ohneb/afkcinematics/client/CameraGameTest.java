@@ -127,8 +127,8 @@ public final class CameraGameTest implements FabricClientGameTest {
             context.runOnClient(client -> {
                 var settings = (SettingsScreen)AfkCinematics.screen();
                 var toggleKey = ((dev.ohneb.afkcinematics.mixin.KeyMappingAccess)AfkCinematics.TOGGLE).afkCinematics$key();
-                pressSetting(settings, "Controls");
-                pressSetting(settings, "Key bindings...");
+                pressSetting(settings, net.minecraft.network.chat.Component.translatable("ohneb_afk_cinematics.toggle.binding",
+                    AfkCinematics.TOGGLE.getTranslatedKeyMessage()).getString());
                 require(AfkCinematics.screen() instanceof net.minecraft.client.gui.screens.options.controls.KeyBindsScreen,
                     "Settings did not open vanilla key bindings");
                 AfkCinematics.screen().onClose();
