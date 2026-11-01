@@ -8,12 +8,12 @@ import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 //? if >=1.21.9 {
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.InputWithModifiers;
 //?}
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
@@ -26,6 +26,7 @@ import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public final class SettingsScreen extends Screen {
     private enum Page { GENERAL, AFK, CAMERA, SHOTS, MUSIC }
@@ -51,10 +52,13 @@ public final class SettingsScreen extends Screen {
     private int maxOffset;
     private Component error = Component.empty();
     private boolean saveFailed, focusSaveError;
-    private Button close, preview;
-    private Component startIssue;
+    private Button close;
+    private int panelLeft, panelWidth, contentLeft, contentWidth, rowHeight, visibleRows;
     private final List<AbstractWidget> navigation = new ArrayList<>();
+    private final List<List<AbstractWidget>> rows = new ArrayList<>();
+    private final java.util.Map<AbstractWidget, Integer> labelPositions = new java.util.HashMap<>();
     private final java.util.Map<EditBox, Component> numericLabels = new java.util.HashMap<>();
+    private final java.util.Map<AbstractWidget, Component> labels = new java.util.HashMap<>();
     private final java.util.Set<String> invalidNumbers = new java.util.HashSet<>();
     private final java.util.Map<String, String> numericDrafts = new java.util.HashMap<>();
     private String focusNumber;
@@ -68,53 +72,91 @@ public final class SettingsScreen extends Screen {
 
     @Override protected void init() {
         CinematicConfig config = AfkCinematics.config();
-        int totalWidth = Math.min(width - 32, 520);
+        int totalWidth = Math.min(width - 24, 440);
         int left = (width - totalWidth) / 2;
-        int sidebar = width >= 360 ? 100 : 64;
-        int gap = width >= 360 ? 14 : 8;
+        int sidebar = width >= 360 ? 64 : 52;
+        int gap = width >= 360 ? 16 : 10;
         int x = left + sidebar + gap;
-        int buttonWidth = totalWidth - sidebar - gap;
+        int buttonWidth = totalWidth - sidebar - gap - 8;
         int top = 32;
+        panelLeft = left;
+        panelWidth = totalWidth;
+        contentLeft = x;
+        contentWidth = buttonWidth;
+        rowHeight = buttonWidth < 210 ? 26 : 20;
         int tabHeight = Math.min(20, Math.max(10, (height - 62 - 12) / Page.values().length));
         for (Page destination : Page.values()) {
-            var tab = addRenderableWidget(Button.builder(text("page." + destination.name().toLowerCase(Locale.ROOT)),
-                ignored -> open(destination)).bounds(left, top + destination.ordinal() * (tabHeight + 3), sidebar, tabHeight).build());
+            var tab = new FlatButton(text("page." + destination.name().toLowerCase(Locale.ROOT)), ignored -> open(destination));
+            tab.tab = true;
+            tab.setX(left);
+            tab.setY(top + destination.ordinal() * (tabHeight + 3));
+            tab.setWidth(sidebar);
+            tab.setHeight(tabHeight);
             tab.active = page != destination;
+            addRenderableWidget(tab);
         }
         shotButtons.clear();
         numericLabels.clear();
+        labels.clear();
         List<AbstractWidget> widgets = controls(config, buttonWidth);
         navigation.clear();
         navigation.addAll(widgets);
-        int visibleRows = Math.max(1, (height - top - 54) / 22);
-        maxOffset = Math.max(0, widgets.size() - visibleRows);
+        rows.clear();
+        if (page == Page.SHOTS) {
+            rows.add(List.of(widgets.getFirst()));
+            int presets = shotSet == ShotSet.SCENERY ? 3 : 2;
+            if (buttonWidth >= 210) rows.add(widgets.subList(1, presets));
+            else for (int i = 1; i < presets; i++) rows.add(List.of(widgets.get(i)));
+            int columns = buttonWidth >= 280 ? 2 : 1;
+            for (int i = presets; i < widgets.size(); i += columns) rows.add(widgets.subList(i, Math.min(i + columns, widgets.size())));
+        } else widgets.forEach(widget -> rows.add(List.of(widget)));
+        visibleRows = Math.max(1, (height - top - 46) / rowHeight);
+        maxOffset = Math.max(0, rows.size() - visibleRows);
         offset = Math.clamp(offset, 0, maxOffset);
-        for (int index = offset; index < Math.min(widgets.size(), offset + visibleRows); index++) {
-            AbstractWidget widget = widgets.get(index);
-            widget.setX(x);
-            widget.setY(top + (index - offset) * 22);
-            widget.setWidth(numericLabels.containsKey(widget) ? 42 : buttonWidth);
-            widget.active &= AfkCinematics.store().readable();
-            addRenderableWidget(widget);
+        labelPositions.clear();
+        for (int index = offset; index < Math.min(rows.size(), offset + visibleRows); index++) {
+            var row = rows.get(index);
+            int columnWidth = (buttonWidth - 12 * (row.size() - 1)) / row.size();
+            for (int column = 0; column < row.size(); column++) {
+                AbstractWidget widget = row.get(column);
+                int columnX = x + column * (columnWidth + 12);
+                int controlWidth = labels.containsKey(widget) ? Math.min(116, Math.max(54, columnWidth / 2)) : columnWidth;
+                if (widget instanceof FlatButton flat && flat.state != null) controlWidth = 42;
+                if (numericLabels.containsKey(widget)) controlWidth = 48;
+                boolean fullLabel = widget instanceof FlatButton flat && flat.state == null && buttonWidth < 210;
+                if (fullLabel) { controlWidth = columnWidth; ((FlatButton)widget).fullLabel = true; }
+                widget.setX(columnX + columnWidth - controlWidth);
+                int controlHeight = fullLabel ? 24 : 18;
+                widget.setY(top + (index - offset) * rowHeight + (rowHeight - controlHeight) / 2);
+                widget.setWidth(controlWidth);
+                widget.setHeight(controlHeight);
+                widget.active &= AfkCinematics.store().readable();
+                labelPositions.put(widget, columnX);
+                addRenderableWidget(widget);
+            }
         }
         if (maxOffset > 0) {
-            int arrowHeight = visibleRows == 1 ? 10 : 20;
-            var up = addRenderableWidget(Button.builder(Component.literal("↑"), ignored -> scroll(-1))
-                .bounds(left + totalWidth + 2, top, 14, arrowHeight).build());
-            var down = addRenderableWidget(Button.builder(Component.literal("↓"), ignored -> scroll(1))
-                .bounds(left + totalWidth + 2, top + Math.max(12, (visibleRows - 1) * 22), 14, arrowHeight).build());
+            var up = new FlatButton(text("scroll.up"), ignored -> scroll(-1));
+            var down = new FlatButton(text("scroll.down"), ignored -> scroll(1));
+            up.display = () -> Component.literal("\u2191");
+            down.display = () -> Component.literal("\u2193");
+            for (var arrow : new FlatButton[]{up, down}) {
+                arrow.setX(left + totalWidth - 6);
+                arrow.setWidth(10);
+                arrow.setHeight(10);
+                addRenderableWidget(arrow);
+            }
+            up.setY(top);
+            down.setY(top + visibleRows * rowHeight - 10);
             up.active = offset > 0;
             down.active = offset < maxOffset;
         }
-        int half = (totalWidth - 6) / 2;
-        preview = Button.builder(text("preview"), button -> {
-            if (save()) { AfkCinematics.showScreen(null); AfkCinematics.requestStart(); }
-        }).bounds(width / 2 - half - 3, height - 26, half, 20).build();
-        startIssue = null;
-        updateStart();
-        addRenderableWidget(preview);
-        close = addRenderableWidget(Button.builder(saveFailed ? text("close_unsaved") : CommonComponents.GUI_DONE, button -> onClose())
-            .bounds(width / 2 + 3, height - 26, half, 20).build());
+        close = new FlatButton(saveFailed ? text("close_unsaved") : CommonComponents.GUI_DONE, button -> onClose());
+        close.setWidth(saveFailed ? Math.min(140, totalWidth) : 72);
+        close.setHeight(18);
+        close.setX(left + totalWidth - close.getWidth());
+        close.setY(height - 24);
+        addRenderableWidget(close);
         if (resumedFocus >= 0 && resumedFocus < navigation.size() && children().contains(navigation.get(resumedFocus))) {
             setFocused(navigation.get(resumedFocus));
             navigation.get(resumedFocus).setFocused(true);
@@ -124,7 +166,6 @@ public final class SettingsScreen extends Screen {
 
     @Override public void tick() {
         super.tick();
-        updateStart();
         if (focusPage) {
             navigation.stream().filter(widget -> widget.active && children().contains(widget)).findFirst().ifPresent(widget -> {
                 setFocused(widget);
@@ -148,25 +189,22 @@ public final class SettingsScreen extends Screen {
         }
     }
 
-    private void updateStart() {
-        Component problem = AfkCinematics.startProblem();
-        if (problem.equals(startIssue)) return;
-        startIssue = problem;
-        preview.active = problem.getString().isEmpty();
-        preview.setTooltip(Tooltip.create(preview.active ? text("preview.help") : problem));
-    }
-
     private List<AbstractWidget> controls(CinematicConfig config, int buttonWidth) {
         List<AbstractWidget> widgets = new ArrayList<>();
         switch (page) {
             case GENERAL -> {
                 widgets.add(toggle("enabled", () -> config.enabled, value -> config.enabled = value));
-                widgets.add(Button.builder(text("toggle.binding", AfkCinematics.TOGGLE.getTranslatedKeyMessage()), button -> {
+                var binding = new FlatButton(text("toggle.binding", AfkCinematics.TOGGLE.getTranslatedKeyMessage()), button -> {
                     if (save()) {
                         resumedFocus = navigation.indexOf(button);
                         AfkCinematics.showScreen(new KeyBindsScreen(this, minecraft.options));
                     }
-                }).tooltip(Tooltip.create(text("bindings.help"))).build());
+                });
+                binding.display = () -> AfkCinematics.TOGGLE.getTranslatedKeyMessage().copy().append("...");
+                binding.setTooltip(Tooltip.create(text("bindings.help")));
+                labels.put(binding, text("toggle.label"));
+                widgets.add(binding);
+                widgets.add(toggle("frontTravel", () -> config.frontTravel, value -> config.frontTravel = value));
                 widgets.add(toggle("autoFishing", () -> config.autoFishing, value -> config.autoFishing = value));
                 widgets.add(toggle("hideHud", () -> config.hideHud, value -> config.hideHud = value));
                 widgets.add(toggle("hidePlayerNames", () -> config.hidePlayerNames, value -> config.hidePlayerNames = value));
@@ -216,6 +254,7 @@ public final class SettingsScreen extends Screen {
                         input.setTextColor(CinematicMusic.customAvailable(config.customMusic) ? 0xFFFFFFFF : 0xFFFF7777);
                     });
                     widgets.add(input);
+                    labels.put(input, text("customMusic"));
                 }
             }
             case SHOTS -> {
@@ -229,16 +268,16 @@ public final class SettingsScreen extends Screen {
                         rebuildWidgets();
                     }, value -> Tooltip.create(text("shots.set.help")));
                 widgets.add(shotSetControl);
-                widgets.add(Button.builder(text("shots.all"), button -> {
+                widgets.add(new FlatButton(text("shots.all"), button -> {
                     config.shots.addAll(types);
                     refreshControls();
-                }).build());
-                if (shotSet == ShotSet.SCENERY) widgets.add(Button.builder(text("shots.moving"), button -> {
+                }));
+                if (shotSet == ShotSet.SCENERY) widgets.add(new FlatButton(text("shots.moving"), button -> {
                     config.shots.addAll(types);
                     config.shots.remove(Shot.Type.PAN);
                     config.shots.remove(Shot.Type.STILL);
                     refreshControls();
-                }).build());
+                }));
                 for (Shot.Type type : types) {
                     String key = "shot." + type.name().toLowerCase(Locale.ROOT);
                     Button button = toggle(key, () -> config.shots.contains(type), enabled -> {
@@ -258,6 +297,7 @@ public final class SettingsScreen extends Screen {
     private EditBox number(String key, int width, int min, int max, int initial, java.util.function.IntConsumer set) {
         var input = new EditBox(font, width, 20, text(key + ".input"));
         numericLabels.put(input, text(key + ".input"));
+        labels.put(input, text(key + ".input"));
         input.setMaxLength(3);
         input.setValue(numericDrafts.computeIfAbsent(key, ignored -> Integer.toString(initial)));
         input.setTextColor(invalidNumbers.contains(key) ? 0xFFFF7777 : 0xFFFFFFFF);
@@ -280,11 +320,22 @@ public final class SettingsScreen extends Screen {
     }
 
     private AbstractSliderButton slider(String label, int width, int min, int max, int initial, java.util.function.IntConsumer set) {
-        return new AbstractSliderButton(0, 0, width, 20, Component.empty(), (double)(initial - min) / (max - min)) {
+        var slider = new AbstractSliderButton(0, 0, width, 18, Component.empty(), (double)(initial - min) / (max - min)) {
             { updateMessage(); setTooltip(Tooltip.create(text(label + ".help"))); }
             @Override protected void updateMessage() { setMessage(text(label, number())); }
             private int number() { return (int)Math.round(value * (max - min)) + min; }
             @Override protected void applyValue() { set.accept(number()); }
+            //? if >=26.1 {
+            /*@Override public void extractWidgetRenderState(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+            *///?} else {
+            @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+            //?}
+                int x = getX(), y = getY(), handle = x + (int)(value * (getWidth() - 8));
+                graphics.fill(x, y + 13, x + getWidth(), y + 15, 0xFF39434A);
+                graphics.fill(x, y + 13, handle + 4, y + 15, active ? 0xFF84D5BB : 0xFF66736D);
+                graphics.fill(handle, y + 11, handle + 8, y + 17, isHoveredOrFocused() ? 0xFFFFFFFF : 0xFFB5C4BE);
+                graphics.drawCenteredString(font, Component.literal(number() + "%"), x + getWidth() / 2, y, active ? 0xFFE6ECE9 : 0xFF7E8983);
+            }
             //? if >=1.21.9 {
             @Override public boolean keyPressed(KeyEvent event) {
                 int key = event.key();
@@ -306,6 +357,8 @@ public final class SettingsScreen extends Screen {
                 return handled;
             }
         };
+        labels.put(slider, text(label + ".label"));
+        return slider;
     }
 
     private void open(Page destination) {
@@ -327,14 +380,11 @@ public final class SettingsScreen extends Screen {
         }
     }
 
-    private <T> CycleButton<T> choice(String key, T initial, T[] values, Function<T, Component> labels,
+    private <T> ChoiceButton<T> choice(String key, T initial, T[] values, Function<T, Component> labels,
         Consumer<T> set, Function<T, Tooltip> help) {
-        //? if >=1.21.11 {
-        var builder = CycleButton.builder(labels, initial).withValues(values);
-        //?} else {
-        /*var builder = CycleButton.builder(labels).withValues(values).withInitialValue(initial);
-        *///?}
-        return builder.withTooltip(help::apply).create(text(key), (button, value) -> set.accept(value));
+        var button = new ChoiceButton<>(key, initial, values, labels, set, help);
+        this.labels.put(button, text(key));
+        return button;
     }
 
     private void refreshShots(CinematicConfig config) {
@@ -346,13 +396,94 @@ public final class SettingsScreen extends Screen {
     }
 
     private Button toggle(String key, BooleanSupplier get, Consumer<Boolean> set) {
-        Button button = Button.builder(label(key, get.getAsBoolean() ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF), b -> {
+        FlatButton button = new FlatButton(label(key, get.getAsBoolean() ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF), b -> {
             set.accept(!get.getAsBoolean());
             b.setMessage(label(key, get.getAsBoolean() ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF));
             if (key.equals("enabled") || key.equals("automatic") || key.equals("music")) refreshControls();
-        }).build();
+        });
+        button.state = get;
+        button.display = () -> get.getAsBoolean() ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF;
         button.setTooltip(Tooltip.create(text(key + ".help")));
+        labels.put(button, text(key));
         return button;
+    }
+
+    private class FlatButton extends Button {
+        protected Supplier<Component> display = this::getMessage;
+        private BooleanSupplier state;
+        private boolean tab, fullLabel;
+
+        FlatButton(Component message, OnPress action) { super(0, 0, 100, 18, message, action, DEFAULT_NARRATION); }
+
+        //? if >=26.1 {
+        /*@Override protected void extractContents(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        *///?} else if >=1.21.11 {
+        @Override protected void renderContents(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        //?} else {
+        /*@Override protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        *///?}
+            int x = getX(), y = getY(), w = getWidth(), h = getHeight();
+            boolean chosen = tab && !active || state != null && state.getAsBoolean();
+            int background = chosen ? 0xFF29493F : isHoveredOrFocused() && active ? 0xFF364148 : 0xFF252C31;
+            if (!tab || chosen || isHoveredOrFocused()) graphics.fill(x, y, x + w, y + h, background);
+            if (tab && chosen) graphics.fill(x, y + 3, x + 2, y + h - 3, 0xFF84D5BB);
+            if (isFocused() && active) {
+                graphics.fill(x, y, x + w, y + 1, 0xFFE1EAE6);
+                graphics.fill(x, y + h - 1, x + w, y + h, 0xFFE1EAE6);
+            }
+            if (fullLabel) {
+                var lines = font.split(getMessage(), w - 8);
+                int count = Math.min(2, lines.size());
+                for (int i = 0; i < count; i++) graphics.drawString(font, lines.get(i), x + (w - font.width(lines.get(i))) / 2,
+                    y + (h - count * 9) / 2 + i * 9, active ? 0xFFE4ECE8 : 0xFF7E8983);
+                return;
+            }
+            Component value = display.get();
+            var clipped = font.substrByWidth(value, w - (w > 14 ? 8 : 0)).getString();
+            graphics.drawString(font, clipped, tab ? x + 7 : x + (w - font.width(clipped)) / 2, y + (h - 8) / 2,
+                active || chosen ? 0xFFE4ECE8 : 0xFF7E8983);
+        }
+    }
+
+    private final class ChoiceButton<T> extends FlatButton {
+        private final String key;
+        private final T[] values;
+        private final Function<T, Component> names;
+        private final Consumer<T> change;
+        private final Function<T, Tooltip> help;
+        private int index;
+
+        ChoiceButton(String key, T initial, T[] values, Function<T, Component> names, Consumer<T> change, Function<T, Tooltip> help) {
+            super(label(key, names.apply(initial)), ignored -> { });
+            this.key = key;
+            this.values = values;
+            this.names = names;
+            this.change = change;
+            this.help = help;
+            index = java.util.Arrays.asList(values).indexOf(initial);
+            display = () -> names.apply(values[index]).copy().append("  >");
+            setTooltip(help.apply(initial));
+        }
+
+        private void cycle(int direction) {
+            index = Math.floorMod(index + direction, values.length);
+            T value = values[index];
+            setMessage(label(key, names.apply(value)));
+            setTooltip(help.apply(value));
+            change.accept(value);
+        }
+
+        //? if >=1.21.9 {
+        @Override public void onPress(InputWithModifiers input) { cycle(input.hasShiftDown() ? -1 : 1); }
+        //?} else {
+        /*@Override public void onPress() { cycle(Screen.hasShiftDown() ? -1 : 1); }
+        *///?}
+
+        @Override public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
+            if (!active || vertical == 0) return false;
+            cycle(vertical > 0 ? -1 : 1);
+            return true;
+        }
     }
 
     private static Component label(String key, Component value) { return Component.translatable("options.generic_value", text(key), value); }
@@ -378,12 +509,36 @@ public final class SettingsScreen extends Screen {
         error = text("save_error");
         saveFailed = true;
         close.setMessage(text("close_unsaved"));
+        close.setWidth(Math.min(140, panelWidth));
+        close.setX(panelLeft + panelWidth - close.getWidth());
         close.setTooltip(Tooltip.create(error));
         focusSaveError = true;
         return false;
     }
 
     @Override public void onClose() { if (saveFailed || save()) AfkCinematics.showScreen(parent); }
+
+    //? if >=1.21.9 {
+    @Override public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+    //?} else {
+    /*@Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    *///?}
+        var before = List.copyOf(navigation);
+        //? if >=1.21.9 {
+        boolean handled = super.mouseClicked(event, doubleClick);
+        //?} else {
+        /*boolean handled = super.mouseClicked(mouseX, mouseY, button);
+        *///?}
+        // Vanilla focuses the clicked instance after its callback; a rebuild has replaced it by then.
+        if (AfkCinematics.screen() == this && getFocused() != null && !children().contains(getFocused())) {
+            int index = before.indexOf(getFocused());
+            if (index >= 0 && index < navigation.size() && children().contains(navigation.get(index))) {
+                setFocused(navigation.get(index));
+                navigation.get(index).setFocused(true);
+            }
+        }
+        return handled;
+    }
 
     @Override public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
         if (maxOffset == 0 || vertical == 0) return super.mouseScrolled(x, y, horizontal, vertical);
@@ -415,27 +570,44 @@ public final class SettingsScreen extends Screen {
     }
 
     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        graphics.fill(panelLeft - 6, 26, panelLeft + panelWidth + 6, height - 29, 0xED171D21);
+        graphics.fill(contentLeft - 9, 32, contentLeft - 8, height - 36, 0xFF303B41);
+        for (int index = offset; index < Math.min(rows.size(), offset + visibleRows); index++) {
+            int rowY = 32 + (index - offset) * rowHeight;
+            graphics.fill(contentLeft, rowY + rowHeight - 1, contentLeft + contentWidth, rowY + rowHeight, 0xFF252E33);
+            for (var widget : rows.get(index)) {
+                Component label = labels.get(widget);
+                if (label == null || widget instanceof FlatButton flat && flat.fullLabel) continue;
+                int labelX = labelPositions.get(widget);
+                var lines = font.split(label, Math.max(20, widget.getX() - labelX - 8));
+                int count = Math.min(2, lines.size());
+                for (int i = 0; i < count; i++) graphics.drawString(font, lines.get(i), labelX,
+                    rowY + (rowHeight - count * 9) / 2 + i * 9, widget.active ? 0xFFDCE4E0 : 0xFF78857D);
+            }
+        }
         super.render(graphics, mouseX, mouseY, delta);
-        graphics.drawCenteredString(font, title, width / 2, 10, 0xFFFFFFFF);
-        // Text fields retain their label even while being edited.
-        numericLabels.forEach((input, label) -> {
-            if (children().contains(input)) graphics.drawString(font, label, input.getX() + 48, input.getY() + 6,
-                input.active ? 0xFFCCCCCC : 0xFF777777);
-        });
+        graphics.drawString(font, title, panelLeft, 12, 0xFFFFFFFF);
         Component status = error;
         if (!AfkCinematics.store().readable()) status = text("read_error");
         else if (!AfkCinematics.conflict().isEmpty()) status = text("conflict", AfkCinematics.conflict());
         else if (status.getString().isEmpty() && page == Page.MUSIC && AfkCinematics.config().music && AfkCinematics.config().soundtrack == CinematicConfig.Soundtrack.CUSTOM
             && !CinematicMusic.customAvailable(AfkCinematics.config().customMusic)) status = text("customMusic.missing");
-        else if (status.getString().isEmpty() && maxOffset > 0) status = text("scroll");
-        else if (status.getString().isEmpty() && page == Page.GENERAL) status = AfkCinematics.TOGGLE.isUnbound()
-            ? text("key.unbound") : text("key.start", AfkCinematics.TOGGLE.getTranslatedKeyMessage());
         if (!status.getString().isEmpty()) {
-            var lines = font.split(status, width - 24);
+            var lines = font.split(status, panelWidth);
             for (int i = 0; i < Math.min(2, lines.size()); i++) {
                 var line = lines.get(i);
-                graphics.drawString(font, line, (width - font.width(line)) / 2, height - 49 + i * 10, 0xFFCCCCCC);
+                graphics.drawString(font, line, panelLeft, height - 45 + i * 10, 0xFFE0B98E);
             }
         }
+        if (maxOffset > 0) {
+            int top = 45, space = Math.max(1, visibleRows * rowHeight - 26);
+            int thumb = Math.max(4, space * visibleRows / rows.size());
+            int y = top + (space - thumb) * offset / maxOffset;
+            graphics.fill(panelLeft + panelWidth - 3, top, panelLeft + panelWidth - 1, top + space, 0xFF303B41);
+            graphics.fill(panelLeft + panelWidth - 3, y, panelLeft + panelWidth - 1, y + thumb, 0xFF84A498);
+        }
+        if (page == Page.GENERAL && width >= 360) graphics.drawString(font,
+            AfkCinematics.TOGGLE.isUnbound() ? text("key.unbound") : text("key.start", AfkCinematics.TOGGLE.getTranslatedKeyMessage()),
+            panelLeft, height - 19, 0xFFAFBDB5);
     }
 }

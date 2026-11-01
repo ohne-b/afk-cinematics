@@ -135,12 +135,6 @@ public final class CameraGameTest implements FabricClientGameTest {
                 require(AfkCinematics.screen() == settings, "Key bindings did not return to cinematic settings");
                 require(((dev.ohneb.afkcinematics.mixin.KeyMappingAccess)AfkCinematics.TOGGLE).afkCinematics$key().equals(toggleKey),
                     "Opening key bindings changed the cinematic binding");
-                AfkCinematics.config().enabled = false;
-                settings.tick();
-                require(!setting(settings, "Start cinematic").active, "Disabled camera left Start available");
-                AfkCinematics.config().enabled = true;
-                settings.tick();
-                require(setting(settings, "Start cinematic").active, "Start did not recover when the camera became available");
                 AfkCinematics.showScreen(null);
                 AfkCinematics.config().automatic = true;
                 AfkCinematics.config().idleSeconds = 10;
