@@ -26,9 +26,8 @@ final class LegacyScreenshotProbe {
                     AfkCinematics.config().shots = EnumSet.of(Shot.Type.DRIFT);
                     binding.setKey(InputConstants.Type.KEYSYM.getOrCreate(InputConstants.KEY_F9));
                     KeyMapping.resetMapping();
-                    AfkCinematics.requestStart();
                 });
-                context.waitFor(client -> AfkCinematics.showing(), 240);
+                LegacyInputGameTest.start(context);
                 context.waitTicks(140);
                 var player = context.computeOnClient(client -> client.player.position());
                 context.runOnClient(client -> {

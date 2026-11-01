@@ -40,8 +40,7 @@ public final class LegacyInputGameTest implements FabricClientGameTest {
             });
             context.waitFor(client -> client.player.onGround() && client.player.getInventory().countItem(Items.EMERALD) == 32);
             context.waitTicks(20);
-            context.runOnClient(client -> AfkCinematics.requestStart());
-            context.waitFor(client -> AfkCinematics.showing(), 120);
+            start(context);
             context.runOnClient(client -> client.options.touchscreen().set(true));
             button(context, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS);
             button(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS);
@@ -52,9 +51,8 @@ public final class LegacyInputGameTest implements FabricClientGameTest {
                     "Touchscreen filtering lost the overlapping LEFT release");
                 require(!client.options.keyAttack.isDown() && !client.options.keyAttack.consumeClick(), "Touchscreen release left Attack active");
                 require(!client.options.keyUse.isDown(), "Touchscreen release left Use active");
-                AfkCinematics.requestStart();
             });
-            context.waitFor(client -> AfkCinematics.showing(), 120);
+            start(context);
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
                 require(player.getInventory().countItem(Items.EMERALD) == 32, "Mouse wake changed inventory");
@@ -69,6 +67,20 @@ public final class LegacyInputGameTest implements FabricClientGameTest {
                 focused = null;
             });
         }
+    }
+
+    static void start(ClientGameTestContext context) {
+        context.waitTicks(3);
+        context.runOnClient(client -> {
+            AfkCinematics.stop();
+            try {
+                var start = AfkCinematics.class.getDeclaredMethod("start", boolean.class);
+                start.setAccessible(true);
+                start.invoke(null, false);
+            } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+        });
+        context.waitFor(client -> AfkCinematics.showing(), 240);
+        context.runOnClient(client -> require(!AfkCinematics.manualControl(), "Legacy wake fixture started manual mode"));
     }
 
     private static void button(ClientGameTestContext context, int button, int action) {
