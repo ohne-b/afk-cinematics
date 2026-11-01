@@ -174,6 +174,29 @@ class ShotSequenceTest {
         assertTrue(accepted.size() >= 3, "Next shot reused a plan from a different starting pose");
     }
 
+    @Test void nextBeforeTheHandoffDiscardsTheOldPlanBeforeAnotherTickOrCaptureRelease() {
+        for (boolean capture : new boolean[]{false, true}) {
+            var accepted = new ArrayList<Shot>();
+            var session = session(geometry(accepted, new boolean[1]), Shot.Type.ARC);
+            long now = 0, started = -1;
+            while (accepted.size() < 2 && now < 20_000_000_000L) {
+                frame(session, now += 50_000_000L);
+                if (session.take() == 1 && started == -1) started = now;
+            }
+            assertEquals(2, accepted.size());
+            long handoff = started + Math.round(accepted.getFirst().duration() * 1e9);
+            while (now + 50_000_000L < handoff) assertNotNull(session.frame(now += 50_000_000L));
+            if (capture) session.beginCapture(now);
+            session.nextShot();
+            if (capture) session.endCapture(now += 2_000_000_000L);
+            assertNotNull(session.frame(now += 100_000_000L));
+            assertEquals(1, session.take(), "Next applied the old pending plan before the next tick");
+            for (int tick = 0; tick < 80; tick++) frame(session, now += 50_000_000L);
+            assertEquals(3, accepted.size(), "Next did not replace the discarded plan exactly once");
+            assertEquals(2, session.take(), "Next caused a second unintended cut");
+        }
+    }
+
     @Test void quickTakesCutAtTheirDeadlineWithoutIntermediateFrames() {
         var accepted = new ArrayList<Shot>();
         var config = new CinematicConfig();

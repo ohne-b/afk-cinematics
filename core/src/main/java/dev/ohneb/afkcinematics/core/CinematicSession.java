@@ -186,7 +186,12 @@ public final class CinematicSession {
     public boolean scenery() { return scene != null && scene.scenery(); }
     public boolean underwater() { return scene != null && scene.kind() == Scene.Kind.WATER; }
     public boolean settled() { return showing(); }
-    public void nextShot() { if (!ended && !manualAdvance) advanceRequested = true; }
+    public void nextShot() {
+        if (ended || manualAdvance) return;
+        advanceRequested = true;
+        // Rendering can reach the handoff before the next tick processes this request.
+        if (shot != null) pending = null;
+    }
 
     public void beginCapture(long now) {
         if (captures++ == 0) captureStarted = now;
