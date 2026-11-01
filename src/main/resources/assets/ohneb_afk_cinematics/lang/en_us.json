@@ -164,5 +164,6 @@
   "ohneb_afk_cinematics.playerShare.label": "Player shots",
   "ohneb_afk_cinematics.musicVolume.label": "Volume",
   "ohneb_afk_cinematics.scroll.up": "Scroll up",
-  "ohneb_afk_cinematics.scroll.down": "Scroll down"
+  "ohneb_afk_cinematics.scroll.down": "Scroll down",
+  "ohneb_afk_cinematics.shots.front_off": "Front travel shots are off in General. Your individual shot selection is kept."
 }

@@ -27,6 +27,13 @@ final class SmokeProbe {
             } else {
                 if (!(AfkCinematics.screen() instanceof SettingsScreen) || AfkCinematics.ownsCamera())
                     throw new AssertionError("Invalid settings or camera state");
+                //? if <=1.21.4 {
+                /*var result = Path.of(System.getProperty("afkcinematics.smoke.result"));
+                Files.createDirectories(result.getParent());
+                try (var image = net.minecraft.client.Screenshot.takeScreenshot(Minecraft.getInstance().getMainRenderTarget())) {
+                    image.writeTo(result.resolveSibling(result.getFileName() + "-settings.png"));
+                }
+                *///?}
                 checkChoices();
                 if (System.getProperty("afkcinematics.smoke.world") != null) SceneProbe.start();
                 else finish("Startup, mixin targets and settings render passed (" + loader + ").");

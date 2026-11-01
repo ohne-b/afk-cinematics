@@ -4,7 +4,7 @@ package dev.ohneb.afkcinematics.core;
 final class FollowMotion {
     private record Axis(double position, double velocity) { }
     private Vec position, velocity = new Vec(0, 0, 0), previous;
-    private double groundY, airborne;
+    private double groundY, airborne, previousHeight, verticalSpring = 7;
 
     FollowMotion(Vec start) { reset(start); }
 
@@ -12,14 +12,18 @@ final class FollowMotion {
         position = previous = start;
         velocity = new Vec(0, 0, 0);
         groundY = start.y();
+        previousHeight = start.y();
         airborne = 0;
+        verticalSpring = 7;
     }
 
     void hold(Vec next) {
         previous = next;
         velocity = new Vec(0, 0, 0);
         groundY = next.y();
+        previousHeight = next.y();
         airborne = 0;
+        verticalSpring = 7;
     }
 
     Vec follow(Vec next, double seconds, boolean walking, boolean grounded) {
@@ -32,11 +36,17 @@ final class FollowMotion {
         }
         Vec destination = new Vec(next.x(), groundY, next.z());
         Axis x = advance(position.x(), velocity.x(), previous.x(), destination.x(), 18, seconds);
-        Axis y = advance(position.y(), velocity.y(), previous.y(), destination.y(), walking ? 7 : 10, seconds);
+        double response = walking ? 7 : 10;
+        // Keep airborne tracking lag near 1.5 blocks even during a long fall; landings still ease in.
+        if (!walking || !grounded) response = Math.max(response, Math.min(120, Math.abs(next.y() - previousHeight) / seconds * 4 / 3));
+        // Retain the faster damping briefly after landing so existing downward velocity cannot overshoot.
+        verticalSpring = Math.max(response, verticalSpring * Math.exp(-seconds * 4));
+        Axis y = advance(position.y(), velocity.y(), previous.y(), destination.y(), verticalSpring, seconds);
         Axis z = advance(position.z(), velocity.z(), previous.z(), destination.z(), 18, seconds);
         position = new Vec(x.position(), y.position(), z.position());
         velocity = new Vec(x.velocity(), y.velocity(), z.velocity());
         previous = destination;
+        previousHeight = next.y();
         return position;
     }
 

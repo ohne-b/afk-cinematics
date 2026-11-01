@@ -59,6 +59,27 @@ class TravelTest {
         }
     }
 
+    @Test void fastFallsKeepThePlayerInFrameInsteadOfHoldingTheAimAboveThem() {
+        for (int fps : new int[]{15, 60, 144}) {
+            var moving = new MovingGeometry(OPEN, ZERO, 0);
+            moving.framing(Scene.Kind.FOLLOW, false);
+            moving.course(0);
+            var local = new Pose(new Vec(0, 2.275, -6.5), 0, 0);
+            for (int frame = 0; frame < fps * 8; frame++) {
+                double t = (double)frame / fps;
+                // Falling accelerates into sustained terminal-speed travel, rather than teleporting.
+                double fall = t < 2 ? 19.5 * t * t : 78 + (t - 2) * 78;
+                Vec rider = new Vec(0, -fall, t * 4);
+                assertTrue(moving.follow(rider, Math.round(t * 1e9), false, frame == 0));
+                Pose view = moving.apply(local, new Vec(0, .2, 1.25), 0, 1, false);
+                assertNotNull(view);
+                double subjectPitch = Pose.lookingAt(view.position(), rider).pitch();
+                assertTrue(Math.abs(subjectPitch - view.pitch()) < 25,
+                    "Falling player left the central frame at " + fps + " FPS, t=" + t);
+            }
+        }
+    }
+
     @Test void disablingFrontViewsCoversSelectionTurnsAndRecovery() {
         var config = new CinematicConfig();
         config.frontTravel = false;

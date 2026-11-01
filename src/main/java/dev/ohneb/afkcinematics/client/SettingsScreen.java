@@ -390,8 +390,9 @@ public final class SettingsScreen extends Screen {
     private void refreshShots(CinematicConfig config) {
         shotButtons.forEach((type, button) -> {
             boolean last = config.shots.contains(type) && config.shots.size() == 1;
-            button.active = !last && AfkCinematics.store().readable();
-            button.setTooltip(Tooltip.create(text(last ? "shots.last" : "shot." + type.name().toLowerCase(Locale.ROOT) + ".help")));
+            boolean front = type == Shot.Type.LEAD && !config.frontTravel;
+            button.active = !last && !front && AfkCinematics.store().readable();
+            button.setTooltip(Tooltip.create(text(front ? "shots.front_off" : last ? "shots.last" : "shot." + type.name().toLowerCase(Locale.ROOT) + ".help")));
         });
     }
 
@@ -424,7 +425,7 @@ public final class SettingsScreen extends Screen {
         *///?}
             int x = getX(), y = getY(), w = getWidth(), h = getHeight();
             boolean chosen = tab && !active || state != null && state.getAsBoolean();
-            int background = chosen ? 0xFF29493F : isHoveredOrFocused() && active ? 0xFF364148 : 0xFF252C31;
+            int background = chosen && (active || tab) ? 0xFF29493F : isHoveredOrFocused() && active ? 0xFF364148 : 0xFF252C31;
             if (!tab || chosen || isHoveredOrFocused()) graphics.fill(x, y, x + w, y + h, background);
             if (tab && chosen) graphics.fill(x, y + 3, x + 2, y + h - 3, 0xFF84D5BB);
             if (isFocused() && active) {
@@ -441,7 +442,7 @@ public final class SettingsScreen extends Screen {
             Component value = display.get();
             var clipped = font.substrByWidth(value, w - (w > 14 ? 8 : 0)).getString();
             graphics.drawString(font, clipped, tab ? x + 7 : x + (w - font.width(clipped)) / 2, y + (h - 8) / 2,
-                active || chosen ? 0xFFE4ECE8 : 0xFF7E8983);
+                active || tab && chosen ? 0xFFE4ECE8 : 0xFF7E8983);
         }
     }
 
@@ -569,7 +570,14 @@ public final class SettingsScreen extends Screen {
         *///?}
     }
 
-    @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    //? if <=1.21.5 {
+    /*@Override public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        super.renderBackground(graphics, mouseX, mouseY, delta);
+        drawPanel(graphics);
+    }
+    *///?}
+
+    private void drawPanel(GuiGraphics graphics) {
         graphics.fill(panelLeft - 6, 26, panelLeft + panelWidth + 6, height - 29, 0xED171D21);
         graphics.fill(contentLeft - 9, 32, contentLeft - 8, height - 36, 0xFF303B41);
         for (int index = offset; index < Math.min(rows.size(), offset + visibleRows); index++) {
@@ -585,6 +593,13 @@ public final class SettingsScreen extends Screen {
                     rowY + (rowHeight - count * 9) / 2 + i * 9, widget.active ? 0xFFDCE4E0 : 0xFF78857D);
             }
         }
+    }
+
+    @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        // Older Screen.render calls our background override before drawing its children.
+        //? if >1.21.5 {
+        drawPanel(graphics);
+        //?}
         super.render(graphics, mouseX, mouseY, delta);
         graphics.drawString(font, title, panelLeft, 12, 0xFFFFFFFF);
         Component status = error;

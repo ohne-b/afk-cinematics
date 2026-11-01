@@ -52,6 +52,12 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     press(settings, "Enabled: OFF");
                     press(settings, "Front travel shots: ON");
                     require(!fixture.config().frontTravel, "Front-view preference did not change");
+                    go(settings, "Shots");
+                    showShotSet(settings, Shot.Type.LEAD);
+                    require(!button(settings, Component.translatable("ohneb_afk_cinematics.shot.lead").getString() + ": ON").active,
+                        "The front-only shot remained available after turning off front views");
+                    go(settings, "General");
+                    press(settings, "Front travel shots: OFF");
                     press(settings, "Start when fishing: ON");
                     require(!fixture.config().autoFishing, "Fishing start setting did not change");
                     go(settings, "AFK");
