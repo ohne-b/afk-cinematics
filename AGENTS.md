@@ -43,8 +43,9 @@ then a fully opaque destination frame, and revalidate before revealing it. Keep 
 viewpoints within the player-centered range; never interpolate through terrain.
 Underwater takes require a fully submerged camera volume. Use each view's environment
 for planning and covered handoffs; water may be passable, lava and solid shapes are not.
-Prepare the next take without freezing the current shot. Revalidate at handoff and
-cover changes of viewpoint or direction. Manual Next discards the prepared plan.
+Prepare the next take without freezing the current shot. Nearby travel angles may blend
+along a validated path; cover disconnected viewpoints and direction resets. Revalidate
+at handoff. Manual Next discards the prepared plan.
 Screenshot holds pause the take's timing, not terrain validation. Release each hold
 only for its owning session; a finished capture must not resume a newer session.
 Wildlife belongs only to automatic scenery selection. Keep it occasional, check the

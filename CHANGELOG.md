@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Tighten travel views through sharp turns, blend nearby angles and keep moving shots flowing through fades. (#56)
 - Keep walking views wider beside walls, ease hill adjustments and soften forward jump pulses. (#55)
 - Remove white click-focus bars and place slider percentages beside their tracks. (#55)
 - Smooth F6 walking, jumps, hills and falls, with a switch to exclude front travel shots. (#54)

@@ -1,6 +1,7 @@
 package dev.ohneb.afkcinematics.client;
 
 import dev.ohneb.afkcinematics.core.CinematicConfig;
+import dev.ohneb.afkcinematics.core.CinematicSession;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.ohneb.afkcinematics.core.Shot;
@@ -363,6 +364,15 @@ public final class TravelGameTest implements FabricClientGameTest {
             key(context, InputConstants.KEY_W, InputConstants.RELEASE);
             context.runOnClient(client -> require(cameraOwner() == owner && client.player.position().distanceTo(walking) > .5,
                 "Manual view blocked walking or replaced its owner"));
+            var walkingSession = (CinematicSession) owner;
+            context.waitFor(client -> walkingSession.settled());
+            int walkingTake = context.computeOnClient(client -> walkingSession.take());
+            context.runOnClient(client -> AfkCinematics.nextShot());
+            context.waitFor(client -> {
+                require(cameraOwner() == owner && AfkCinematics.showing(), "Changing travel angles replaced the manual session");
+                require(AfkCinematics.fade() == 0, "Nearby clear walking angles used a black cut");
+                return walkingSession.take() > walkingTake;
+            }, 140);
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
                 //? if >=26.2 {
