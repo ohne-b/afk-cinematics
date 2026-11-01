@@ -45,7 +45,7 @@ public final class SettingsScreen extends Screen {
     private final EnumMap<Shot.Type, Button> shotButtons = new EnumMap<>(Shot.Type.class);
     private Page page = Page.GENERAL;
     private final EnumMap<Page, Integer> offsets = new EnumMap<>(Page.class);
-    private boolean focusPage;
+    private boolean focusPage, keyboardFocus;
     private ShotSet shotSet = ShotSet.SCENERY;
     private AbstractWidget shotSetControl;
     private int offset;
@@ -128,7 +128,7 @@ public final class SettingsScreen extends Screen {
                 widget.setX(columnX + columnWidth - controlWidth);
                 int controlHeight = fullLabel ? 24 : 18;
                 widget.setY(top + (index - offset) * rowHeight + (rowHeight - controlHeight) / 2);
-                widget.setWidth(controlWidth);
+                widget.setWidth(widget instanceof AbstractSliderButton ? controlWidth - font.width("100%") - 8 : controlWidth);
                 widget.setHeight(controlHeight);
                 widget.active &= AfkCinematics.store().readable();
                 labelPositions.put(widget, columnX);
@@ -331,10 +331,10 @@ public final class SettingsScreen extends Screen {
             @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
             //?}
                 int x = getX(), y = getY(), handle = x + (int)(value * (getWidth() - 8));
-                graphics.fill(x, y + 13, x + getWidth(), y + 15, 0xFF39434A);
-                graphics.fill(x, y + 13, handle + 4, y + 15, active ? 0xFF84D5BB : 0xFF66736D);
-                graphics.fill(handle, y + 11, handle + 8, y + 17, isHoveredOrFocused() ? 0xFFFFFFFF : 0xFFB5C4BE);
-                graphics.drawCenteredString(font, Component.literal(number() + "%"), x + getWidth() / 2, y, active ? 0xFFE6ECE9 : 0xFF7E8983);
+                graphics.fill(x, y + 8, x + getWidth(), y + 10, 0xFF39434A);
+                graphics.fill(x, y + 8, handle + 4, y + 10, active ? 0xFF84D5BB : 0xFF66736D);
+                graphics.fill(handle, y + 5, handle + 8, y + 13, isHovered() || isFocused() && keyboardFocus ? 0xFF84D5BB : 0xFFB5C4BE);
+                graphics.drawString(font, Component.literal(number() + "%"), x + getWidth() + 8, y + 5, active ? 0xFFE6ECE9 : 0xFF7E8983);
             }
             //? if >=1.21.9 {
             @Override public boolean keyPressed(KeyEvent event) {
@@ -425,13 +425,11 @@ public final class SettingsScreen extends Screen {
         *///?}
             int x = getX(), y = getY(), w = getWidth(), h = getHeight();
             boolean chosen = tab && !active || state != null && state.getAsBoolean();
-            int background = chosen && (active || tab) ? 0xFF29493F : isHoveredOrFocused() && active ? 0xFF364148 : 0xFF252C31;
-            if (!tab || chosen || isHoveredOrFocused()) graphics.fill(x, y, x + w, y + h, background);
+            boolean highlighted = isHovered() || isFocused() && keyboardFocus;
+            int background = chosen && (active || tab) ? 0xFF29493F : highlighted && active ? 0xFF364148 : 0xFF252C31;
+            if (!tab || chosen || highlighted) graphics.fill(x, y, x + w, y + h, background);
             if (tab && chosen) graphics.fill(x, y + 3, x + 2, y + h - 3, 0xFF84D5BB);
-            if (isFocused() && active) {
-                graphics.fill(x, y, x + w, y + 1, 0xFFE1EAE6);
-                graphics.fill(x, y + h - 1, x + w, y + h, 0xFFE1EAE6);
-            }
+            if (isFocused() && active && keyboardFocus) graphics.fill(x, y + 3, x + 2, y + h - 3, 0xFF84D5BB);
             if (fullLabel) {
                 var lines = font.split(getMessage(), w - 8);
                 int count = Math.min(2, lines.size());
@@ -524,6 +522,7 @@ public final class SettingsScreen extends Screen {
     //?} else {
     /*@Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
     *///?}
+        keyboardFocus = false;
         var before = List.copyOf(navigation);
         //? if >=1.21.9 {
         boolean handled = super.mouseClicked(event, doubleClick);
@@ -546,6 +545,7 @@ public final class SettingsScreen extends Screen {
     }
 
     @Override public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
+        keyboardFocus = false;
         if (maxOffset == 0 || vertical == 0) return super.mouseScrolled(x, y, horizontal, vertical);
         scroll(-(int)Math.signum(vertical));
         return true;
@@ -562,6 +562,7 @@ public final class SettingsScreen extends Screen {
     //?} else {
     /*@Override public boolean keyPressed(int key, int scan, int modifiers) {
     *///?}
+        keyboardFocus = true;
         if (maxOffset > 0 && (key == InputConstants.KEY_PAGEUP || key == InputConstants.KEY_PAGEDOWN)) {
             offset = Math.clamp(offset + (key == InputConstants.KEY_PAGEUP ? -visibleRows : visibleRows), 0, maxOffset);
             focusPage = true;
