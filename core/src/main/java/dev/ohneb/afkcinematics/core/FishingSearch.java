@@ -26,7 +26,7 @@ final class FishingSearch {
         firstSide = random.nextBoolean() ? 1 : -1;
         types = new ArrayList<>(config.shots);
         types.removeIf(type -> !type.fishingOnly());
-        if (types.isEmpty() && config.shots.contains(Shot.Type.STILL)) types.add(Shot.Type.STILL);
+        if (types.isEmpty()) types.add(Shot.Type.STILL);
         Collections.shuffle(types, random);
         types.sort(Comparator.comparingInt(history::lastUse));
     }

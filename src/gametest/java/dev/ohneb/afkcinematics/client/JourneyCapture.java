@@ -93,8 +93,6 @@ final class JourneyCapture {
                 context.waitTicks(60);
                 context.runOnClient(client -> {
                     var config = AfkCinematics.config();
-                    config.boats = config.flight = CinematicConfig.StartMode.MANUAL;
-                    config.travelControls = true;
                     config.cinematicFps = 60;
                     config.letterbox = true;
                     config.pace = CinematicConfig.Pace.SHORT;
@@ -113,7 +111,7 @@ final class JourneyCapture {
                     cameraStop = null;
                 });
                 key(context, InputConstants.KEY_W, InputConstants.PRESS);
-                start(context);
+            manual(context);
                 context.waitFor(client -> AfkCinematics.fade() == 0, 100);
                 org.slf4j.LoggerFactory.getLogger("JourneyCapture").info("Journey capture started: {}", label);
                 long started = System.nanoTime();

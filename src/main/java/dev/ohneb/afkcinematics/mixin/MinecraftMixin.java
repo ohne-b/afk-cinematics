@@ -29,7 +29,10 @@ public abstract class MinecraftMixin {
 
     @Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
     private void afkCinematics$attack(CallbackInfoReturnable<Boolean> cir) {
-        if (AfkCinematics.ownsCamera()) { AfkCinematics.stop(); cir.setReturnValue(false); }
+        if (AfkCinematics.ownsCamera() && !AfkCinematics.manualControl()) {
+            AfkCinematics.blockInput(((KeyMappingAccess)Minecraft.getInstance().options.keyAttack).afkCinematics$key());
+            cir.setReturnValue(false);
+        }
     }
 
     @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
@@ -42,7 +45,10 @@ public abstract class MinecraftMixin {
 
     @Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
     private void afkCinematics$hold(boolean down, CallbackInfo ci) {
-        if (down && AfkCinematics.ownsCamera()) { AfkCinematics.stop(); ci.cancel(); }
+        if (down && AfkCinematics.ownsCamera() && !AfkCinematics.manualControl()) {
+            AfkCinematics.blockInput(((KeyMappingAccess)Minecraft.getInstance().options.keyAttack).afkCinematics$key());
+            ci.cancel();
+        }
     }
 
     @Inject(method = "reloadResourcePacks", at = @At("HEAD"))

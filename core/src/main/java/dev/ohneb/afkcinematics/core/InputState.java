@@ -35,6 +35,7 @@ public final class InputState {
     public boolean consumed(long input) { return consumed.contains(input); }
 
     public boolean held() { return !held.isEmpty(); }
+    public boolean held(long input) { return held.contains(input); }
     public boolean heldExcept(long permitted) { return held.stream().anyMatch(input -> input != permitted); }
     public void suppress(long input) { suppressed.add(input); }
     public boolean suppressed(long input) { return suppressed.contains(input); }

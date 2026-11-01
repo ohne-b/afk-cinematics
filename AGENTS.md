@@ -16,13 +16,11 @@ Expose the transient F1 flag to mod HUDs only while rendering; restore it in `fi
 Keep suppression across world/player replacement and vanilla key-state restoration.
 Consumed cinematic controls retain suppression through screens until physical release.
 Chat may retain an existing session; screen-consumed keys cannot become gameplay on close.
-Only explicit manual look permission may relax ordinary view rotation wake.
-Activity start choices are independent of AFK auto-start.
-Only manually started travel views may retain steering. Follow the rendered subject
+Automatic sessions wake on gameplay input. Manual sessions retain real controls and
+adapt to movement, mounts, water and casts without replacing their owner. Follow the rendered subject
 without changing its pose; validate movement from the last applied world-camera position.
-Fishing views follow only the current player's live bobber. Permit genuine rod use
-only through vanilla's hand routing; never cast, retrieve or infer a catch automatically.
-Manual Elytra views may pass genuine rocket use through the same hand and input guards.
+Fishing views follow only the current player's live bobber. Preserve vanilla's hand
+and interaction routing; never cast, retrieve or infer a catch automatically.
 Track the effective mouse button after vanilla's platform-specific remapping.
 Inactive release events can be synthetic; they do not establish physical release.
 
@@ -35,7 +33,7 @@ disconnected recovery views require opaque origin and destination frames. Stop o
 invalid state or when no clear view remains. Every stop path uses the same cleanup.
 Apply the transient lens only to the world projection paired with that pose, before
 culling. Preserve the hand projection, panorama mode and the user's FOV option.
-Override the frame cap only for ordinary AFK views, not fishing or travel; preserve normal options and
+Override the frame cap only for automatically started AFK sessions; preserve normal options and
 minimized-window throttling. Do not simulate activity to avoid idle limits.
 Separate scenery viewpoints use covered cuts: render a fully opaque old frame,
 then a fully opaque destination frame, and revalidate before revealing it. Keep all
@@ -46,6 +44,8 @@ Prepare the next take without freezing the current shot. Revalidate at handoff a
 cover changes of viewpoint or direction. Manual Next discards the prepared plan.
 Screenshot holds pause the take's timing, not terrain validation. Release each hold
 only for its owning session; a finished capture must not resume a newer session.
+Wildlife belongs only to automatic scenery selection. Keep it occasional, check the
+live animal before handoff, and remember its species across intervening ordinary takes.
 Underwater audio follows the last applied camera, not a pending scene. Keep the
 player's real fluid state unchanged and reconcile its normal ambience after stopping.
 

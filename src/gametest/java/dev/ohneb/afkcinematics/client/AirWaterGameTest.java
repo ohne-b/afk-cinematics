@@ -142,6 +142,17 @@ public final class AirWaterGameTest implements FabricClientGameTest {
                 player.teleportTo(position.get().x, position.get().y, position.get().z);
             });
             context.waitFor(client -> client.player.isUnderWater() && waterTransitions == 2);
+            context.runOnClient(client -> { checkWaterAudio = false; AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL); });
+            manual(context);
+            Object owner = context.computeOnClient(client -> cameraOwner());
+            key(context, InputConstants.KEY_SPACE, InputConstants.PRESS);
+            context.waitFor(client -> !client.player.isUnderWater(), 180);
+            key(context, InputConstants.KEY_SPACE, InputConstants.RELEASE);
+            context.runOnClient(client -> require(cameraOwner() == owner && AfkCinematics.showing(), "Swimming to the surface replaced the manual session"));
+            key(context, InputConstants.KEY_LSHIFT, InputConstants.PRESS);
+            context.waitFor(client -> client.player.isUnderWater(), 100);
+            key(context, InputConstants.KEY_LSHIFT, InputConstants.RELEASE);
+            context.runOnClient(client -> require(cameraOwner() == owner && AfkCinematics.frameLimit() == 0, "Diving ended manual mode or applied the AFK cap"));
         } finally {
             context.runOnClient(client -> { AfkCinematics.stop(); focused = null; checkWaterAudio = false; waterLoop = null; waterAudioHistory = null; });
         }

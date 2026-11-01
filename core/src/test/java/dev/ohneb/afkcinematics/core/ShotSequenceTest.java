@@ -14,6 +14,40 @@ class ShotSequenceTest {
     private static final Scene SECOND = new Scene(new Vec(8, 10, 0), new Vec(8, 12, -8), Scene.Kind.LANDSCAPE, 7.9);
     private static final Scene THIRD = new Scene(new Vec(0, 10, 8), new Vec(0, 12, 0), Scene.Kind.LANDSCAPE, 7.8);
 
+    @Test void wildlifeStaysRareAndRemembersTheLastSpeciesBeyondRecentHistory() {
+        var config = new CinematicConfig();
+        config.subject = CinematicConfig.Subject.SCENERY;
+        var history = new ShotHistory();
+        var animal = new Scene(FIRST.focus(), FIRST.vantage(), Scene.Kind.WILDLIFE, 8,
+            new Scene.Animal(1, java.util.UUID.randomUUID(), "minecraft:fox"));
+        Shot shot = new Shot(Shot.Type.STILL, FIRST.vantage(), FIRST.vantage(), FIRST.vantage(), FIRST.focus(), FIRST.focus(), 10);
+        for (int i = 0; i < 3; i++) history.add(FIRST, shot);
+        assertTrue(history.wildlifeReady());
+        history.add(animal, shot);
+        for (int i = 0; i < 5; i++) { assertFalse(history.wildlifeReady()); history.add(FIRST, shot); }
+        assertTrue(history.wildlifeReady());
+        for (int i = 0; i < 12; i++) history.add(FIRST, shot);
+        assertEquals("minecraft:fox", history.lastSpecies());
+        int[] probes = {0};
+        var world = new Geometry() {
+            public boolean clear(Vec a, Vec b, double m) { return true; }
+            public boolean visible(Vec a, Vec b, double m) { return true; }
+            public Scene scenery(Vec a, Pose p, double b, int i) { return FIRST; }
+            public Scene wildlife(Vec a, double b, String excluded, int i) { probes[0]++; assertEquals("minecraft:fox", excluded); return null; }
+        };
+        int attempts = 200;
+        for (int i = 0; i < attempts; i++) {
+            var planner = new ShotPlanner(ANCHOR, ENTRY, ENTRY, 0, config, history, new Random(i * 31L));
+            for (int j = 0; j < 100 && !planner.exhausted(); j++) if (planner.next(world) != null) break;
+        }
+        assertTrue(probes[0] > 0 && probes[0] < attempts * 8 / 3, "Wildlife became a quota instead of an occasional option");
+        config.wildlife = false;
+        int before = probes[0];
+        var planner = new ShotPlanner(ANCHOR, ENTRY, ENTRY, 0, config, history, new Random(4));
+        for (int j = 0; j < 100 && !planner.exhausted(); j++) if (planner.next(world) != null) break;
+        assertEquals(before, probes[0]);
+    }
+
     @Test void successfulTakesUseEveryAvailableMoveBeforeRepeating() {
         var config = new CinematicConfig();
         config.subject = CinematicConfig.Subject.SCENERY;

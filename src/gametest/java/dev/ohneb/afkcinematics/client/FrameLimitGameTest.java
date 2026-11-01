@@ -56,6 +56,9 @@ public final class FrameLimitGameTest implements FabricClientGameTest {
                 AfkCinematics.showScreen(null);
                 require(client.getFramerateLimitTracker().getFramerateLimit() == 20, "Normal cap did not resume on exit");
             });
+            manual(context);
+            context.runOnClient(client -> require(AfkCinematics.frameLimit() == 0
+                && client.getFramerateLimitTracker().getFramerateLimit() == 20, "Stationary manual view inherited the AFK cap"));
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();

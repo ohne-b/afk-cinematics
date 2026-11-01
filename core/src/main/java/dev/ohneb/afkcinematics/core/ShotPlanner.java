@@ -27,6 +27,8 @@ final class ShotPlanner {
     private boolean cut, entering;
     private final TravelSearch travel;
     private final FishingSearch fishing;
+    private final boolean tryWildlife;
+    private int animalProbe;
 
     ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
                 ShotHistory history, Random random) {
@@ -43,28 +45,45 @@ final class ShotPlanner {
         this.config = config;
         this.history = history;
         this.random = random;
-        travel = activity.travel()
-            ? new TravelSearch(anchor, activity, config, history, random) : null;
+        travel = activity.travel() || activity == Scene.Kind.FISHING
+            ? new TravelSearch(anchor, activity == Scene.Kind.FISHING ? Scene.Kind.FOLLOW : activity, config, history, random) : null;
         fishing = activity == Scene.Kind.FISHING ? new FishingSearch(anchor, bobber, config, history, random) : null;
         triedPlayer = config.subject == CinematicConfig.Subject.SCENERY;
         triedScenery = config.subject == CinematicConfig.Subject.PLAYER;
         if (triedPlayer || triedScenery) sceneryFirst = triedPlayer;
         else sceneryFirst = history.sceneryFirst(config.playerShare, random);
+        tryWildlife = activity == Scene.Kind.PLAYER && config.wildlife && !triedScenery
+            && (config.subject == CinematicConfig.Subject.SCENERY || config.playerShare < 100)
+            && history.wildlifeReady() && random.nextDouble() < .15
+            && (config.shots.contains(Shot.Type.DRIFT) || config.shots.contains(Shot.Type.STILL));
     }
 
-    boolean exhausted() { return fishing != null ? fishing.exhausted() : travel != null ? travel.exhausted() : search == null && triedPlayer && triedScenery; }
+    boolean exhausted() { return travel != null ? (fishing == null || fishing.exhausted()) && travel.exhausted() : search == null && triedPlayer && triedScenery; }
 
     static double preparationSeconds(CinematicConfig config) {
         int player = config.subject == CinematicConfig.Subject.SCENERY ? 0 : ShotSearch.playerAttempts(config);
         int scenery = config.subject == CinematicConfig.Subject.PLAYER ? 0
             : Scene.PROBES + SCENERY_CANDIDATES * (SCENERY_ATTEMPTS + 1);
         // Two planning steps per tick, including a fallback after a rejected subject.
-        return Math.max(4, (player + scenery + 2) / 40.0 + 0.5);
+        return Math.max(4, (player + scenery + 10) / 40.0 + 0.5);
     }
 
     Plan next(Geometry geometry) {
-        if (fishing != null) return fishing.next(geometry);
+        if (fishing != null && !fishing.exhausted()) return fishing.next(geometry);
         if (travel != null) return travel.next(geometry);
+        if (tryWildlife && animalProbe < 8) {
+            Scene animal = geometry.wildlife(anchor, sceneryBearing, history.lastSpecies(), animalProbe++);
+            if (animal == null || !animal.near(anchor) || !geometry.available(animal)) return null;
+            Vec start = animal.vantage();
+            Vec offset = start.subtract(animal.focus());
+            boolean still = config.motion == CinematicConfig.Motion.STILL || !config.shots.contains(Shot.Type.DRIFT);
+            double drift = config.motion == CinematicConfig.Motion.REDUCED ? .25 : .8;
+            Vec end = still ? start : start.add(new Vec(-offset.z(), 0, offset.x()).scale(drift / Math.max(1, offset.length())));
+            Shot shot = new Shot(still ? Shot.Type.STILL : Shot.Type.DRIFT, start, start.lerp(end, .5), end,
+                animal.focus(), animal.focus(), 10);
+            return Scene.inRange(end, anchor) && geometry.forScene(animal).valid(shot, start)
+                ? new Plan(shot, animal, true, true) : null;
+        }
         if (search == null) {
             if (!triedPlayer && (!sceneryFirst || triedScenery)) {
                 triedPlayer = true;

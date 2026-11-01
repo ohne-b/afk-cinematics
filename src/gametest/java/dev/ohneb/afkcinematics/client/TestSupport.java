@@ -44,7 +44,6 @@ public final class TestSupport {
             var config = AfkCinematics.config();
             config.enabled = true;
             config.automatic = false;
-            config.boats = config.minecarts = config.flight = config.fishing = CinematicConfig.StartMode.MANUAL;
             config.unfocused = true;
             config.music = false;
             config.motion = CinematicConfig.Motion.GENTLE;
@@ -63,9 +62,30 @@ public final class TestSupport {
 
     public static void start(ClientGameTestContext context) {
         context.waitTicks(3);
-        context.runOnClient(client -> AfkCinematics.requestStart());
+        context.runOnClient(client -> {
+            AfkCinematics.stop();
+            try {
+                var start = AfkCinematics.class.getDeclaredMethod("start", boolean.class);
+                start.setAccessible(true);
+                start.invoke(null, false);
+            } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
+        });
         // Mixed mode may exhaust every player angle before finding its scenery fallback.
         context.waitFor(client -> AfkCinematics.showing(), 240);
+    }
+
+    public static void manual(ClientGameTestContext context) {
+        context.waitTicks(3);
+        context.runOnClient(client -> AfkCinematics.requestStart());
+        context.waitFor(client -> AfkCinematics.showing(), 240);
+    }
+
+    public static Object cameraOwner() {
+        try {
+            var field = AfkCinematics.class.getDeclaredField("session");
+            field.setAccessible(true);
+            return field.get(null);
+        } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
     }
 
     public static void key(ClientGameTestContext context, int key, int action) {

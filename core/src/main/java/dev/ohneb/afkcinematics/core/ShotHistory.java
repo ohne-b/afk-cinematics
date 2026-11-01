@@ -8,13 +8,22 @@ import java.util.Random;
 final class ShotHistory {
     private record Take(Scene scene, Shot shot, Pose view) { }
     private final List<Take> takes = new ArrayList<>();
+    private int total, lastAnimal = -2;
+    private String lastSpecies = "";
 
     void add(Scene scene, Shot shot) {
+        total++;
+        if (scene.animal() != null) {
+            lastAnimal = total;
+            lastSpecies = scene.animal().species();
+        }
         takes.add(new Take(scene, shot, shot.sample(0)));
         if (takes.size() > 12) takes.removeFirst();
     }
 
     boolean empty() { return takes.isEmpty(); }
+    boolean wildlifeReady() { return total >= 3 && total - lastAnimal >= 5; }
+    String lastSpecies() { return lastSpecies; }
     Shot.Type lastType() { return empty() ? null : takes.getLast().shot().type(); }
 
     boolean sceneryFirst(int playerShare, Random random) {

@@ -24,7 +24,7 @@ final class TravelSearch {
         firstSide = random.nextBoolean() ? 1 : -1;
         types = new ArrayList<>(config.shots);
         types.removeIf(type -> !type.travelOnly());
-        if (types.isEmpty() && config.shots.contains(Shot.Type.STILL)) types.add(Shot.Type.STILL);
+        if (types.isEmpty()) types.add(Shot.Type.STILL);
         Collections.shuffle(types, random);
         types.sort(Comparator.comparingInt(history::lastUse));
     }
@@ -37,6 +37,7 @@ final class TravelSearch {
         Shot.Type type = types.get(index % types.size());
         int view = index / types.size();
         boolean flying = kind == Scene.Kind.FLIGHT;
+        boolean close = kind == Scene.Kind.FOLLOW || kind == Scene.Kind.SWIM;
         double side = (view % 2 == 0 ? 1 : -1) * firstSide;
         double scale = switch (view / 2) { case 0 -> 1; case 1 -> 0.75; default -> 0.5; };
         double distance = switch (type) {
@@ -45,14 +46,14 @@ final class TravelSearch {
             case BROADSIDE -> flying ? 20 : 14;
             case WIDE_TRACK -> flying ? 23 : 19;
             default -> flying ? 15 : 10;
-        } * scale;
+        } * scale * (close ? .65 : 1);
         double height = switch (type) {
             case LOW_ESCORT -> flying ? -.4 : .5;
             case HIGH_TRAIL -> flying ? 11 : 8;
             case BROADSIDE -> flying ? 2 : 1;
             case WIDE_TRACK -> flying ? 11 : 7;
             default -> flying ? 3 : 1.5;
-        } * scale;
+        } * scale * (kind == Scene.Kind.SWIM ? .2 : close ? .65 : 1);
         double angle = switch (type) {
             case TRAIL -> 20 * side;
             case HIGH_TRAIL -> 15 * side;
@@ -77,7 +78,7 @@ final class TravelSearch {
             default -> 2.5;
         };
         // The close tunnel view follows the rider, not a look-ahead point beyond the next corner.
-        Vec focus = centeredCart ? subject : subject.add(new Vec(0, .2, lead * scale));
+        Vec focus = centeredCart ? subject : subject.add(new Vec(0, .2, lead * scale * (close ? .5 : 1)));
         double duration = config.pace.minimumSeconds + random.nextDouble() * (config.pace.maximumSeconds - config.pace.minimumSeconds);
         Shot shot = new Shot(type, start, start, start, focus, focus, duration);
         Scene scene = new Scene(subject, start, kind, 0);

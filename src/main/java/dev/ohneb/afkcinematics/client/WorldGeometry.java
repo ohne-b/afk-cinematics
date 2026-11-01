@@ -21,6 +21,7 @@ public final class WorldGeometry implements Geometry {
     private final ClientLevel level;
     private final Medium medium;
     private final WorldGeometry[] views;
+    private java.util.List<net.minecraft.world.entity.Mob> animals = java.util.List.of();
 
     public WorldGeometry(ClientLevel level) { this(level, false); }
 
@@ -45,6 +46,37 @@ public final class WorldGeometry implements Geometry {
 
     @Override public Scene scenery(Vec anchor, Pose original, double bearing, int probe) {
         return WorldScenery.probe(level, this, anchor, original, bearing, probe);
+    }
+
+    @Override public Scene wildlife(Vec anchor, double bearing, String lastSpecies, int probe) {
+        if (probe == 0) animals = level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
+            new AABB(vector(anchor), vector(anchor)).inflate(18, 8, 18), entity -> {
+                var category = entity.getType().getCategory();
+                return (category == net.minecraft.world.entity.MobCategory.CREATURE
+                    || category == net.minecraft.world.entity.MobCategory.AMBIENT)
+                    && entity.isAlive() && !entity.isInvisible() && !entity.isPassenger() && !entity.hasCustomName()
+                    && entity.getTarget() == null && !entity.isInWater() && entity.getDeltaMovement().lengthSqr() < .025
+                    && !net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString().equals(lastSpecies);
+            }).stream().limit(8).toList();
+        if (animals.isEmpty()) return null;
+        var animal = animals.get(probe % animals.size());
+        Vec focus = point(animal.position().add(0, animal.getBbHeight() * .55, 0));
+        double angle = Math.toRadians(bearing + probe * 137.5);
+        double radius = Math.clamp(animal.getBbWidth() * 5, 5, 9);
+        Vec camera = focus.add(new Vec(Math.sin(angle) * radius, .7, Math.cos(angle) * radius));
+        double quality = WorldScenery.quality(level, camera, focus, false, false);
+        if (quality <= 0 || !clear(camera, camera) || !visible(camera, focus, .15)) return null;
+        return new Scene(focus, camera, Scene.Kind.WILDLIFE, quality,
+            new Scene.Animal(animal.getId(), animal.getUUID(), net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(animal.getType()).toString()));
+    }
+
+    @Override public boolean available(Scene scene) {
+        if (scene == null || scene.animal() == null) return true;
+        var animal = level.getEntity(scene.animal().id());
+        if (animal == null || !animal.getUUID().equals(scene.animal().uuid()) || !animal.isAlive() || animal.isInvisible()) return false;
+        var block = animal.blockPosition();
+        return level.getChunkSource().hasChunk(block.getX() >> 4, block.getZ() >> 4)
+            && point(animal.position().add(0, animal.getBbHeight() * .55, 0)).distance(scene.focus()) < 2.5;
     }
 
     @Override public double viewQuality(Pose view) {

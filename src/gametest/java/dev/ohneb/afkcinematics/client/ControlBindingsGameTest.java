@@ -245,7 +245,6 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
                 hide(client, false);
             });
             context.runOnClient(client -> {
-                AfkCinematics.config().manualLook = true;
                 AfkCinematics.requestStart();
                 AfkCinematics.mouseMoved(2, 1);
             });
@@ -257,9 +256,9 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
             context.waitTicks(3);
             context.runOnClient(client -> {
                 require(AfkCinematics.showing(), "Manual look permission did not survive tick-based rotation checks");
-                AfkCinematics.config().manualLook = false;
                 AfkCinematics.mouseMoved(2, 1);
-                require(!AfkCinematics.ownsCamera(), "Disabled manual look retained the camera");
+                require(AfkCinematics.showing(), "Manual look ended the camera");
+                AfkCinematics.stop();
             });
             start(context);
             context.runOnClient(client -> {
@@ -284,7 +283,6 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
                 heldKey = -1;
                 AfkCinematics.stop();
                 AfkCinematics.showScreen(null);
-                AfkCinematics.config().manualLook = false;
                 client.options.keyChat.setKey(oldChat);
                 client.options.keyUse.setKey(oldUse);
                 client.options.keyCommand.setKey(oldCommand);

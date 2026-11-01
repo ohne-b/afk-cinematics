@@ -123,7 +123,6 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                         } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
                     }
                     AfkCinematics.config().subject = CinematicConfig.Subject.SCENERY;
-                    AfkCinematics.config().fishing = dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.MANUAL;
                     String selectedShots = System.getProperty("afkcinematics.test.shots");
                     if (selectedShots != null) {
                         var choices = java.util.EnumSet.noneOf(Shot.Type.class);
@@ -142,7 +141,6 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                     sceneryFrames.add("nanoseconds,x,y,z,opacity,scenery,shot,type,yaw,pitch");
                 });
                 if (fishing) {
-                    context.runOnClient(client -> AfkCinematics.config().fishing = CinematicConfig.StartMode.AUTOMATIC);
                     mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS);
                     context.waitTicks(1);
                     mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.RELEASE);
@@ -151,6 +149,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                         client.player.fishing == null ? "none" : client.player.fishing.position(),
                         FishingActivity.hook(client.player, client.level) != null));
                     context.waitFor(client -> FishingActivity.hook(client.player, client.level) != null, 60);
+                    manual(context);
                 } else start(context);
                 context.waitFor(client -> AfkCinematics.showing() && (fishing || AfkCinematics.scenery()) && AfkCinematics.fade() == 0, 200);
                 int duration = Math.clamp(Integer.getInteger("afkcinematics.test.naturalSeconds", 40), 40, 3600);
