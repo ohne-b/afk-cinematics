@@ -15,8 +15,8 @@ public final class MovingGeometry implements Geometry {
     private long updated;
     private double heading, desiredHeading, turnVelocity;
     private boolean followsCourse, reframeRequested;
-    private double elapsed, extension = 1, reveal = 1, terrainLift;
-    private Vec previousTarget;
+    private double elapsed, extension = 1, reveal = 1;
+    private Vec previousTarget, previousOrigin;
     private Recovery recovery = Recovery.NONE;
     private boolean recoveryCovered;
 
@@ -110,34 +110,16 @@ public final class MovingGeometry implements Geometry {
 
     /** Travel framing may shorten, but every revealed position still has a clear rider sightline. */
     private Pose travel(Vec desired, Vec focus, double fade, int take, boolean cut) {
-        if (activity == Scene.Kind.FOLLOW || activity == Scene.Kind.RIDE) {
-            double needed = 0;
-            if (!usable(desired, .3)) {
-                // Follow a descending hillside from above instead of repeatedly pulling into the rider.
-                double below = 0;
-                for (double height : new double[]{.5, 1, 2, 3, 4, 6}) {
-                    if (!usable(desired.add(new Vec(0, height, 0)), .3)) { below = height; continue; }
-                    double above = height;
-                    for (int i = 0; i < 6; i++) {
-                        double middle = (below + above) * .5;
-                        if (usable(desired.add(new Vec(0, middle, 0)), .3)) above = middle;
-                        else below = middle;
-                    }
-                    needed = above + .15;
-                    break;
-                }
-            }
-            terrainLift = Math.max(needed, terrainLift - elapsed * .65);
-            desired = desired.add(new Vec(0, terrainLift, 0));
-        } else terrainLift = 0;
+        boolean walking = walking();
+        if (walking) desired = walkingView(desired, cut);
         Vec offset = desired.subtract(target);
         double distance = offset.length();
         Vec point = null;
         if (distance > .001) {
             Vec direction = offset.scale(1 / distance);
             // Only obstruction shortens the boom; jumping must not change its intended length.
-            double maximum = distance * (cut ? 1 : Math.min(1, extension + elapsed * 2 / Math.max(.8, distance)));
-            point = nearby(direction, maximum, .3);
+            double maximum = distance * (cut || walking ? 1 : Math.min(1, extension + elapsed * 2 / Math.max(.8, distance)));
+            point = nearby(direction, maximum, walking ? .15 : .3);
             // A rider beside a corner can be inside the padding while the real sightline is clear.
             if (point == null) point = nearby(direction, maximum, 0);
         }
@@ -152,10 +134,19 @@ public final class MovingGeometry implements Geometry {
         }
         if (recovery == Recovery.DESTINATION) { recovery = Recovery.NONE; reveal = 0; recoveryCovered = false; }
         if (!destination && !cut && previous != null) {
-            double movement = previousTarget == null ? 0 : target.distance(previousTarget);
-            double limit = Math.max(.001, movement * 1.5 + elapsed * 12);
+            Vec carried = previousOrigin == null ? from : from.add(origin.subtract(previousOrigin));
+            double movement = walking ? carried.distance(from) : previousTarget == null ? 0 : target.distance(previousTarget);
+            double limit = Math.max(.001, movement * (walking ? 1 : 1.5) + elapsed * (walking ? 6 : 12));
             double travel = from.distance(point);
             Vec step = travel > limit ? from.lerp(point, limit / travel) : point;
+            if (walking) {
+                // Ease composition changes relative to the filtered rig, not the player's jump arc.
+                double blend = 1 - Math.exp(-elapsed * 8);
+                double widening = point.distance(origin) - carried.distance(origin);
+                if (widening > 0) blend = Math.min(blend, elapsed * 2 / widening);
+                Vec eased = carried.lerp(point, blend);
+                if (usable(eased, 0) && world.clear(from, eased)) step = eased;
+            }
             if (usable(step, 0) && world.clear(from, step)) point = step;
             else {
                 // Do not jump through a trunk. Cover the old view, then recheck a close destination.
@@ -172,11 +163,61 @@ public final class MovingGeometry implements Geometry {
         previous = result;
         previousFocus = aim;
         previousTarget = target;
+        previousOrigin = origin;
         previousFade = fade;
         previousTake = take;
         if (destination) { recovery = Recovery.DESTINATION; recoveryCovered = false; }
         else if (recovery == Recovery.NONE) reveal = Math.min(1, reveal + elapsed / .3);
         return result;
+    }
+
+    private boolean walking() { return activity == Scene.Kind.FOLLOW || activity == Scene.Kind.RIDE; }
+
+    private Vec walkingView(Vec desired, boolean cut) {
+        Vec carried = previous == null || previousOrigin == null || cut ? desired : previous.position().add(origin.subtract(previousOrigin));
+        Vec ahead = previousOrigin == null || elapsed <= 0 ? new Vec(0, 0, 0) : origin.subtract(previousOrigin).scale(.3 / elapsed);
+        ahead = new Vec(ahead.x(), 0, ahead.z());
+        if (ahead.length() > 1.5) ahead = ahead.scale(1.5 / ahead.length());
+        if (usable(desired, .3) && bodyVisible(desired) && world.clear(desired, desired.add(ahead), .3)
+            && (previous == null || cut || world.clear(previous.position(), desired))) return desired;
+
+        Vec best = null;
+        double bestScore = Double.POSITIVE_INFINITY;
+        // Keep an established roomy view when a wall or stair edge makes nearby choices alternate.
+        if (carried.distance(target) >= Math.min(3.5, desired.distance(target) * .7)) {
+            bestScore = walkingScore(carried, desired, carried, ahead, cut, bestScore);
+            if (Double.isFinite(bestScore)) best = carried;
+        }
+        Vec offset = desired.subtract(origin);
+        double radius = Math.hypot(offset.x(), offset.z());
+        Vec[] arms = {offset, rotate(offset, -20), rotate(offset, 20), rotate(offset, -40), rotate(offset, 40),
+            rotate(new Vec(0, offset.y(), -radius), desiredHeading)};
+        for (double lift : new double[]{0, .75, 1.5, 3, 4.5, 6}) {
+            for (Vec arm : arms) {
+                Vec candidate = origin.add(arm).add(new Vec(0, lift, 0));
+                double score = walkingScore(candidate, desired, carried, ahead, cut, bestScore);
+                if (score < bestScore) { best = candidate; bestScore = score; }
+            }
+        }
+        return best == null ? desired : best;
+    }
+
+    private double walkingScore(Vec point, Vec desired, Vec carried, Vec ahead, boolean cut, double bestScore) {
+        double deviation = point.distance(desired), change = point.distance(carried);
+        double score = deviation * deviation + change * change * .5;
+        if (score >= bestScore || !usable(point, .15)) return Double.POSITIVE_INFINITY;
+        if (!bodyVisible(point)) score += 64;
+        if (score >= bestScore) return Double.POSITIVE_INFINITY;
+        // Look a short distance ahead so the rig starts lifting or moving sideways before impact.
+        if (!world.clear(point, point.add(ahead), .15)) score += 64;
+        if (score >= bestScore) return Double.POSITIVE_INFINITY;
+        if (previous != null && !cut && !world.clear(previous.position(), point)) score += 256;
+        return score;
+    }
+
+    private boolean bodyVisible(Vec point) {
+        // Prefer room for the lower body too, so descending one step does not suddenly hide the rider.
+        return world.visible(point, new Vec(target.x(), Math.min(target.y(), origin.y()) - .65, target.z()));
     }
 
     private Vec nearby(Vec direction, double maximum, double margin) {
@@ -212,7 +253,7 @@ public final class MovingGeometry implements Geometry {
             Vec offset = point.subtract(target);
             if (-Math.sin(radians) * offset.x() + Math.cos(radians) * offset.z() > .05) return false;
         }
-        return Scene.inRange(point, target) && world.clear(point, point, margin) && world.visible(point, target, margin);
+        return Scene.inRange(point, target) && world.clear(point, point, margin) && world.visible(point, target, walking() ? 0 : margin);
     }
 
     private Pose coveredOrigin() {
