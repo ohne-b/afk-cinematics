@@ -130,17 +130,20 @@ class CameraTest {
         assertEquals(shot.sample(0), shot.sample(shot.duration()));
     }
 
-    @Test void widerEntryKeepsASmoothTravelSpeedAtTwentyFramesPerSecond() {
+    @Test void widerEntryCutsOnceAndKeepsStillShotsStationary() {
         var config = playerConfig();
         config.shots = EnumSet.of(Shot.Type.STILL);
         for (int seed = 0; seed < 16; seed++) {
             var session = new CinematicSession(SUBJECT, ENTRY, 0, config, OPEN, new Random(seed));
             session.tick(0);
-            Pose previous = ENTRY;
+            Pose previous = session.frame(0);
+            assertNotEquals(ENTRY, previous);
+            assertEquals(1, session.take());
             for (int frame = 0; frame <= 140; frame++) {
                 Pose next = session.frame(frame * 50_000_000L);
                 assertNotNull(next);
-                assertTrue(previous.position().distance(next.position()) < 0.3, "Wide entry moved too abruptly");
+                assertEquals(0, previous.position().distance(next.position()), 1e-10, "A still take drifted after its entry cut");
+                assertEquals(previous.yaw(), next.yaw(), 1e-10);
                 previous = next;
             }
             assertTrue(session.settled());
@@ -155,7 +158,6 @@ class CameraTest {
                 long now = tick * 50_000_000L;
                 session.tick(now);
                 Pose pose = session.frame(now);
-                session.coveredFrame();
                 assertNotNull(pose);
                 Vec offset = pose.position().subtract(SUBJECT);
                 assertTrue(Math.hypot(offset.x(), offset.z()) <= 14.000001, "Successive shots drifted beyond fourteen blocks");

@@ -31,11 +31,6 @@ public record Shot(Type type, Vec start, Vec control, Vec end, Vec focusStart, V
     public Vec focus(double seconds) { return focusStart.lerp(focusEnd, progress(seconds)); }
 
     private double progress(double seconds) {
-        seconds = Math.clamp(seconds, 0, duration);
-        double ramp = Math.min(2, duration * 0.2);
-        if (seconds > duration - ramp) return 1 - progress(duration - seconds);
-        if (seconds < ramp)
-            return (seconds - ramp / Math.PI * Math.sin(Math.PI * seconds / ramp)) / (2 * (duration - ramp));
-        return (seconds - ramp * 0.5) / (duration - ramp);
+        return Math.clamp(seconds / duration, 0, 1);
     }
 }

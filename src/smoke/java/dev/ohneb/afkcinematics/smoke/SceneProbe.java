@@ -147,7 +147,7 @@ final class SceneProbe {
             startAfk();
             stage = 5;
             ticks = 0;
-        } else if (stage == 5 && AfkCinematics.scenery() && AfkCinematics.fade() == 0) {
+        } else if (stage == 5 && AfkCinematics.scenery()) {
             stage = 6;
         } else if (stage == 6 && ++ticks >= 120) {
             checkView(true);
@@ -177,7 +177,7 @@ final class SceneProbe {
         //?} else {
         /*var point = WorldGeometry.point(camera.getPosition());
         *///?}
-        if (!AfkCinematics.showing() || AfkCinematics.scenery() != scenery || AfkCinematics.fade() != 0
+        if (!AfkCinematics.showing() || AfkCinematics.scenery() != scenery
             || client.player.position().distanceToSqr(position) > 0.0001
             || client.player.getYRot() != yaw || client.player.getXRot() != pitch)
             throw new AssertionError("Cinematic did not preserve the player pose");

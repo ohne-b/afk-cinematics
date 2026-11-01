@@ -55,24 +55,23 @@ public final class SceneryGameTest implements FabricClientGameTest {
                 AfkCinematics.config().hideHud = false;
                 hide(client, true);
             });
-            for (boolean destination : new boolean[]{false, true}) {
-                context.runOnClient(client -> holdCoveredScenery = destination);
-                start(context);
-                context.waitFor(client -> AfkCinematics.fade() == 1 && AfkCinematics.scenery() == destination, 160);
-                var capture = context.takeScreenshot(TestScreenshotOptions.of(destination ? "scenery-covered-destination" : "scenery-covered-origin")
-                    .withDestinationDir(artifacts));
-                assertBlack(capture);
-                context.runOnClient(client -> { AfkCinematics.stop(); holdCoveredScenery = null; });
-            }
+            context.runOnClient(client -> AfkCinematics.config().letterbox = true);
+            start(context);
+            context.waitFor(client -> AfkCinematics.scenery(), 160);
+            context.waitTicks(14);
+            var capture = context.takeScreenshot(TestScreenshotOptions.of("scenery-direct-cut-f1")
+                .withDestinationDir(artifacts));
+            assertLetterbox(capture);
+            context.runOnClient(client -> AfkCinematics.stop());
             context.runOnClient(client -> {
                 hide(client, false);
                 AfkCinematics.config().hideHud = true;
                 AfkCinematics.config().letterbox = true;
                 sceneryFrames = new ArrayList<>();
-                sceneryFrames.add("nanoseconds,x,y,z,opacity,scenery,shot,type,yaw,pitch");
+                sceneryFrames.add("nanoseconds,x,y,z,cut,scenery,shot,type,yaw,pitch");
             });
             start(context);
-            context.waitFor(client -> AfkCinematics.scenery() && AfkCinematics.fade() == 0, 160);
+            context.waitFor(client -> AfkCinematics.scenery(), 160);
             checkScene(context, initial, origin.get(), true);
             context.takeScreenshot(TestScreenshotOptions.of("scenery-from-small-cave").withDestinationDir(artifacts));
             context.waitTicks(120);
@@ -97,7 +96,7 @@ public final class SceneryGameTest implements FabricClientGameTest {
                 } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
             });
             start(context);
-            context.waitFor(client -> AfkCinematics.scenery() && AfkCinematics.fade() == 0, 160);
+            context.waitFor(client -> AfkCinematics.scenery(), 160);
             checkScene(context, initial, origin.get(), false);
             context.takeScreenshot(TestScreenshotOptions.of("scenery-underground-cavern").withDestinationDir(artifacts));
             context.waitTicks(80);
@@ -118,7 +117,6 @@ public final class SceneryGameTest implements FabricClientGameTest {
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
-                holdCoveredScenery = null;
                 sceneryFrames = null;
                 hide(client, hidden);
                 focused = null;
@@ -129,7 +127,7 @@ public final class SceneryGameTest implements FabricClientGameTest {
     private static void checkScene(ClientGameTestContext context, Pose initial, BlockPos origin, boolean surface) {
         context.runOnClient(client -> {
             var point = WorldGeometry.point(camera(client).position());
-            require(AfkCinematics.scenery() && AfkCinematics.fade() == 0, "Scenery view stopped before inspection");
+            require(AfkCinematics.scenery(), "Scenery view stopped before inspection");
             require(Scene.inRange(point, initial.position()), "Scenery escaped the player-centered range");
             require(new WorldGeometry(client.level, AfkCinematics.underwater()).clear(point, point), "Scenery camera clipped terrain");
             require(surface ? point.y() > origin.getY() + 10 : point.y() < origin.getY() + 9,
@@ -182,12 +180,17 @@ public final class SceneryGameTest implements FabricClientGameTest {
         require(items.isEmpty(), stage + " created items: " + items.stream().map(entity -> entity.getItem().toString()).toList());
     }
 
-    private static void assertBlack(Path path) {
+    private static void assertLetterbox(Path path) {
         try {
             var image = ImageIO.read(path.toFile());
-            for (int x = image.getWidth() / 4; x < image.getWidth() * 3 / 4; x += 8)
+            int visible = 0;
+            for (int x = image.getWidth() / 4; x < image.getWidth() * 3 / 4; x += 8) {
+                require((image.getRGB(x, 2) & 0xffffff) == 0, "Animated letterbox missing with F1 enabled");
+                require((image.getRGB(x, image.getHeight() - 3) & 0xffffff) == 0, "Bottom letterbox missing");
                 for (int y = image.getHeight() / 4; y < image.getHeight() * 3 / 4; y += 8)
-                    require((image.getRGB(x, y) & 0xffffff) == 0, "Covered transition exposed the world with F1 enabled");
+                    if ((image.getRGB(x, y) & 0xffffff) != 0) visible++;
+            }
+            require(visible > 100, "Direct cut left the world covered in black");
         } catch (Exception exception) { throw new AssertionError(exception); }
     }
 

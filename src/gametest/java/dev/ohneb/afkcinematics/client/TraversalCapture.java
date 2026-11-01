@@ -69,7 +69,7 @@ final class TraversalCapture {
                     revealedShot = null;
                 });
                 manual(context);
-                context.waitFor(client -> AfkCinematics.fade() == 0, 100);
+                context.waitFor(client -> AfkCinematics.showing(), 100);
                 key(context, InputConstants.KEY_W, InputConstants.PRESS);
                 boolean jumping = false;
                 long started = System.nanoTime();
@@ -88,7 +88,7 @@ final class TraversalCapture {
                         var point = camera.position();
                         var subject = client.player.position();
                         rows.add(System.nanoTime() + "," + point.x + "," + point.y + "," + point.z
-                            + "," + camera.yRot() + "," + camera.xRot() + "," + AfkCinematics.fade()
+                            + "," + camera.yRot() + "," + camera.xRot() + "," + AfkCinematics.cameraCut()
                             + "," + subject.x + "," + subject.y + "," + subject.z + "," + client.player.onGround()
                             + "," + (revealedShot == null ? "" : revealedShot.type()));
                     });

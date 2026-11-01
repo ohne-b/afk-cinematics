@@ -2,9 +2,6 @@ package dev.ohneb.afkcinematics.mixin;
 
 import dev.ohneb.afkcinematics.client.AfkCinematics;
 import dev.ohneb.afkcinematics.core.Pose;
-//? if >=1.21.11 {
-import dev.ohneb.afkcinematics.core.Vec;
-//?}
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 //? if >=26.1 {
@@ -30,7 +27,8 @@ public abstract class CameraMixin {
     @Shadow protected abstract void setRotation(float yaw, float pitch);
     @Shadow private boolean detached;
     //? if >=1.21.11 {
-    @Unique private Vec afkCinematics$lastPosition;
+    @Unique private boolean afkCinematics$applied;
+    @Unique private long afkCinematics$cut;
     //?}
 
     //? if >=26.1 {
@@ -58,16 +56,17 @@ public abstract class CameraMixin {
         Pose pose = AfkCinematics.cameraFrame((Camera)(Object)this, delta);
         if (pose == null) {
             //? if >=1.21.11 {
-            if (afkCinematics$lastPosition != null) refreshEnvironment();
-            afkCinematics$lastPosition = null;
+            if (afkCinematics$applied) refreshEnvironment();
+            afkCinematics$applied = false;
             //?}
             return false;
         }
         setPosition(pose.position().x(), pose.position().y(), pose.position().z());
         setRotation((float)pose.yaw(), (float)pose.pitch());
         //? if >=1.21.11 {
-        if (AfkCinematics.fade() == 1 && !pose.position().equals(afkCinematics$lastPosition)) refreshEnvironment();
-        afkCinematics$lastPosition = pose.position();
+        if (!afkCinematics$applied || afkCinematics$cut != AfkCinematics.cameraCut()) refreshEnvironment();
+        afkCinematics$applied = true;
+        afkCinematics$cut = AfkCinematics.cameraCut();
         //?}
         detached = Minecraft.getInstance().player.getEyePosition().distanceToSqr(
             pose.position().x(), pose.position().y(), pose.position().z()) >= 0.64;

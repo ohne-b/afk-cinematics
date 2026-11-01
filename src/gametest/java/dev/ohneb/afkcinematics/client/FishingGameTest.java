@@ -106,7 +106,7 @@ public final class FishingGameTest implements FabricClientGameTest {
                 AfkCinematics.config().music = true;
             });
             context.waitFor(client -> CinematicMusic.manages(), 80);
-            context.waitFor(client -> AfkCinematics.fade() == 0 && AfkCinematics.showing(), 60);
+            context.waitFor(client -> AfkCinematics.showing(), 60);
             Shot waitingTake = context.computeOnClient(client -> revealedShot);
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
@@ -118,7 +118,7 @@ public final class FishingGameTest implements FabricClientGameTest {
                 } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
             });
             context.waitTicks(10);
-            context.runOnClient(client -> require(revealedShot == waitingTake && AfkCinematics.fade() == 0,
+            context.runOnClient(client -> require(revealedShot == waitingTake,
                 "A bite interrupted the current fishing take"));
             screenshot(context, "fishing-bite");
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst().fishing != null,

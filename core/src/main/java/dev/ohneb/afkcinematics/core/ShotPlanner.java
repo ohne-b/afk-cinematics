@@ -64,8 +64,12 @@ final class ShotPlanner {
         int player = config.subject == CinematicConfig.Subject.SCENERY ? 0 : ShotSearch.playerAttempts(config);
         int scenery = config.subject == CinematicConfig.Subject.PLAYER ? 0
             : Scene.PROBES + SCENERY_CANDIDATES * (SCENERY_ATTEMPTS + 1);
-        // Two planning steps per tick, including a fallback after a rejected subject.
-        return Math.max(4, (player + scenery + 10) / 40.0 + 0.5);
+        return Math.max(4, (player + scenery + 10) / (20.0 * stepsPerTick(config)) + 0.5);
+    }
+
+    static int stepsPerTick(CinematicConfig config) {
+        // Quick takes must fit a complete rejected-player/scenery search before their deadline.
+        return config.pace == CinematicConfig.Pace.QUICK ? 5 : 2;
     }
 
     Plan next(Geometry geometry) {
@@ -80,7 +84,8 @@ final class ShotPlanner {
             double drift = config.motion == CinematicConfig.Motion.REDUCED ? .25 : .8;
             Vec end = still ? start : start.add(new Vec(-offset.z(), 0, offset.x()).scale(drift / Math.max(1, offset.length())));
             Shot shot = new Shot(still ? Shot.Type.STILL : Shot.Type.DRIFT, start, start.lerp(end, .5), end,
-                animal.focus(), animal.focus(), Math.max(10, preparationSeconds(config) + .85));
+                animal.focus(), animal.focus(), config.pace.minimumSeconds
+                    + random.nextDouble() * (config.pace.maximumSeconds - config.pace.minimumSeconds));
             return Scene.inRange(end, anchor) && geometry.forScene(animal).valid(shot, start)
                 ? new Plan(shot, animal, true, true) : null;
         }
@@ -88,7 +93,7 @@ final class ShotPlanner {
             if (!triedPlayer && (!sceneryFirst || triedScenery)) {
                 triedPlayer = true;
                 selected = new Scene(anchor, original.position(), Scene.Kind.PLAYER, 0);
-                cut = !history.empty();
+                cut = true;
                 entering = true;
             } else if (!triedScenery) {
                 if (probe < Scene.PROBES) {

@@ -142,7 +142,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                     revealedShot = null;
                     cameraTimings.add("operation,nanoseconds");
                     sceneryFrames = new ArrayList<>();
-                    sceneryFrames.add("nanoseconds,x,y,z,opacity,scenery,shot,type,yaw,pitch");
+                    sceneryFrames.add("nanoseconds,x,y,z,cut,scenery,shot,type,yaw,pitch");
                 });
                 if (fishing) {
                     mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS);
@@ -155,7 +155,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                     context.waitFor(client -> FishingActivity.hook(client.player, client.level) != null, 60);
                     manual(context);
                 } else start(context);
-                context.waitFor(client -> AfkCinematics.showing() && (fishing || AfkCinematics.scenery()) && AfkCinematics.fade() == 0, 200);
+                context.waitFor(client -> AfkCinematics.showing() && (fishing || AfkCinematics.scenery()), 200);
                 int duration = Math.clamp(Integer.getInteger("afkcinematics.test.naturalSeconds", 40), 40, 3600);
                 long started = System.nanoTime();
                 long lastReveal = started;
@@ -184,7 +184,7 @@ public final class NaturalSceneGameTest implements FabricClientGameTest {
                         Path frame = context.takeScreenshot(TestScreenshotOptions.of("frame").withDestinationDir(artifacts));
                         captures.add(frame.getFileName() + "," + System.nanoTime());
                     } else if (tick == 200 || tick == 450 || tick == 700) {
-                        context.waitFor(client -> AfkCinematics.fade() == 0, 100);
+                        context.waitFor(client -> AfkCinematics.showing(), 100);
                         context.takeScreenshot(TestScreenshotOptions.of("natural-scenery-" + tick).withDestinationDir(artifacts));
                     }
                     if (capture == null) context.waitTicks(1);

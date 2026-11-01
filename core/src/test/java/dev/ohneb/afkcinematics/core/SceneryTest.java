@@ -14,7 +14,7 @@ class SceneryTest {
     @Test void crampedPlayerFallsBackToSceneryWithoutTravellingThroughWalls() {
         var session = session(CinematicConfig.Subject.MIXED, cavern(new boolean[]{false}));
         Pose previous = ENTRY;
-        double opacity = 0;
+        int take = 0;
         int cuts = 0;
         for (int tick = 0; tick < 200; tick++) {
             long now = tick * 50_000_000L;
@@ -23,37 +23,28 @@ class SceneryTest {
             assertFalse(session.ended());
             if (pose == null) continue;
             if (pose.position().distance(previous.position()) > 2) {
-                assertEquals(1, opacity, "The last old-view frame must be covered");
-                assertEquals(1, session.fade(), "The first new-view frame must be covered");
+                assertEquals(take + 1, session.take());
                 cuts++;
             }
             assertTrue(pose.position().distance(ENTRY.position()) < 0.01 || pose.position().y() > 10,
                 "Camera crossed the cave ceiling instead of cutting");
             assertTrue(Scene.inRange(pose.position(), PLAYER));
             previous = pose;
-            opacity = session.fade();
-            session.coveredFrame();
+            take = session.take();
         }
         assertEquals(1, cuts);
         assertTrue(session.scenery());
-        assertEquals(0, session.fade());
     }
 
-    @Test void destinationIsRevalidatedBeforeItIsRevealed() {
+    @Test void destinationIsRevalidatedBeforeItIsApplied() {
         boolean[] obstructed = {false};
         var session = session(CinematicConfig.Subject.SCENERY, cavern(obstructed));
-        long now = 0;
-        while (session.fade() != 1 && now < 10_000_000_000L) {
-            session.tick(now);
-            session.frame(now);
-            now += 50_000_000L;
-        }
-        assertEquals(1, session.fade());
-        assertEquals(ENTRY, session.current());
+        for (int tick = 0; tick < 45; tick++) session.tick(tick * 50_000_000L);
+        assertFalse(session.showing());
         obstructed[0] = true;
-        session.coveredFrame();
-        assertNull(session.frame(now));
+        assertNull(session.frame(2_250_000_000L));
         assertTrue(session.ended());
+        assertEquals(0, session.take());
         assertEquals(ENTRY, session.current());
     }
 
@@ -112,7 +103,6 @@ class SceneryTest {
             long now = tick * 50_000_000L;
             session.tick(now);
             Pose pose = session.frame(now);
-            session.coveredFrame();
             if (pose == null) { assertFalse(session.ended()); continue; }
             assertTrue(Scene.inRange(pose.position(), PLAYER));
             if (session.scenery()) sawScenery = true;
@@ -122,30 +112,19 @@ class SceneryTest {
         assertTrue(returned);
     }
 
-    @Test void extraCameraUpdatesCannotAdvanceACutWithoutCoveredGuiFrames() {
+    @Test void aCutNeedsNoGuiAcknowledgementAndAppliesOnlyOnce() {
         var session = session(CinematicConfig.Subject.SCENERY, cavern(new boolean[]{false}));
-        long now = 0;
-        while (session.fade() != 1 && now < 10_000_000_000L) {
-            session.tick(now);
-            session.frame(now);
-            now += 50_000_000L;
-        }
-        assertEquals(1, session.fade());
-        for (int frame = 0; frame < 30; frame++) {
-            assertEquals(ENTRY, session.frame(now));
-            now += 50_000_000L;
-        }
-        session.coveredFrame();
+        for (int tick = 0; tick < 45; tick++) session.tick(tick * 50_000_000L);
+        assertEquals(0, session.take());
+        long now = 2_250_000_000L;
         Pose destination = session.frame(now);
-        assertNotEquals(ENTRY, destination);
+        assertNotNull(destination);
+        assertTrue(destination.position().y() > 10);
+        assertEquals(1, session.take());
         for (int frame = 0; frame < 30; frame++) {
-            now += 50_000_000L;
             assertEquals(destination, session.frame(now));
-            assertEquals(1, session.fade());
+            assertEquals(1, session.take());
         }
-        session.coveredFrame();
-        for (int frame = 0; frame < 20; frame++) session.frame(now += 50_000_000L);
-        assertEquals(0, session.fade());
         assertFalse(session.ended());
     }
 
@@ -180,9 +159,8 @@ class SceneryTest {
             session.tick(now);
             Pose pose = session.frame(now);
             if (pose == null) { assertFalse(session.ended()); continue; }
-            if (session.scenery() && session.fade() == 1 && (views.isEmpty()
+            if (session.scenery() && (views.isEmpty()
                 || Math.abs(views.getLast() - pose.position().x()) > 3)) views.add(pose.position().x());
-            session.coveredFrame();
         }
         assertTrue(views.size() >= 2);
         assertTrue(views.get(0) > 0 && views.get(1) < 0, "Player shots erased scenery variety");

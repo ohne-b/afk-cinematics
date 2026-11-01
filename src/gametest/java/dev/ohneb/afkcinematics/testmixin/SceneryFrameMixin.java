@@ -18,22 +18,20 @@ public abstract class SceneryFrameMixin {
     @Unique private Shot afkCinematics$lastShot;
     @Unique private int afkCinematics$shotNumber;
     @Unique private Pose afkCinematics$previous;
-    @Unique private double afkCinematics$opacity;
+    @Unique private int afkCinematics$take;
     @Unique private long afkCinematics$frameStarted;
     @Unique private long afkCinematics$tickStarted;
     @Unique private long afkCinematics$gap;
     @Unique private long afkCinematics$lastFrame;
 
-    @Inject(method = "frame", at = @At("HEAD"), cancellable = true)
-    private void afkCinematics$holdCoveredFrame(long now, CallbackInfoReturnable<Pose> cir) {
+    @Inject(method = "frame", at = @At("HEAD"))
+    private void afkCinematics$startFrame(long now, CallbackInfoReturnable<Pose> cir) {
         if (TestSupport.cameraTimings != null) {
             afkCinematics$frameStarted = System.nanoTime();
             afkCinematics$gap = afkCinematics$lastFrame == 0 ? 0 : now - afkCinematics$lastFrame;
             afkCinematics$lastFrame = now;
         }
-        var session = (CinematicSession)(Object)this;
-        if (TestSupport.holdCoveredScenery != null && session.fade() == 1
-            && session.scenery() == TestSupport.holdCoveredScenery) cir.setReturnValue(session.current());
+
     }
 
     @Inject(method = "frame", at = @At("RETURN"))
@@ -49,22 +47,22 @@ public abstract class SceneryFrameMixin {
             TestSupport.revealedShot = shot;
         }
         if (afkCinematics$previous != null && pose.position().distance(afkCinematics$previous.position()) > 2)
-            TestSupport.require(afkCinematics$opacity == 1 && session.fade() == 1, "Scenery changed position during an uncovered frame");
+            TestSupport.require(afkCinematics$take != session.take(), "Scenery jumped without committing a new take");
         if (TestSupport.checkTransitions && afkCinematics$previous != null) {
             double movement = pose.position().distance(afkCinematics$previous.position());
             double turn = Math.abs(Math.IEEEremainder(pose.yaw() - afkCinematics$previous.yaw(), 360));
-            if (afkCinematics$opacity == 1 && session.fade() == 1) {
-                if (movement >= 0.3 || turn >= 5) TestSupport.coveredCuts++;
+            if (afkCinematics$take != session.take()) {
+                if (movement >= 0.3 || turn >= 5) TestSupport.directCuts++;
             } else {
-                TestSupport.require(movement < 0.3, "Shot transition jumped position without two opaque frames");
-                TestSupport.require(turn < 5, "Shot transition jumped rotation without two opaque frames");
+                TestSupport.require(movement < 0.3, "Camera jumped position within a continuous take");
+                TestSupport.require(turn < 5, "Camera jumped rotation within a continuous take");
             }
         }
         TestSupport.sceneryFrames.add(now + "," + pose.position().x() + "," + pose.position().y() + ","
-            + pose.position().z() + "," + session.fade() + "," + session.scenery() + "," + afkCinematics$shotNumber
+            + pose.position().z() + "," + session.take() + "," + session.scenery() + "," + afkCinematics$shotNumber
             + "," + (shot == null ? "" : shot.type()) + "," + pose.yaw() + "," + pose.pitch());
         afkCinematics$previous = pose;
-        afkCinematics$opacity = session.fade();
+        afkCinematics$take = session.take();
     }
 
     @Inject(method = "tick", at = @At("HEAD"))
@@ -84,7 +82,7 @@ public abstract class SceneryFrameMixin {
     private void afkCinematics$rejectedFrame(CallbackInfoReturnable<Pose> cir) {
         if (TestSupport.cameraTimings == null) return;
         var state = new StringBuilder("Frame gap: ").append(afkCinematics$gap / 1e6).append(" ms");
-        for (String name : new String[]{"phase", "current", "currentFocus", "shot", "pending"}) {
+        for (String name : new String[]{"current", "currentFocus", "shot", "pending"}) {
             try {
                 var field = CinematicSession.class.getDeclaredField(name);
                 field.setAccessible(true);

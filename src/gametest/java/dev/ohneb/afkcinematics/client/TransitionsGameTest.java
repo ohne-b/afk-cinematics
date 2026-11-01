@@ -25,11 +25,11 @@ public final class TransitionsGameTest implements FabricClientGameTest {
             limit.set(client.options.framerateLimit().get());
             client.options.framerateLimit().set(20);
             AfkCinematics.config().cinematicFps = 20;
-            AfkCinematics.config().pace = CinematicConfig.Pace.SHORT;
+            AfkCinematics.config().pace = CinematicConfig.Pace.QUICK;
             AfkCinematics.config().shots = EnumSet.of(Shot.Type.DRIFT);
             sceneryFrames = new ArrayList<>();
             checkTransitions = true;
-            coveredCuts = 0;
+            directCuts = 0;
         });
         try (var world = context.worldBuilder().create()) {
             world.getServer().runOnServer(server -> {
@@ -41,7 +41,7 @@ public final class TransitionsGameTest implements FabricClientGameTest {
             start(context);
             context.waitTicks(40);
             var trace = new ArrayList<String>();
-            trace.add("nanoseconds,x,y,z,yaw,pitch,collision_nanoseconds,opacity");
+            trace.add("nanoseconds,x,y,z,yaw,pitch,collision_nanoseconds,cut");
             long started = System.nanoTime();
             boolean requested = false;
             while (System.nanoTime() - started < 30_000_000_000L) {
@@ -60,11 +60,11 @@ public final class TransitionsGameTest implements FabricClientGameTest {
                     require(new WorldGeometry(client.level).clear(pose.position(), pose.position()), "Camera entered an obstruction");
                     long duration = System.nanoTime() - query;
                     trace.add((System.nanoTime() - started) + "," + pose.position().x() + "," + pose.position().y()
-                        + "," + pose.position().z() + "," + pose.yaw() + "," + pose.pitch() + "," + duration + "," + AfkCinematics.fade());
+                        + "," + pose.position().z() + "," + pose.yaw() + "," + pose.pitch() + "," + duration + "," + AfkCinematics.cameraCut());
                 });
                 context.waitTicks(1);
             }
-            context.runOnClient(client -> require(coveredCuts > 0, "Transition fixture never exercised a changed viewpoint"));
+            context.runOnClient(client -> require(directCuts >= 2, "Transition fixture never exercised a changed viewpoint"));
             Path artifacts = Path.of(System.getProperty("afkcinematics.test.artifacts"));
             context.takeScreenshot(TestScreenshotOptions.of("camera-after-transition").withDestinationDir(artifacts));
             try { Files.write(artifacts.resolve("camera-trace.csv"), trace); }
