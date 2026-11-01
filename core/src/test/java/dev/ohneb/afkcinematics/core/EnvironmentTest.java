@@ -59,10 +59,10 @@ class EnvironmentTest {
         };
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.FLYOVER, Shot.Type.OVERHEAD, Shot.Type.CRANE, Shot.Type.REVEAL);
-        var search = new ShotSearch(LAND, ENTRY, 0, config, null, true, true, new Random(1));
+        var search = new ShotSearch(LAND, 0, config, null, new Random(1));
         assertTrue(search.exhausted());
         config.shots.add(Shot.Type.DRIFT);
-        var shot = new ShotSearch(LAND, ENTRY, 0, config, null, true, true, new Random(1)).next(open);
+        var shot = new ShotSearch(LAND, 0, config, null, new Random(1)).next(open);
         assertNotNull(shot);
         assertEquals(Shot.Type.DRIFT, shot.type());
         assertEquals(LAND.vantage().y(), shot.start().y());
@@ -73,7 +73,7 @@ class EnvironmentTest {
         var config = new CinematicConfig();
         config.subject = CinematicConfig.Subject.SCENERY;
         config.shots = EnumSet.of(Shot.Type.FLYOVER);
-        var planner = new ShotPlanner(ANCHOR, ENTRY, ENTRY, 0, config, new ShotHistory(), new Random(1));
+        var planner = new ShotPlanner(ANCHOR, ENTRY, 0, config, new ShotHistory(), new Random(1));
         Geometry geometry = new Geometry() {
             public boolean clear(Vec a, Vec b, double margin) { return true; }
             public boolean visible(Vec a, Vec b, double margin) { return true; }

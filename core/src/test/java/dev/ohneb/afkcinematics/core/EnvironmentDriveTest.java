@@ -20,7 +20,7 @@ class EnvironmentDriveTest {
                 Shot.Type.DESCENDING_PASS, Shot.Type.PULL_AWAY}) {
             var config = new CinematicConfig();
             config.shots = EnumSet.of(type);
-            Shot shot = new ShotSearch(scene, Pose.lookingAt(vantage, focus), 0, config, null, true, true, new Random(4)).next(OPEN);
+            Shot shot = new ShotSearch(scene, 0, config, null, new Random(4)).next(OPEN);
             assertNotNull(shot, type.name());
             assertTrue(shot.start().distance(shot.end()) / shot.duration() > 8.0 / 46, type.name());
             if (type == Shot.Type.RISING_PASS) assertTrue(shot.end().y() > shot.start().y());
@@ -44,7 +44,7 @@ class EnvironmentDriveTest {
         for (Shot.Type type : new Shot.Type[]{Shot.Type.FLY_THROUGH, Shot.Type.TRAVERSE, Shot.Type.FLYOVER}) {
             var config = new CinematicConfig();
             config.shots = EnumSet.of(type);
-            Shot shot = new ShotSearch(scene, Pose.lookingAt(vantage, focus), 0, config, null, true, true, new Random(4)).next(OPEN);
+            Shot shot = new ShotSearch(scene, 0, config, null, new Random(4)).next(OPEN);
             assertNotNull(shot, type.name());
             assertTrue(shot.start().distance(focus) > 20);
             assertTrue(shot.start().distance(shot.end()) / shot.duration() >= 11.0 / 46);
@@ -62,8 +62,7 @@ class EnvironmentDriveTest {
             Vec focus = new Vec(0, 2, 0), vantage = new Vec(0, 2.5, -8);
             var config = new CinematicConfig();
             config.shots = EnumSet.of(Shot.Type.FLY_THROUGH, Shot.Type.TRAVERSE);
-            Shot shot = new ShotSearch(new Scene(focus, vantage, kind, 8), Pose.lookingAt(vantage, focus),
-                0, config, null, true, true, new Random(3)).next(OPEN);
+            Shot shot = new ShotSearch(new Scene(focus, vantage, kind, 8), 0, config, null, new Random(3)).next(OPEN);
             assertNotNull(shot);
             assertEquals(vantage.y(), shot.start().y());
             assertEquals(vantage.y(), shot.end().y());
@@ -75,8 +74,7 @@ class EnvironmentDriveTest {
             Vec focus = new Vec(0, 0, 0), vantage = new Vec(0, 14, -22);
             var config = new CinematicConfig();
             config.shots = EnumSet.of(type);
-            Shot shot = new ShotSearch(new Scene(focus, vantage, Scene.Kind.AERIAL, 8), Pose.lookingAt(vantage, focus),
-                0, config, null, true, true, new Random(2)).next(OPEN);
+            Shot shot = new ShotSearch(new Scene(focus, vantage, Scene.Kind.AERIAL, 8), 0, config, null, new Random(2)).next(OPEN);
             assertNotNull(shot);
             assertEquals(vantage, shot.start());
             assertEquals(vantage, shot.end());
@@ -102,8 +100,7 @@ class EnvironmentDriveTest {
         config.subject = CinematicConfig.Subject.SCENERY;
         var random = new Random(9);
         for (int take = 0; take < 5; take++) {
-            var planner = new ShotPlanner(new Vec(0, 1, 0), new Pose(new Vec(0, 1, 0), 0, 0),
-                new Pose(new Vec(0, 1, 0), 0, 0), 0, config, new ShotHistory(), random);
+            var planner = new ShotPlanner(new Vec(0, 1, 0), new Pose(new Vec(0, 1, 0), 0, 0), 0, config, new ShotHistory(), random);
             planner.next(geometry);
         }
         assertEquals(5, directions.stream().distinct().count());

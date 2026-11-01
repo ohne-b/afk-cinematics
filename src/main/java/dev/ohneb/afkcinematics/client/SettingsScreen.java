@@ -491,10 +491,21 @@ public final class SettingsScreen extends Screen {
         /*@Override public void onPress() { cycle(Screen.hasShiftDown() ? -1 : 1); }
         *///?}
 
-        @Override public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
-            if (!active || vertical == 0) return false;
-            cycle(vertical > 0 ? -1 : 1);
-            return true;
+        //? if >=1.21.9 {
+        @Override public boolean keyPressed(KeyEvent event) {
+            int key = event.key();
+        //?} else {
+        /*@Override public boolean keyPressed(int key, int scan, int modifiers) {
+        *///?}
+            if (active && isFocused() && (key == InputConstants.KEY_LEFT || key == InputConstants.KEY_RIGHT)) {
+                cycle(key == InputConstants.KEY_RIGHT ? 1 : -1);
+                return true;
+            }
+            //? if >=1.21.9 {
+            return super.keyPressed(event);
+            //?} else {
+            /*return super.keyPressed(key, scan, modifiers);
+            *///?}
         }
     }
 

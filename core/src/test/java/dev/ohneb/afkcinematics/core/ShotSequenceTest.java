@@ -37,13 +37,13 @@ class ShotSequenceTest {
         };
         int attempts = 200;
         for (int i = 0; i < attempts; i++) {
-            var planner = new ShotPlanner(ANCHOR, ENTRY, ENTRY, 0, config, history, new Random(i * 31L));
+            var planner = new ShotPlanner(ANCHOR, ENTRY, 0, config, history, new Random(i * 31L));
             for (int j = 0; j < 100 && !planner.exhausted(); j++) if (planner.next(world) != null) break;
         }
         assertTrue(probes[0] > 0 && probes[0] < attempts * 8 / 3, "Wildlife became a quota instead of an occasional option");
         config.wildlife = false;
         int before = probes[0];
-        var planner = new ShotPlanner(ANCHOR, ENTRY, ENTRY, 0, config, history, new Random(4));
+        var planner = new ShotPlanner(ANCHOR, ENTRY, 0, config, history, new Random(4));
         for (int j = 0; j < 100 && !planner.exhausted(); j++) if (planner.next(world) != null) break;
         assertEquals(before, probes[0]);
     }
@@ -56,7 +56,7 @@ class ShotSequenceTest {
         var used = EnumSet.noneOf(Shot.Type.class);
         var world = geometry(new ArrayList<>(), new boolean[1]);
         for (int take = 0; take < config.shots.size(); take++) {
-            var planner = new ShotPlanner(ANCHOR, ENTRY, ENTRY, 0, config, history, new Random(take));
+            var planner = new ShotPlanner(ANCHOR, ENTRY, 0, config, history, new Random(take));
             ShotPlanner.Plan plan = null;
             for (int step = 0; step < 200 && plan == null && !planner.exhausted(); step++) plan = planner.next(world);
             assertNotNull(plan);

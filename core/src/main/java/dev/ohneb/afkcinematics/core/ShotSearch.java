@@ -13,28 +13,21 @@ public final class ShotSearch {
     private static final List<Double> PLAYER_DISTANCES = List.of(7.0, 10.0, 14.0);
     private final Vec subject;
     private final Scene scene;
-    private final Pose previous;
     private final double bearing;
     private final CinematicConfig.Motion motion;
     private final CinematicConfig.Pace pace;
     private final List<Shot.Type> types;
     private final List<Double> angles;
     private final List<Double> distances;
-    private final boolean entering;
-    private final boolean cut;
     private final Random random;
     private int attempt;
 
-    public ShotSearch(Scene scene, Pose previous, double bearing, CinematicConfig config,
-                      Shot.Type last, boolean entering, boolean cut, Random random) {
+    public ShotSearch(Scene scene, double bearing, CinematicConfig config, Shot.Type last, Random random) {
         this.scene = scene;
         this.subject = scene.focus();
-        this.previous = previous;
         this.bearing = bearing;
         this.motion = config.motion;
         this.pace = config.pace;
-        this.entering = entering;
-        this.cut = cut;
         this.random = random;
         angles = new ArrayList<>();
         distances = new ArrayList<>();
@@ -99,22 +92,20 @@ public final class ShotSearch {
         int view = index / types.size();
         double angle = Math.toRadians(bearing + angles.get(view % angles.size()));
         double radius = distances.get(view / angles.size());
-        Vec start = entering
-            ? subject.add(new Vec(Math.sin(angle) * radius, 0.55, -Math.cos(angle) * radius))
-            : previous.position();
-        if (entering && scene.scenery())
+        Vec start = subject.add(new Vec(Math.sin(angle) * radius, 0.55, -Math.cos(angle) * radius));
+        if (scene.scenery())
             start = limitDistance(subject.add(rotate(scene.vantage().subtract(subject), Math.toRadians(angles.get(view)))));
-        if (entering && type == Shot.Type.PULL_AWAY) {
+        if (type == Shot.Type.PULL_AWAY) {
             Vec offset = start.subtract(subject);
             start = subject.add(new Vec(offset.x() * 0.65, offset.y(), offset.z() * 0.65));
         }
-        if (entering && type == Shot.Type.DESCENDING_PASS && scene.kind() != Scene.Kind.WATER)
+        if (type == Shot.Type.DESCENDING_PASS && scene.kind() != Scene.Kind.WATER)
             start = new Vec(start.x(), Math.max(start.y(), subject.y() + 6), start.z());
-        if (entering && type == Shot.Type.LOW_PASS)
+        if (type == Shot.Type.LOW_PASS)
             start = new Vec(start.x(), subject.y() + (scene.scenery() ? 0.25 : -0.6), start.z());
-        if (entering && type == Shot.Type.FLYOVER && scene.kind() != Scene.Kind.WATER)
+        if (type == Shot.Type.FLYOVER && scene.kind() != Scene.Kind.WATER)
             start = new Vec(start.x(), Math.max(start.y(), subject.y() + (scene.scenery() ? 6 : 4)), start.z());
-        if (entering && type == Shot.Type.REVEAL) {
+        if (type == Shot.Type.REVEAL) {
             Vec offset = start.subtract(subject);
             double scale = Math.min(1, 7 / Math.hypot(offset.x(), offset.z()));
             start = subject.add(new Vec(offset.x() * scale, Math.min(offset.y(), 1.2), offset.z() * scale));
@@ -128,7 +119,7 @@ public final class ShotSearch {
         Vec tangent = new Vec(-offset.z(), 0, offset.x()).scale(1 / horizontal);
         Vec end = start;
         Vec control = start;
-        Vec focusStart = entering ? subject : previous.lookAhead(start.distance(subject));
+        Vec focusStart = subject;
         Vec focusEnd = subject;
         switch (type) {
             case ARC -> {
@@ -209,11 +200,7 @@ public final class ShotSearch {
                 control = start.lerp(end, 0.5);
             }
             case PAN -> {
-                if (entering) focusStart = subject.add(tangent.scale(-0.9 * amount * sign));
-                else {
-                    Vec initial = focusStart.subtract(subject);
-                    if ((initial.x() * tangent.x() + initial.z() * tangent.z()) * sign > 0) sign = -sign;
-                }
+                focusStart = subject.add(tangent.scale(-0.9 * amount * sign));
                 focusEnd = subject.add(tangent.scale(0.9 * amount * sign));
             }
             case STILL -> focusEnd = focusStart;
@@ -222,7 +209,7 @@ public final class ShotSearch {
         Shot candidate = new Shot(type, start, limitDistance(control), limitDistance(end), focusStart, focusEnd,
             CinematicConfig.Pace.LONG.maximumSeconds).cutAfter(duration);
         if (type != Shot.Type.STILL && type != Shot.Type.PAN && candidate.start().distance(candidate.end()) < 0.01) return null;
-        return geometry.valid(candidate, cut ? candidate.start() : previous.position()) ? candidate : null;
+        return geometry.valid(candidate, candidate.start()) ? candidate : null;
     }
 
     private static Vec rotate(Vec vector, double angle) {

@@ -33,8 +33,7 @@ class ShotMotionTest {
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.DOLLY);
         for (int seed = 0; seed < 8; seed++) {
-            var shot = new ShotSearch(scene, Pose.lookingAt(scene.vantage(), SUBJECT), 0, config,
-                null, true, true, new Random(seed)).next(OPEN);
+            var shot = new ShotSearch(scene, 0, config, null, new Random(seed)).next(OPEN);
             assertNotNull(shot);
             assertTrue(shot.start().distance(shot.end()) / shot.duration() > 2.0 / 46, "Outer-limit dolly lost its movement");
             assertTrue(shot.end().distance(SUBJECT) < shot.start().distance(SUBJECT));
@@ -46,9 +45,9 @@ class ShotMotionTest {
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.DRIFT);
         var pose = Pose.lookingAt(scene.vantage(), SUBJECT);
-        Shot gentle = new ShotSearch(scene, pose, 0, config, null, true, true, new Random(2)).next(OPEN);
+        Shot gentle = new ShotSearch(scene, 0, config, null, new Random(2)).next(OPEN);
         config.motion = CinematicConfig.Motion.REDUCED;
-        Shot reduced = new ShotSearch(scene, pose, 0, config, null, true, true, new Random(2)).next(OPEN);
+        Shot reduced = new ShotSearch(scene, 0, config, null, new Random(2)).next(OPEN);
         assertNotNull(gentle);
         assertNotNull(reduced);
         assertTrue(gentle.start().distance(gentle.end()) >= 2.5);
@@ -62,7 +61,7 @@ class ShotMotionTest {
             config.shots = EnumSet.of(type);
             config.motion = CinematicConfig.Motion.GENTLE;
             var entry = Pose.lookingAt(scene.vantage(), SUBJECT);
-            Shot shot = new ShotSearch(scene, entry, 0, config, null, true, true, new Random(2)).next(OPEN);
+            Shot shot = new ShotSearch(scene, 0, config, null, new Random(2)).next(OPEN);
             assertNotNull(shot);
             Vec travel = shot.end().subtract(shot.start());
             assertTrue(travel.length() / shot.duration() > 4.0 / 46, type + " did not create a substantial camera drive");
@@ -82,7 +81,7 @@ class ShotMotionTest {
                 assertTrue(shot.end().distance(SUBJECT) > shot.start().distance(SUBJECT));
             }
             config.motion = CinematicConfig.Motion.REDUCED;
-            Shot reduced = new ShotSearch(scene, entry, 0, config, null, true, true, new Random(2)).next(OPEN);
+            Shot reduced = new ShotSearch(scene, 0, config, null, new Random(2)).next(OPEN);
             assertTrue(reduced.start().distance(reduced.end()) < travel.length() * 0.4);
         }
     }

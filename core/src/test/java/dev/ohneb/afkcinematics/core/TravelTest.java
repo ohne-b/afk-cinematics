@@ -464,7 +464,6 @@ class TravelTest {
                 ShotPlanner.Plan found = null;
                 while (!search.exhausted() && found == null) found = search.next(narrow);
                 assertNotNull(found, kind + " " + type);
-                assertTrue(found.cut());
                 assertEquals(0, found.shot().start().distance(found.shot().sample(10).position()), 1e-10);
                 assertEquals(type, found.shot().type());
             }
