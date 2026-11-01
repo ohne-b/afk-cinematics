@@ -75,10 +75,12 @@ class ConfigTest {
         assertEquals(EnumSet.of(Shot.Type.PAN, Shot.Type.CRANE), store.config().shots);
         assertEquals(CinematicConfig.Pace.LONG, store.config().pace);
         assertEquals(CinematicConfig.Subject.MIXED, store.config().subject);
-        assertEquals(CinematicConfig.Lens.CINEMATIC, store.config().lens);
+        assertTrue(store.config().useGameFov);
+        assertEquals(90, store.config().customFov);
         store.config().subject = CinematicConfig.Subject.SCENERY;
         store.config().playerShare = 75;
-        store.config().lens = CinematicConfig.Lens.GAME;
+        store.config().useGameFov = false;
+        store.config().customFov = 140;
         store.config().soundtrack = CinematicConfig.Soundtrack.CUSTOM;
         store.config().customMusic = "example:quiet_music";
         store.config().musicVolume = 35;
@@ -94,7 +96,8 @@ class ConfigTest {
         upgraded.add(Shot.Type.values()[Shot.Type.values().length - 1]);
         assertEquals(upgraded, new ConfigStore(path).config().shots);
         assertEquals(CinematicConfig.Subject.SCENERY, new ConfigStore(path).config().subject);
-        assertEquals(CinematicConfig.Lens.GAME, new ConfigStore(path).config().lens);
+        assertFalse(new ConfigStore(path).config().useGameFov);
+        assertEquals(140, new ConfigStore(path).config().customFov);
         assertEquals(CinematicConfig.Soundtrack.CUSTOM, new ConfigStore(path).config().soundtrack);
         assertEquals("example:quiet_music", new ConfigStore(path).config().customMusic);
         assertEquals(35, new ConfigStore(path).config().musicVolume);
@@ -102,6 +105,15 @@ class ConfigTest {
         var defaults = new ConfigStore(path).config();
         assertEquals(EnumSet.allOf(Shot.Type.class), defaults.shots);
         assertEquals(CinematicConfig.Pace.RELAXED, defaults.pace);
+        assertTrue(defaults.useGameFov);
+        for (String invalid : new String[]{"null", "\"140\"", "140.5", "1e30"}) {
+            Files.writeString(path, "{\"customFov\":" + invalid + "}");
+            assertEquals(90, new ConfigStore(path).config().customFov);
+        }
+        for (int fov : new int[]{0, 30, 90, 140, 999}) {
+            Files.writeString(path, "{\"customFov\":" + fov + "}");
+            assertEquals(Math.clamp(fov, 30, 140), new ConfigStore(path).config().customFov);
+        }
     }
 
     @Test void cinematicFrameCapPersistsAndRejectsInvalidValues() throws Exception {

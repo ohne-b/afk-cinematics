@@ -112,10 +112,24 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     press(settings, "Enable all");
                     go(settings, "Camera");
                     require(!button(settings, "Camera").active, "Sidebar did not mark the current category");
+                    var fov = settings.children().stream().filter(net.minecraft.client.gui.components.AbstractSliderButton.class::isInstance)
+                        .map(net.minecraft.client.gui.components.AbstractSliderButton.class::cast).findFirst().orElseThrow();
+                    require(!fov.active && fixture.config().useGameFov, "Custom FOV did not start disabled");
+                    press(settings, "Use game FOV: ON");
+                    fov = settings.children().stream().filter(net.minecraft.client.gui.components.AbstractSliderButton.class::isInstance)
+                        .map(net.minecraft.client.gui.components.AbstractSliderButton.class::cast).findFirst().orElseThrow();
+                    require(fov.active && !fixture.config().useGameFov, "Custom FOV could not be enabled");
+                    settings.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(fov.getX() + fov.getWidth() - 1, fov.getY() + 8,
+                        new net.minecraft.client.input.MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0)), false);
+                    require(fixture.config().customFov == 140, "FOV slider did not reach 140 degrees");
+                    go(settings, "General");
+                    go(settings, "Camera");
+                    require(!fixture.config().useGameFov && fixture.config().customFov == 140, "Changing pages reset the lens");
                 });
                 context.takeScreenshot(TestScreenshotOptions.of("camera-settings").withDestinationDir(artifacts));
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
+                    press(settings, "Use game FOV: OFF");
                     go(settings, "Music");
                     press(settings, "Cinematic music: OFF");
                     press(settings, "Playlist: Game music");

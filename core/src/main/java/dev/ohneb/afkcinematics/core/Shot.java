@@ -30,6 +30,16 @@ public record Shot(Type type, Vec start, Vec control, Vec end, Vec focusStart, V
 
     public Vec focus(double seconds) { return focusStart.lerp(focusEnd, progress(seconds)); }
 
+    /** Keep the original movement speed, but cut before the full path finishes. */
+    public Shot cutAfter(double seconds) {
+        if (!Double.isFinite(seconds) || seconds <= 0 || seconds > duration)
+            throw new IllegalArgumentException("Invalid cut time");
+        double t = seconds / duration;
+        Vec left = start.lerp(control, t), right = control.lerp(end, t);
+        return new Shot(type, start, left, left.lerp(right, t),
+            focusStart, focus(seconds), seconds);
+    }
+
     private double progress(double seconds) {
         return Math.clamp(seconds / duration, 0, 1);
     }

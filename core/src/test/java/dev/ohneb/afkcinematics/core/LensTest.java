@@ -16,25 +16,29 @@ class LensTest {
 
     @Test void theLensCutsWithTheCameraAndStaysFixedDuringATake() {
         var config = new CinematicConfig();
+        assertEquals(100, config.fieldOfView(100));
+        config.useGameFov = false;
+        config.customFov = 140;
         config.subject = CinematicConfig.Subject.PLAYER;
         config.shots = EnumSet.of(Shot.Type.STILL);
         var session = session(config);
         session.tick(0);
         session.frame(0);
-        assertEquals(62, config.lens.blend(100, 16.0 / 9, session.lensStrength()), 0.00001);
-        double previous = 100;
+        assertEquals(1, session.lensStrength());
         for (int tick = 1; tick <= 180; tick++) {
             session.tick(tick * 50_000_000L);
             session.frame(tick * 50_000_000L);
-            double fov = config.lens.blend(100, 16.0 / 9, session.lensStrength());
-            assertTrue(fov <= previous && fov >= 62);
-            if (tick >= 120) assertEquals(62, fov, 0.00001);
-            previous = fov;
+            assertEquals(1, session.lensStrength());
+            assertEquals(140, config.fieldOfView(100));
         }
-        assertEquals(100, CinematicConfig.Lens.GAME.blend(100, 0.5, 1));
-        assertEquals(78, CinematicConfig.Lens.WIDE.blend(100, 16.0 / 9, 1), 0.00001);
-        double tall = CinematicConfig.Lens.CINEMATIC.fieldOfView(100, 0.5);
-        assertEquals(Math.tan(Math.toRadians(62) / 2), Math.tan(Math.toRadians(tall) / 2) * 0.5, 0.00001);
+        for (double aspect : new double[]{.5, 16.0 / 9, 32.0 / 9}) {
+            double halfHeight = .05 * Math.tan(Math.toRadians(140) / 2);
+            var corner = new Vec(halfHeight * aspect, halfHeight, .05);
+            assertTrue(config.cameraRadius(aspect) > corner.length(), "The wider near plane escaped camera clearance");
+        }
+        config.useGameFov = true;
+        assertEquals(100, config.fieldOfView(100));
+        assertEquals(75, config.fieldOfView(75));
     }
 
     @Test void aSceneryLensChangesOnlyWithAnAppliedTake() {

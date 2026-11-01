@@ -59,7 +59,7 @@ class GeometryTest {
             Shot shot = new ShotSearch(new Scene(focus, vantage, Scene.Kind.LANDSCAPE, 1), Pose.lookingAt(vantage, focus),
                 0, config, null, true, true, new Random(2)).next(room);
             assertNotNull(shot, "A short downward crane was lost at distance " + distance);
-            assertEquals(2.3, shot.end().y(), 0.00001);
+            assertTrue(shot.end().y() >= 2.3 && shot.end().y() < shot.start().y());
         }
     }
 

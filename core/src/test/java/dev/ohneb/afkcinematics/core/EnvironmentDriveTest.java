@@ -22,7 +22,7 @@ class EnvironmentDriveTest {
             config.shots = EnumSet.of(type);
             Shot shot = new ShotSearch(scene, Pose.lookingAt(vantage, focus), 0, config, null, true, true, new Random(4)).next(OPEN);
             assertNotNull(shot, type.name());
-            assertTrue(shot.start().distance(shot.end()) > 8, type.name());
+            assertTrue(shot.start().distance(shot.end()) / shot.duration() > 8.0 / 46, type.name());
             if (type == Shot.Type.RISING_PASS) assertTrue(shot.end().y() > shot.start().y());
             if (type == Shot.Type.DESCENDING_PASS) assertTrue(shot.end().y() < shot.start().y());
             if (type == Shot.Type.PULL_AWAY) assertTrue(shot.end().distance(focus) > shot.start().distance(focus));
@@ -47,7 +47,7 @@ class EnvironmentDriveTest {
             Shot shot = new ShotSearch(scene, Pose.lookingAt(vantage, focus), 0, config, null, true, true, new Random(4)).next(OPEN);
             assertNotNull(shot, type.name());
             assertTrue(shot.start().distance(focus) > 20);
-            assertTrue(shot.start().distance(shot.end()) >= 11);
+            assertTrue(shot.start().distance(shot.end()) / shot.duration() >= 11.0 / 46);
             for (int sample = 0; sample <= 100; sample++) {
                 Pose pose = shot.sample(shot.duration() * sample / 100);
                 assertEquals(vantage.y(), pose.position().y(), 1e-9);
