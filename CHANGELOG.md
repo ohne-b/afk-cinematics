@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Keep walking views wider beside walls, ease hill adjustments and soften forward jump pulses. (#55)
+- Remove white click-focus bars and place slider percentages beside their tracks. (#55)
 - Smooth F6 walking, jumps, hills and falls, with a switch to exclude front travel shots. (#54)
 - Compact settings rows, a narrower sidebar and a two-column shot picker; remove the Start cinematic button. (#54)
 - One F6 mode for walking, swimming, riding, flight and fishing with normal controls. Automatic fishing still starts per cast and keeps music between quick casts. (#53)

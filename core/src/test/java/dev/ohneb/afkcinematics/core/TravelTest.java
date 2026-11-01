@@ -59,6 +59,68 @@ class TravelTest {
         }
     }
 
+    @Test void repeatedJumpSpeedChangesDoNotPunchTheCameraForward() {
+        for (int fps : new int[]{30, 60, 144}) {
+            var steady = new FollowMotion(ZERO);
+            var jumping = new FollowMotion(ZERO);
+            double maximum = 0;
+            for (int frame = 1; frame <= fps * 8; frame++) {
+                double t = (double)frame / fps, phase = t % .65 / .65;
+                Vec reference = steady.follow(new Vec(0, 0, t * 4), 1.0 / fps, true, true);
+                Vec actual = jumping.follow(new Vec(0, phase < .9 ? Math.sin(phase / .9 * Math.PI) * 1.25 : 0,
+                    t * 4 + .08 * Math.sin(t / .65 * Math.PI * 2)), 1.0 / fps, true, phase >= .9);
+                if (t > 2) maximum = Math.max(maximum, Math.abs(actual.z() - reference.z()));
+            }
+            assertTrue(maximum < .045, "Jump speed pulses reached the camera at " + fps + " FPS: " + maximum);
+        }
+    }
+
+    @Test void walkingBesideWallsKeepsARoomyRearViewOverHills() {
+        for (int direction : new int[]{1, -1}) {
+            Geometry hillside = new Geometry() {
+                private double floor(double z) { return direction * Math.clamp(Math.floor(z / 2), 0, 5); }
+                private boolean line(Vec a, Vec b, double margin) {
+                    int steps = Math.max(1, (int)Math.ceil(a.distance(b) * 50));
+                    for (int i = 0; i <= steps; i++) {
+                        Vec p = a.lerp(b, (double)i / steps);
+                        if (Math.abs(p.x()) + margin >= 1 || p.y() - margin <= floor(p.z() + direction * margin)) return false;
+                    }
+                    return true;
+                }
+                public boolean clear(Vec a, Vec b, double margin) { return line(a, b, .25 + margin); }
+                public boolean visible(Vec a, Vec b, double margin) { return line(a, b, margin); }
+            };
+            var moving = new MovingGeometry(hillside, new Vec(0, 1.2, -4), 0);
+            moving.framing(Scene.Kind.FOLLOW, false);
+            moving.course(0);
+            Pose local = new Pose(new Vec(2.22, 2.275, -6.1), 0, 0), previous = null;
+            double oldFade = 0;
+            for (int frame = 0; frame <= 360; frame++) {
+                double z = -4 + frame / 20.0;
+                Vec rider = new Vec(0, direction * Math.clamp(Math.floor(z / 2), 0, 5) + 1.2, z);
+                assertTrue(moving.follow(rider, frame * 16_666_667L, false, true));
+                Pose view = moving.apply(local, new Vec(0, .2, 1.25), 0, 1, false);
+                assertNotNull(view, "Lost the wall-side route at " + frame);
+                assertTrue(hillside.clear(view.position(), view.position()));
+                assertEquals(0, moving.fade(), "A usable rear corridor should not require a cut at " + frame);
+                if (moving.fade() == 0) {
+                    assertTrue(hillside.visible(view.position(), rider));
+                    assertTrue(rider.z() - view.position().z() > 3,
+                        "An angled view collapsed into a close-up despite a clear rear corridor at " + frame);
+                }
+                if (previous != null && !hillside.clear(previous.position(), view.position())) {
+                    assertEquals(1, oldFade);
+                    assertEquals(1, moving.fade());
+                }
+                if (previous != null) assertTrue(previous.position().distance(view.position()) < .35,
+                    "Wall-side framing jumped at " + frame);
+                previous = view;
+                oldFade = moving.fade();
+                moving.coveredFrame();
+            }
+        }
+    }
+
     @Test void fastFallsKeepThePlayerInFrameInsteadOfHoldingTheAimAboveThem() {
         for (int fps : new int[]{15, 60, 144}) {
             var moving = new MovingGeometry(OPEN, ZERO, 0);
@@ -131,11 +193,47 @@ class TravelTest {
             moving.follow(rider, frame * 16_666_667L, false, true);
             Pose view = moving.apply(local, ZERO, 0, 1, false);
             assertNotNull(view);
-            assertEquals(0, moving.fade(), "A clear hillside should not need repeated blackouts");
+            assertEquals(0, moving.fade(), "A clear hillside should not need repeated blackouts at " + frame + ": " + view + ", rider=" + rider);
             assertTrue(terraces.visible(view.position(), rider));
             if (previous != null) assertTrue(terraces.clear(previous.position(), view.position()));
             previous = view;
         }
+    }
+
+    @Test void raisedWalkingCameraSettlesGraduallyAfterClearingALedge() {
+        Geometry ledge = new Geometry() {
+            private boolean line(Vec a, Vec b, double margin) {
+                for (int i = 0; i <= 100; i++) {
+                    Vec p = a.lerp(b, i / 100.0);
+                    if (Math.abs(p.x()) + margin >= .6 || p.y() - margin <= 0
+                        || p.z() - margin <= 0 && p.y() - margin <= 6) return false;
+                }
+                return true;
+            }
+            public boolean clear(Vec a, Vec b, double margin) { return line(a, b, .25 + margin); }
+            public boolean visible(Vec a, Vec b, double margin) { return line(a, b, margin); }
+        };
+        var moving = new MovingGeometry(ledge, new Vec(0, 1.2, 5.5), 0);
+        moving.framing(Scene.Kind.FOLLOW, false);
+        moving.course(0);
+        Pose local = new Pose(new Vec(0, .6, -6.5), 0, 0), previous = null;
+        double previousDrop = 0;
+        for (int frame = 0; frame <= 480; frame++) {
+            moving.follow(new Vec(0, 1.2, 5.5 + frame / 20.0), frame * 16_666_667L, false, true);
+            Pose view = moving.apply(local, ZERO, 0, 1, false);
+            assertNotNull(view);
+            assertEquals(0, moving.fade());
+            if (frame == 0) assertTrue(view.position().y() > 7, "Fixture did not establish the raised view");
+            if (previous != null) {
+                assertTrue(view.position().distance(previous.position()) < .17,
+                    "Clearing the ledge caused an abrupt drop at " + frame);
+                double drop = view.position().y() - previous.position().y();
+                assertTrue(Math.abs(drop - previousDrop) < .06, "Ledge settling began with a velocity jump at " + frame);
+                previousDrop = drop;
+            }
+            previous = view;
+        }
+        assertEquals(1.8, previous.position().y(), .01, "The view remained elevated after the ledge");
     }
 
     @Test void oneManualSessionCanChangeActivityWithoutLosingItsCaptureOwner() {
