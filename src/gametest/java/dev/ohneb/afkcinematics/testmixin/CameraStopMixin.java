@@ -13,6 +13,19 @@ import java.util.stream.Collectors;
 
 @Mixin(value = AfkCinematics.class, remap = false)
 public abstract class CameraStopMixin {
+    @org.spongepowered.asm.mixin.Unique private static long afkCinematics$frameStarted;
+
+    @Inject(method = "cameraFrame", at = @At("HEAD"))
+    private static void afkCinematics$timeFrame(CallbackInfoReturnable<dev.ohneb.afkcinematics.core.Pose> cir) {
+        if (TestSupport.cameraTimings != null) afkCinematics$frameStarted = System.nanoTime();
+    }
+
+    @Inject(method = "cameraFrame", at = @At("RETURN"))
+    private static void afkCinematics$frameTime(CallbackInfoReturnable<dev.ohneb.afkcinematics.core.Pose> cir) {
+        if (TestSupport.cameraTimings != null)
+            TestSupport.cameraTimings.add("applied_frame," + (System.nanoTime() - afkCinematics$frameStarted));
+    }
+
     @Inject(method = "holdForScreenshot", at = @At("HEAD"), cancellable = true)
     private static void afkCinematics$continuousRecording(CallbackInfoReturnable<Runnable> cir) {
         // Video fixtures sample moving frames; ordinary screenshot tests retain capture holds.

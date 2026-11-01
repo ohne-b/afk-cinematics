@@ -33,8 +33,6 @@
   "ohneb_afk_cinematics.music.help": "Add music during cinematics, after any current track finishes. Toggle without leaving the view with /afkcinematics music.",
   "ohneb_afk_cinematics.unfocused": "Play in background",
   "ohneb_afk_cinematics.unfocused.help": "Keep playing when you switch windows. Pausing the game still stops the camera.",
-  "ohneb_afk_cinematics.preview": "Start cinematic",
-  "ohneb_afk_cinematics.preview.help": "Save and start a manual cinematic. Keep playing; press the cinematic key again to stop.",
   "ohneb_afk_cinematics.unavailable": "The camera is unavailable right now. Close other menus and try again.",
   "ohneb_afk_cinematics.no_view": "No clear view nearby. Try another spot or enable more shot types.",
   "ohneb_afk_cinematics.save_error": "Could not save settings. Check the config folder permissions.",
@@ -140,7 +138,7 @@
   "ohneb_afk_cinematics.key.start": "%s toggles the camera while you play.",
   "ohneb_afk_cinematics.key.unbound": "Set a Start / stop key in Controls.",
   "ohneb_afk_cinematics.key.choices": "Shift-click a choice to go back.",
-  "ohneb_afk_cinematics.start.disabled": "Cinematics are off. Turn them on in AFK settings.",
+  "ohneb_afk_cinematics.start.disabled": "Cinematics are off. Turn them on in General settings.",
   "ohneb_afk_cinematics.start.world": "Join a world to start a cinematic.",
   "ohneb_afk_cinematics.start.spectator": "Cinematics are unavailable in spectator mode.",
   "ohneb_afk_cinematics.start.unsafe": "Wait until you are safe and awake to start a cinematic.",
@@ -159,5 +157,13 @@
   "ohneb_afk_cinematics.page.shots": "Shots",
   "ohneb_afk_cinematics.page.music": "Music",
   "ohneb_afk_cinematics.autoFishing": "Start when fishing",
-  "ohneb_afk_cinematics.autoFishing.help": "Start once your bobber reaches water. Reel in normally to return; music carries over if you cast again soon."
+  "ohneb_afk_cinematics.autoFishing.help": "Start once your bobber reaches water. Reel in normally to return; music carries over if you cast again soon.",
+  "ohneb_afk_cinematics.frontTravel": "Front travel shots",
+  "ohneb_afk_cinematics.frontTravel.help": "Allow cameras ahead of you while travelling. Turn off to keep rear and side views, including when the camera moves around an obstacle. AFK and fishing shots are unchanged.",
+  "ohneb_afk_cinematics.toggle.label": "Start / stop key",
+  "ohneb_afk_cinematics.playerShare.label": "Player shots",
+  "ohneb_afk_cinematics.musicVolume.label": "Volume",
+  "ohneb_afk_cinematics.scroll.up": "Scroll up",
+  "ohneb_afk_cinematics.scroll.down": "Scroll down",
+  "ohneb_afk_cinematics.shots.front_off": "Front travel shots are off in General. Your individual shot selection is kept."
 }

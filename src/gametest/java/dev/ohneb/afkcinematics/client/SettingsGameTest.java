@@ -48,8 +48,16 @@ public final class SettingsGameTest implements FabricClientGameTest {
                 context.runOnClient(client -> {
                     var settings = (SettingsScreen)AfkCinematics.screen();
                     press(settings, "Enabled: ON");
-                    require(!button(settings, "Start cinematic").active, "Disabled mod left Start enabled");
+                    require(!fixture.config().enabled, "Enabled toggle did not change");
                     press(settings, "Enabled: OFF");
+                    press(settings, "Front travel shots: ON");
+                    require(!fixture.config().frontTravel, "Front-view preference did not change");
+                    go(settings, "Shots");
+                    showShotSet(settings, Shot.Type.LEAD);
+                    require(!button(settings, Component.translatable("ohneb_afk_cinematics.shot.lead").getString() + ": ON").active,
+                        "The front-only shot remained available after turning off front views");
+                    go(settings, "General");
+                    press(settings, "Front travel shots: OFF");
                     press(settings, "Start when fishing: ON");
                     require(!fixture.config().autoFishing, "Fishing start setting did not change");
                     go(settings, "AFK");
@@ -80,6 +88,11 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     subject.onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
                     require(settings.getFocused() == button(settings, "Subject: Player"), "Changing subject lost focus");
                     require(!button(settings, "Occasional wildlife: ON").active, "Player-only AFK retained wildlife");
+                    button(settings, "Subject: Player").onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 1));
+                    var mixed = button(settings, "Subject: Mixed");
+                    settings.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(mixed.getX() + 5, mixed.getY() + 5,
+                        new net.minecraft.client.input.MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0)), false);
+                    require(settings.getFocused() == button(settings, "Subject: Player"), "Mouse cycling left focus on a replaced control");
                     button(settings, "Subject: Player").onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 1));
                     go(settings, "Shots");
                     for (Shot.Type type : Shot.Type.values()) {
@@ -165,13 +178,14 @@ public final class SettingsGameTest implements FabricClientGameTest {
 
     private static void showShotSet(SettingsScreen settings, Shot.Type type) {
         String target = "For: " + (type.travelOnly() ? "Following" : type.fishingOnly() ? "Fishing" : "Player & scenery");
+        Predicate<String> group = label -> label.startsWith("For: ");
         for (int step = 0; step < 3; step++) {
-            AbstractButton selector = button(settings, "shot-set selector", label -> label.startsWith("For: "));
+            AbstractButton selector = button(settings, "shot-set selector", group);
             if (selector.getMessage().getString().equals(target)) return;
             settings.setFocused(selector);
             selector.setFocused(true);
             selector.onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
-            require(settings.getFocused() instanceof AbstractButton focused && focused.getMessage().getString().startsWith("For: "),
+            require(settings.getFocused() instanceof AbstractButton focused && group.test(focused.getMessage().getString()),
                 "Switching sets lost keyboard focus");
         }
         throw new AssertionError("Missing shot set: " + target);

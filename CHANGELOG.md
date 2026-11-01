@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Smooth F6 walking, jumps, hills and falls, with a switch to exclude front travel shots. (#54)
+- Compact settings rows, a narrower sidebar and a two-column shot picker; remove the Start cinematic button. (#54)
 - One F6 mode for walking, swimming, riding, flight and fishing with normal controls. Automatic fishing still starts per cast and keeps music between quick casts. (#53)
 - Fixed settings categories with controls on the right, plus occasional wildlife views during AFK scenery. (#53)
 - Pull travel cameras closer around obstacles, retain usable takes when replacement shots fail, and use F6 as the default start key. (#52)

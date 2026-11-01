@@ -27,6 +27,13 @@ final class SmokeProbe {
             } else {
                 if (!(AfkCinematics.screen() instanceof SettingsScreen) || AfkCinematics.ownsCamera())
                     throw new AssertionError("Invalid settings or camera state");
+                //? if <=1.21.4 {
+                /*var result = Path.of(System.getProperty("afkcinematics.smoke.result"));
+                Files.createDirectories(result.getParent());
+                try (var image = net.minecraft.client.Screenshot.takeScreenshot(Minecraft.getInstance().getMainRenderTarget())) {
+                    image.writeToFile(result.resolveSibling(result.getFileName() + "-settings.png"));
+                }
+                *///?}
                 checkChoices();
                 if (System.getProperty("afkcinematics.smoke.world") != null) SceneProbe.start();
                 else finish("Startup, mixin targets and settings render passed (" + loader + ").");
@@ -65,11 +72,11 @@ final class SmokeProbe {
         }
     }
 
-    private static net.minecraft.client.gui.components.CycleButton<?> playlist(SettingsScreen screen) {
+    private static net.minecraft.client.gui.components.AbstractButton playlist(SettingsScreen screen) {
         for (int i = 0; i < 20; i++) {
-            var found = screen.children().stream().filter(net.minecraft.client.gui.components.CycleButton.class::isInstance)
-                .map(child -> (net.minecraft.client.gui.components.CycleButton<?>)child)
-                .filter(button -> button.getValue() instanceof dev.ohneb.afkcinematics.core.CinematicConfig.Soundtrack)
+            var found = screen.children().stream().filter(net.minecraft.client.gui.components.AbstractButton.class::isInstance)
+                .map(net.minecraft.client.gui.components.AbstractButton.class::cast)
+                .filter(button -> button.getMessage().getString().startsWith("Playlist: "))
                 .findFirst();
             if (found.isPresent()) return found.get();
             screen.mouseScrolled(0, 0, 0, -1);

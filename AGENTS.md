@@ -21,6 +21,7 @@ starts once per cast, and may retain its owned music briefly between casts.
 Manual sessions retain real controls and
 adapt to movement, mounts, water and casts without replacing their owner. Follow the rendered subject
 without changing its pose; validate movement from the last applied world-camera position.
+Filtered travel framing must still validate visibility against the actual subject.
 Fishing views follow only the current player's live bobber. Preserve vanilla's hand
 and interaction routing; never cast, retrieve or infer a catch automatically.
 Track the effective mouse button after vanilla's platform-specific remapping.
