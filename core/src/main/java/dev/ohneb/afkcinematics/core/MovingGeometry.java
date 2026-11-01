@@ -17,6 +17,7 @@ public final class MovingGeometry implements Geometry {
     private boolean followsCourse, reframeRequested;
     private double elapsed, extension = 1, reveal = 1;
     private Vec previousTarget, previousOrigin;
+    private Vec adjustmentVelocity = new Vec(0, 0, 0);
     private Recovery recovery = Recovery.NONE;
     private boolean recoveryCovered;
 
@@ -28,6 +29,7 @@ public final class MovingGeometry implements Geometry {
     }
 
     public void framing(Scene.Kind activity, boolean frontViews) {
+        if (this.activity != activity) adjustmentVelocity = new Vec(0, 0, 0);
         this.activity = activity;
         this.frontViews = frontViews;
     }
@@ -45,7 +47,7 @@ public final class MovingGeometry implements Geometry {
                 motion.reset(origin);
             }
             turn(elapsed);
-        } else motion.hold(next);
+        } else { motion.hold(next); adjustmentVelocity = new Vec(0, 0, 0); }
         return true;
     }
 
@@ -133,6 +135,7 @@ public final class MovingGeometry implements Geometry {
             return coveredOrigin();
         }
         if (recovery == Recovery.DESTINATION) { recovery = Recovery.NONE; reveal = 0; recoveryCovered = false; }
+        Vec nextVelocity = new Vec(0, 0, 0);
         if (!destination && !cut && previous != null) {
             Vec carried = previousOrigin == null ? from : from.add(origin.subtract(previousOrigin));
             double movement = walking ? carried.distance(from) : previousTarget == null ? 0 : target.distance(previousTarget);
@@ -141,20 +144,35 @@ public final class MovingGeometry implements Geometry {
             Vec step = travel > limit ? from.lerp(point, limit / travel) : point;
             if (walking) {
                 // Ease composition changes relative to the filtered rig, not the player's jump arc.
-                double blend = 1 - Math.exp(-elapsed * 8);
-                double widening = point.distance(origin) - carried.distance(origin);
-                if (widening > 0) blend = Math.min(blend, elapsed * 2 / widening);
-                Vec eased = carried.lerp(point, blend);
-                if (usable(eased, 0) && world.clear(from, eased)) step = eased;
+                double spring = 6, decay = Math.exp(-spring * elapsed);
+                Vec error = carried.subtract(point);
+                Vec change = adjustmentVelocity.add(error.scale(spring)).scale(elapsed);
+                Vec eased = point.add(error.add(change).scale(decay));
+                Vec velocity = adjustmentVelocity.subtract(change.scale(spring)).scale(decay);
+                double widening = eased.distance(origin) - carried.distance(origin);
+                if (widening > elapsed * 2) {
+                    double amount = elapsed * 2 / widening;
+                    eased = carried.lerp(eased, amount);
+                    velocity = velocity.scale(amount);
+                }
+                double distanceFromPrevious = from.distance(eased);
+                if (distanceFromPrevious > limit) {
+                    double amount = limit / distanceFromPrevious;
+                    eased = from.lerp(eased, amount);
+                    velocity = velocity.scale(amount);
+                }
+                if (usable(eased, 0) && world.clear(from, eased)) { step = eased; nextVelocity = velocity; }
             }
             if (usable(step, 0) && world.clear(from, step)) point = step;
             else {
                 // Do not jump through a trunk. Cover the old view, then recheck a close destination.
                 recovery = Recovery.ORIGIN;
                 recoveryCovered = false;
+                adjustmentVelocity = new Vec(0, 0, 0);
                 return coveredOrigin();
             }
         }
+        adjustmentVelocity = nextVelocity;
         double ratio = Math.min(1, point.distance(target) / Math.max(.001, distance));
         Vec aim = target.lerp(focus, ratio);
         if (!activity.travel() && !world.visible(point, aim)) aim = target;

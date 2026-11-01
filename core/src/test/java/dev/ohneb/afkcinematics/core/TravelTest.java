@@ -200,6 +200,42 @@ class TravelTest {
         }
     }
 
+    @Test void raisedWalkingCameraSettlesGraduallyAfterClearingALedge() {
+        Geometry ledge = new Geometry() {
+            private boolean line(Vec a, Vec b, double margin) {
+                for (int i = 0; i <= 100; i++) {
+                    Vec p = a.lerp(b, i / 100.0);
+                    if (Math.abs(p.x()) + margin >= .6 || p.y() - margin <= 0
+                        || p.z() - margin <= 0 && p.y() - margin <= 6) return false;
+                }
+                return true;
+            }
+            public boolean clear(Vec a, Vec b, double margin) { return line(a, b, .25 + margin); }
+            public boolean visible(Vec a, Vec b, double margin) { return line(a, b, margin); }
+        };
+        var moving = new MovingGeometry(ledge, new Vec(0, 1.2, 5.5), 0);
+        moving.framing(Scene.Kind.FOLLOW, false);
+        moving.course(0);
+        Pose local = new Pose(new Vec(0, .6, -6.5), 0, 0), previous = null;
+        double previousDrop = 0;
+        for (int frame = 0; frame <= 480; frame++) {
+            moving.follow(new Vec(0, 1.2, 5.5 + frame / 20.0), frame * 16_666_667L, false, true);
+            Pose view = moving.apply(local, ZERO, 0, 1, false);
+            assertNotNull(view);
+            assertEquals(0, moving.fade());
+            if (frame == 0) assertTrue(view.position().y() > 7, "Fixture did not establish the raised view");
+            if (previous != null) {
+                assertTrue(view.position().distance(previous.position()) < .17,
+                    "Clearing the ledge caused an abrupt drop at " + frame);
+                double drop = view.position().y() - previous.position().y();
+                assertTrue(Math.abs(drop - previousDrop) < .06, "Ledge settling began with a velocity jump at " + frame);
+                previousDrop = drop;
+            }
+            previous = view;
+        }
+        assertEquals(1.8, previous.position().y(), .01, "The view remained elevated after the ledge");
+    }
+
     @Test void oneManualSessionCanChangeActivityWithoutLosingItsCaptureOwner() {
         var config = new CinematicConfig();
         var moving = new MovingGeometry(OPEN, ZERO, 0);
