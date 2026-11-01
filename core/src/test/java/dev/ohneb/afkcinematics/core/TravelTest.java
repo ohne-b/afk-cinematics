@@ -62,6 +62,51 @@ class TravelTest {
         }
     }
 
+    @Test void followingLowersUnderCoverWithoutCrowdingTheRider() {
+        Geometry canopy = new Geometry() {
+            private boolean line(Vec a, Vec b, double margin) {
+                int steps = Math.max(1, (int)Math.ceil(a.distance(b) * 100));
+                for (int i = 0; i <= steps; i++) {
+                    Vec p = a.lerp(b, (double)i / steps);
+                    if (p.y() - margin <= -1.17 || p.y() + margin >= 1.4 && p.y() - margin <= 7
+                        && p.z() + margin >= 4 && p.z() - margin <= 20) return false;
+                }
+                return true;
+            }
+            public boolean clear(Vec a, Vec b, double margin) { return line(a, b, .25 + margin); }
+            public boolean visible(Vec a, Vec b, double margin) { return line(a, b, margin); }
+        };
+        for (Scene.Kind kind : new Scene.Kind[]{Scene.Kind.FOLLOW, Scene.Kind.RIDE}) {
+            var moving = new MovingGeometry(canopy, new Vec(0, 0, -8), 0);
+            moving.framing(kind, false);
+            moving.course(0);
+            Pose local = new Pose(new Vec(2.2, 2.275, -6.1), 0, 0), previous = null;
+            double closest = Double.POSITIVE_INFINITY, largestStep = 0;
+            int previousCuts = 0;
+            for (int frame = 0; frame <= 780; frame++) {
+                Vec rider = new Vec(0, 0, -8 + frame / 15.0);
+                assertTrue(moving.follow(rider, frame * 16_666_667L, false, true));
+                Pose view = moving.apply(local, new Vec(0, .2, 1.25), 1, false);
+                assertNotNull(view);
+                assertTrue(canopy.visible(view.position(), rider));
+                assertTrue(view.position().z() < rider.z(), "Front views are disabled");
+                if (previous != null) {
+                    if (moving.cuts() == previousCuts) assertTrue(canopy.clear(previous.position(), view.position()));
+                    largestStep = Math.max(largestStep, previous.position().distance(view.position()));
+                }
+                assertTrue(canopy.clear(view.position(), view.position()));
+                if (rider.z() >= 12 && rider.z() <= 19)
+                    closest = Math.min(closest, view.position().distance(rider));
+                previous = view;
+                previousCuts = moving.cuts();
+            }
+            assertTrue(closest > 5, "A lower full-distance view fits, but the camera crowded to " + closest);
+            assertEquals(1, moving.cuts(), "There is a continuous route beneath the canopy");
+            assertTrue(largestStep < .17, "Cover caused a camera jump: " + largestStep);
+            assertEquals(local.position().y(), previous.position().y(), .01, "The camera must settle back after cover");
+        }
+    }
+
     @Test void walkingJumpsStayInsideTheFrameWhileLandingsAndFallsAreFollowed() {
         var moving = new MovingGeometry(OPEN, ZERO, 0);
         moving.framing(Scene.Kind.FOLLOW, true);
