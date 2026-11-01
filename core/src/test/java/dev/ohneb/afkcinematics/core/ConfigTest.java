@@ -44,14 +44,17 @@ class ConfigTest {
         var store = new ConfigStore(path);
         assertTrue(store.config().wildlife);
         assertTrue(store.config().autoFishing);
+        assertTrue(store.config().frontTravel);
         store.config().wildlife = false;
         store.config().automatic = false;
         store.config().autoFishing = false;
+        store.config().frontTravel = false;
         assertTrue(store.save());
         var restored = new ConfigStore(path).config();
         assertFalse(restored.wildlife);
         assertFalse(restored.automatic);
         assertFalse(restored.autoFishing);
+        assertFalse(restored.frontTravel);
     }
 
     @Test void reportsAnUnwritableDestinationWithoutRemovingIt() throws Exception {

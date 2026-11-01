@@ -4,6 +4,9 @@ package dev.ohneb.afkcinematics.core;
 public final class MovingGeometry implements Geometry {
     private enum Recovery { NONE, ORIGIN, DESTINATION }
     private final Geometry world;
+    private final FollowMotion motion;
+    private Scene.Kind activity = Scene.Kind.FLIGHT;
+    private boolean frontViews = true;
     private Vec origin, target;
     private Pose previous;
     private Vec previousFocus;
@@ -12,7 +15,7 @@ public final class MovingGeometry implements Geometry {
     private long updated;
     private double heading, desiredHeading, turnVelocity;
     private boolean followsCourse, reframeRequested;
-    private double elapsed, arm = Double.POSITIVE_INFINITY, reveal = 1;
+    private double elapsed, extension = 1, reveal = 1, terrainLift;
     private Vec previousTarget;
     private Recovery recovery = Recovery.NONE;
     private boolean recoveryCovered;
@@ -20,18 +23,29 @@ public final class MovingGeometry implements Geometry {
     public MovingGeometry(Geometry world, Vec origin, long now) {
         this.world = world;
         this.origin = this.target = origin;
+        motion = new FollowMotion(origin);
         updated = now;
     }
 
-    public boolean follow(Vec next, long now, boolean capture) {
+    public void framing(Scene.Kind activity, boolean frontViews) {
+        this.activity = activity;
+        this.frontViews = frontViews;
+    }
+
+    public boolean follow(Vec next, long now, boolean capture, boolean grounded) {
         if (now < updated || next.distance(target) > 16 || next.distance(origin) > 24) return false;
-        elapsed = capture ? 0 : Math.min(0.1, (now - updated) / 1e9);
+        elapsed = capture ? 0 : Math.min(0.25, (now - updated) / 1e9);
         target = next;
         updated = now;
         if (!capture) {
-            origin = origin.lerp(next, 1 - Math.exp(-elapsed / 0.08));
+            if (followsCourse && activity.travel())
+                origin = motion.follow(next, elapsed, activity == Scene.Kind.FOLLOW || activity == Scene.Kind.RIDE, grounded);
+            else {
+                origin = origin.lerp(next, 1 - Math.exp(-elapsed / 0.08));
+                motion.reset(origin);
+            }
             turn(elapsed);
-        }
+        } else motion.hold(next);
         return true;
     }
 
@@ -79,7 +93,7 @@ public final class MovingGeometry implements Geometry {
             reframeRequested = false;
         }
         Vec point = rotate(pose.position(), heading).add(origin);
-        Vec worldFocus = focus == null ? null : rotate(focus, heading).add(target);
+        Vec worldFocus = focus == null ? null : rotate(focus, heading).add(activity.travel() ? origin : target);
         Pose result = worldFocus == null ? new Pose(point, pose.yaw() + heading, pose.pitch()) : Pose.lookingAt(point, worldFocus);
         if (capture && previous != null) { result = previous; worldFocus = previousFocus; }
         else if (followsCourse && focus != null) return travel(point, worldFocus, fade, take, cut);
@@ -96,12 +110,33 @@ public final class MovingGeometry implements Geometry {
 
     /** Travel framing may shorten, but every revealed position still has a clear rider sightline. */
     private Pose travel(Vec desired, Vec focus, double fade, int take, boolean cut) {
+        if (activity == Scene.Kind.FOLLOW || activity == Scene.Kind.RIDE) {
+            double needed = 0;
+            if (!usable(desired, .3)) {
+                // Follow a descending hillside from above instead of repeatedly pulling into the rider.
+                double below = 0;
+                for (double height : new double[]{.5, 1, 2, 3, 4, 6}) {
+                    if (!usable(desired.add(new Vec(0, height, 0)), .3)) { below = height; continue; }
+                    double above = height;
+                    for (int i = 0; i < 6; i++) {
+                        double middle = (below + above) * .5;
+                        if (usable(desired.add(new Vec(0, middle, 0)), .3)) above = middle;
+                        else below = middle;
+                    }
+                    needed = above + .15;
+                    break;
+                }
+            }
+            terrainLift = Math.max(needed, terrainLift - elapsed * .65);
+            desired = desired.add(new Vec(0, terrainLift, 0));
+        } else terrainLift = 0;
         Vec offset = desired.subtract(target);
         double distance = offset.length();
         Vec point = null;
         if (distance > .001) {
             Vec direction = offset.scale(1 / distance);
-            double maximum = Math.min(distance, cut ? distance : arm + elapsed * 2);
+            // Only obstruction shortens the boom; jumping must not change its intended length.
+            double maximum = distance * (cut ? 1 : Math.min(1, extension + elapsed * 2 / Math.max(.8, distance)));
             point = nearby(direction, maximum, .3);
             // A rider beside a corner can be inside the padding while the real sightline is clear.
             if (point == null) point = nearby(direction, maximum, 0);
@@ -118,7 +153,7 @@ public final class MovingGeometry implements Geometry {
         if (recovery == Recovery.DESTINATION) { recovery = Recovery.NONE; reveal = 0; recoveryCovered = false; }
         if (!destination && !cut && previous != null) {
             double movement = previousTarget == null ? 0 : target.distance(previousTarget);
-            double limit = Math.max(.35, movement * 1.5 + elapsed * 12);
+            double limit = Math.max(.001, movement * 1.5 + elapsed * 12);
             double travel = from.distance(point);
             Vec step = travel > limit ? from.lerp(point, limit / travel) : point;
             if (usable(step, 0) && world.clear(from, step)) point = step;
@@ -131,9 +166,9 @@ public final class MovingGeometry implements Geometry {
         }
         double ratio = Math.min(1, point.distance(target) / Math.max(.001, distance));
         Vec aim = target.lerp(focus, ratio);
-        if (!world.visible(point, aim)) aim = target;
+        if (!activity.travel() && !world.visible(point, aim)) aim = target;
         Pose result = Pose.lookingAt(point, aim);
-        arm = point.distance(target);
+        extension = ratio;
         previous = result;
         previousFocus = aim;
         previousTarget = target;
@@ -162,7 +197,7 @@ public final class MovingGeometry implements Geometry {
         Vec near = target.add(direction.scale(minimum));
         if (!usable(near, margin)) return null;
         // Fixed work per frame; the padded arm also leaves room before foliage reaches the camera.
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 10 && maximum - minimum > .01; i++) {
             double middle = (minimum + maximum) * .5;
             Vec candidate = target.add(direction.scale(middle));
             if (usable(candidate, margin)) { minimum = middle; near = candidate; }
@@ -172,7 +207,12 @@ public final class MovingGeometry implements Geometry {
     }
 
     private boolean usable(Vec point, double margin) {
-        return Scene.inRange(point, target) && world.clear(point, point) && world.visible(point, target, margin);
+        if (!frontViews && activity.travel()) {
+            double radians = Math.toRadians(desiredHeading);
+            Vec offset = point.subtract(target);
+            if (-Math.sin(radians) * offset.x() + Math.cos(radians) * offset.z() > .05) return false;
+        }
+        return Scene.inRange(point, target) && world.clear(point, point, margin) && world.visible(point, target, margin);
     }
 
     private Pose coveredOrigin() {

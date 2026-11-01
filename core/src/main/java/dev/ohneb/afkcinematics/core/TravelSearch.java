@@ -23,7 +23,7 @@ final class TravelSearch {
         this.random = random;
         firstSide = random.nextBoolean() ? 1 : -1;
         types = new ArrayList<>(config.shots);
-        types.removeIf(type -> !type.travelOnly());
+        types.removeIf(type -> !type.travelOnly() || !config.frontTravel && type == Shot.Type.LEAD);
         if (types.isEmpty()) types.add(Shot.Type.STILL);
         Collections.shuffle(types, random);
         types.sort(Comparator.comparingInt(history::lastUse));
@@ -48,6 +48,7 @@ final class TravelSearch {
             default -> flying ? 15 : 10;
         } * scale * (close ? .65 : 1);
         double height = switch (type) {
+            case TRAIL -> kind == Scene.Kind.FOLLOW ? 3.5 : flying ? 3 : 1.5;
             case LOW_ESCORT -> flying ? -.4 : .5;
             case HIGH_TRAIL -> flying ? 11 : 8;
             case BROADSIDE -> flying ? 2 : 1;

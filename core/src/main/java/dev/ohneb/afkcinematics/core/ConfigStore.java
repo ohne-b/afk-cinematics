@@ -48,6 +48,7 @@ public final class ConfigStore {
             config.keepChat = bool("keepChat", true);
             config.wildlife = bool("wildlife", true);
             config.autoFishing = bool("autoFishing", true);
+            config.frontTravel = bool("frontTravel", true);
         } catch (IOException | RuntimeException exception) {
             readable = false;
             config.enabled = false;
@@ -128,6 +129,7 @@ public final class ConfigStore {
         updated.addProperty("keepChat", config.keepChat);
         updated.addProperty("wildlife", config.wildlife);
         updated.addProperty("autoFishing", config.autoFishing);
+        updated.addProperty("frontTravel", config.frontTravel);
         Path temporary = null;
         try {
             Path directory = path.toAbsolutePath().getParent();
