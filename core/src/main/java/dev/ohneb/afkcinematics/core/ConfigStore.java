@@ -32,6 +32,7 @@ public final class ConfigStore {
             config.subject = enumeration("subject", CinematicConfig.Subject.MIXED);
             config.playerShare = Math.clamp(integer("playerShare", 25), 0, 100);
             config.pace = enumeration("pace", CinematicConfig.Pace.RELAXED);
+            config.transition = enumeration("transition", CinematicConfig.Transition.CUT);
             config.shots = shots();
             config.useGameFov = bool("useGameFov", true);
             config.customFov = Math.clamp(integer("customFov", 90), 30, 140);
@@ -111,6 +112,7 @@ public final class ConfigStore {
         updated.addProperty("subject", config.subject.name().toLowerCase(Locale.ROOT));
         updated.addProperty("playerShare", Math.clamp(config.playerShare, 0, 100));
         updated.addProperty("pace", config.pace.name().toLowerCase(Locale.ROOT));
+        updated.addProperty("transition", config.transition.name().toLowerCase(Locale.ROOT));
         var shots = new JsonArray();
         config.shots.forEach(type -> shots.add(type.name().toLowerCase(Locale.ROOT)));
         updated.add("shots", shots);

@@ -112,6 +112,9 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     press(settings, "Enable all");
                     go(settings, "Camera");
                     require(!button(settings, "Camera").active, "Sidebar did not mark the current category");
+                    press(settings, "Transition: Cut");
+                    require(fixture.config().transition == dev.ohneb.afkcinematics.core.CinematicConfig.Transition.FADE,
+                        "Transition choice did not select Fade");
                     var fov = settings.children().stream().filter(net.minecraft.client.gui.components.AbstractSliderButton.class::isInstance)
                         .map(net.minecraft.client.gui.components.AbstractSliderButton.class::cast).findFirst().orElseThrow();
                     require(!fov.active && fixture.config().useGameFov, "Custom FOV did not start disabled");

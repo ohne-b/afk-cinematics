@@ -6,6 +6,7 @@ public final class CinematicConfig {
     public enum Soundtrack { GAME, CREATIVE, DISCS, CUSTOM }
     public enum Motion { GENTLE, REDUCED, STILL }
     public enum Subject { MIXED, PLAYER, SCENERY }
+    public enum Transition { CUT, FADE }
     public enum Pace {
         QUICK(6, 10), SHORT(12, 18), RELAXED(20, 30), LONG(32, 46);
         public final double minimumSeconds, maximumSeconds;
@@ -24,6 +25,7 @@ public final class CinematicConfig {
     public Subject subject = Subject.MIXED;
     public int playerShare = 25;
     public Pace pace = Pace.RELAXED;
+    public Transition transition = Transition.CUT;
     public EnumSet<Shot.Type> shots = EnumSet.allOf(Shot.Type.class);
     public boolean useGameFov = true;
     public int customFov = 90;
