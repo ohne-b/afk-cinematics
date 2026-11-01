@@ -114,15 +114,6 @@ public final class SettingsScreen extends Screen {
         }).bounds(width / 2 - half - 3, height - 26, half, 20).build();
         startIssue = null;
         updateStart();
-        if (focusNumber != null) {
-            numericLabels.forEach((input, label) -> {
-                if (label.equals(text(focusNumber + ".input")) && children().contains(input)) {
-                    setFocused(input);
-                    input.setFocused(true);
-                }
-            });
-            focusNumber = null;
-        }
         addRenderableWidget(preview);
         close = addRenderableWidget(Button.builder(saveFailed ? text("close_unsaved") : CommonComponents.GUI_DONE, button -> onClose())
             .bounds(width / 2 + 3, height - 26, half, 20).build());
@@ -136,6 +127,15 @@ public final class SettingsScreen extends Screen {
     @Override public void tick() {
         super.tick();
         updateStart();
+        if (focusNumber != null) {
+            numericLabels.forEach((input, label) -> {
+                if (label.equals(text(focusNumber + ".input")) && children().contains(input)) {
+                    setFocused(input);
+                    input.setFocused(true);
+                }
+            });
+            focusNumber = null;
+        }
         if (focusSaveError) {
             setFocused(close);
             close.setFocused(true);

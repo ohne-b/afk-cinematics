@@ -55,15 +55,24 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     go(settings, "AFK details");
                     field(settings, "FPS while AFK").setValue("144");
                     require(fixture.config().cinematicFps == 144, "Exact FPS entry was lost");
+                    int originalWidth = settings.width, originalHeight = settings.height;
+                    settings.resize(220, 140);
                     field(settings, "FPS while AFK").setValue("30");
                     field(settings, "FPS while AFK").setValue("300");
-                    go(settings, "Camera");
-                    settings.onClose();
+                    button(settings, "AFK details", value -> value.endsWith("  AFK details"))
+                        .onPress(new KeyEvent(InputConstants.KEY_SPACE, 0, 0));
+                    for (int i = 0; i < 30; i++) settings.mouseScrolled(0, 0, 0, 1);
+                    var done = button(settings, "Done");
+                    settings.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(done.getX() + 5, done.getY() + 5,
+                        new net.minecraft.client.input.MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0)), false);
                     settings.tick();
-                    require(AfkCinematics.screen() == settings && field(settings, "FPS while AFK").getValue().equals("300"),
+                    var invalidFps = settings.children().stream().filter(EditBox.class::isInstance).map(EditBox.class::cast)
+                        .filter(input -> input.getMessage().getString().equals("FPS while AFK")).findFirst().orElse(null);
+                    require(AfkCinematics.screen() == settings && invalidFps != null && invalidFps.getValue().equals("300"),
                         "Rebuilding settings silently saved a numeric prefix");
-                    require(settings.getFocused() == field(settings, "FPS while AFK"), "Invalid hidden number did not regain focus");
-                    field(settings, "FPS while AFK").setValue("144");
+                    require(settings.getFocused() == invalidFps, "Invalid hidden number did not regain focus");
+                    invalidFps.setValue("144");
+                    settings.resize(originalWidth, originalHeight);
                     var subject = button(settings, "Subject: Mixed");
                     settings.setFocused(subject);
                     subject.setFocused(true);
