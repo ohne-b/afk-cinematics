@@ -2,10 +2,12 @@ package dev.ohneb.afkcinematics.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.ohneb.afkcinematics.core.CinematicConfig;
+import dev.ohneb.afkcinematics.testmixin.KeyboardInvoker;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
 import net.minecraft.client.CameraType;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.core.BlockPos;
@@ -139,11 +141,30 @@ public final class CameraGameTest implements FabricClientGameTest {
                 AfkCinematics.config().automatic = true;
                 AfkCinematics.config().idleSeconds = 10;
             });
+            manual(context);
+            key(context, InputConstants.KEY_W, InputConstants.PRESS);
+            context.runOnClient(client -> {
+                focused = false;
+                // Deliver the inactive release before the next focus tick, as GLFW can.
+                ((KeyboardInvoker)client.keyboardHandler).press(AfkCinematics.window(), InputConstants.RELEASE,
+                    new KeyEvent(InputConstants.KEY_W, 0, 0));
+                AfkCinematics.tick();
+                require(AfkCinematics.suppressed(keyboardKey(InputConstants.KEY_W)), "Inactive release lost input protection");
+                focused = true;
+                var toggle = ((dev.ohneb.afkcinematics.mixin.KeyMappingAccess)AfkCinematics.TOGGLE).afkCinematics$key();
+                AfkCinematics.input(toggle, InputConstants.PRESS, false);
+                AfkCinematics.input(toggle, InputConstants.RELEASE, false);
+                require(!AfkCinematics.ownsCamera() && !AfkCinematics.manualControl(), "Toggle did not end manual mode");
+            });
             context.waitFor(client -> AfkCinematics.showing(), 400);
             context.runOnClient(client -> {
+                require(!AfkCinematics.manualControl(), "Idle restart retained manual controls");
+                require(AfkCinematics.suppressed(keyboardKey(InputConstants.KEY_W)) && !client.options.keyUp.isDown(),
+                    "Resuming AFK released the quarantined movement key");
                 AfkCinematics.stop();
                 AfkCinematics.config().automatic = false;
             });
+            key(context, InputConstants.KEY_W, InputConstants.RELEASE);
 
             context.runOnClient(client -> {
                 focused = true;

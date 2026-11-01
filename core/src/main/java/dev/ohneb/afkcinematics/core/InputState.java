@@ -39,5 +39,6 @@ public final class InputState {
     public boolean heldExcept(long permitted) { return held.stream().anyMatch(input -> input != permitted); }
     public void suppress(long input) { suppressed.add(input); }
     public boolean suppressed(long input) { return suppressed.contains(input); }
-    public void resetHeld() { held.retainAll(suppressed); }
+    // Focus/world changes invalidate held activity, not suppression awaiting a trusted release.
+    public void resetHeld() { held.clear(); }
 }

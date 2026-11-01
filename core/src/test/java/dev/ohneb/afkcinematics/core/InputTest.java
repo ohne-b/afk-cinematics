@@ -19,17 +19,24 @@ class InputTest {
         assertFalse(input.suppressed(18));
     }
 
-    @Test void lifecycleResetRetainsSuppressionUntilRelease() {
+    @Test void lifecycleResetAllowsIdleWithoutReleasingSuppressedInputs() {
         var input = new InputState();
-        input.press(17, true);
+        var idle = new IdleTimer();
+        idle.reset(0);
+        input.press(17, false);
         input.press(18, false);
+        // A release while unfocused quarantines the key until a trusted release arrives.
+        input.suppress(17);
         input.resetHeld();
-        assertTrue(input.held());
+        assertTrue(idle.ready(10_000_000_000L, 10, !input.held()), "Stale held input permanently blocked AFK");
+        assertFalse(input.heldExcept(18));
         assertTrue(input.suppressed(17));
         assertTrue(input.press(17, false));
+        assertTrue(input.held(), "A new physical event still counts as activity");
         assertTrue(input.release(17));
         assertFalse(input.held());
         assertFalse(input.suppressed(17));
+        assertFalse(input.press(17, false), "A fresh press after release must work normally");
     }
 
     @Test void blockedInputStaysBlockedThroughRepeatsUntilRelease() {
