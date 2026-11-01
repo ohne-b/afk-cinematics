@@ -19,7 +19,9 @@ public final class CinematicOverlay {
         if (world == null || player == null || AfkCinematics.screen() != null && !AfkCinematics.chatting()) return;
         double amount = BARS.sample(System.nanoTime(), AfkCinematics.showing() && AfkCinematics.config().letterbox,
             AfkCinematics.capturing());
-        if (amount <= 0) return;
+        double fade = AfkCinematics.fadeOpacity();
+        long cut = AfkCinematics.cameraCut();
+        if (amount <= 0 && fade <= 0) return;
         //? if >=26.1 {
         /*graphics.nextStratum();
         *///?}
@@ -33,6 +35,10 @@ public final class CinematicOverlay {
         if (edge != 0) {
             graphics.fill(0, bar, width, bar + 1, edge);
             graphics.fill(0, height - bar - 1, width, height - bar, edge);
+        }
+        if (fade > 0) {
+            graphics.fill(0, 0, width, height, (int)Math.round(fade * 255) << 24);
+            if (fade == 1) AfkCinematics.coveredFrame(cut);
         }
     }
 }

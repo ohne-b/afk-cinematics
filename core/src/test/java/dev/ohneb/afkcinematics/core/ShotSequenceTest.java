@@ -112,17 +112,20 @@ class ShotSequenceTest {
     }
 
     @Test void anObstructedPreparedPathIsRecheckedAtHandoff() {
-        var accepted = new ArrayList<Shot>();
-        boolean[] blocked = {false};
-        var session = session(geometry(accepted, blocked), Shot.Type.ARC);
-        long now = reachSecondPlan(session, accepted);
-        blocked[0] = true;
-        for (int tick = 0; tick < 140 && !session.ended(); tick++) {
-            now += 50_000_000L;
-            session.tick(now);
-            session.frame(now);
+        for (var transition : CinematicConfig.Transition.values()) {
+            var accepted = new ArrayList<Shot>();
+            boolean[] blocked = {false};
+            var session = session(geometry(accepted, blocked), transition, Shot.Type.ARC);
+            long now = reachSecondPlan(session, accepted);
+            blocked[0] = true;
+            for (int tick = 0; tick < 140 && !session.ended(); tick++) {
+                now += 50_000_000L;
+                session.tick(now);
+                session.frame(now);
+                session.coveredFrame();
+            }
+            assertTrue(session.ended(), "A stale prepared path was installed without revalidation");
         }
-        assertTrue(session.ended(), "A stale prepared path was installed without revalidation");
     }
 
     @Test void rejectedSuccessorsDoNotCutTheCurrentTakeShort() {
@@ -175,25 +178,30 @@ class ShotSequenceTest {
     }
 
     @Test void nextBeforeTheHandoffDiscardsTheOldPlanBeforeAnotherTickOrCaptureRelease() {
-        for (boolean capture : new boolean[]{false, true}) {
-            var accepted = new ArrayList<Shot>();
-            var session = session(geometry(accepted, new boolean[1]), Shot.Type.ARC);
-            long now = 0, started = -1;
-            while (accepted.size() < 2 && now < 20_000_000_000L) {
-                frame(session, now += 50_000_000L);
-                if (session.take() == 1 && started == -1) started = now;
+        for (var transition : CinematicConfig.Transition.values()) {
+            for (boolean capture : new boolean[]{false, true}) {
+                var accepted = new ArrayList<Shot>();
+                var session = session(geometry(accepted, new boolean[1]), transition, Shot.Type.ARC);
+                long now = 0, started = -1;
+                while (accepted.size() < 2 && now < 20_000_000_000L) {
+                    frame(session, now += 50_000_000L);
+                    if (session.take() == 1 && started == -1) started = now;
+                }
+                assertEquals(2, accepted.size());
+                long handoff = started + Math.round(accepted.getFirst().duration() * 1e9);
+                while (now + 50_000_000L < handoff) assertNotNull(session.frame(now += 50_000_000L));
+                if (capture) session.beginCapture(now);
+                session.nextShot();
+                if (capture) session.endCapture(now += 2_000_000_000L);
+                assertNotNull(session.frame(now += 100_000_000L));
+                assertEquals(1, session.take(), "Next applied the old pending plan before the next tick");
+                for (int tick = 0; tick < 80; tick++) {
+                    frame(session, now += 50_000_000L);
+                    session.coveredFrame();
+                }
+                assertEquals(3, accepted.size(), "Next did not replace the discarded plan exactly once");
+                assertEquals(2, session.take(), "Next caused a second unintended cut");
             }
-            assertEquals(2, accepted.size());
-            long handoff = started + Math.round(accepted.getFirst().duration() * 1e9);
-            while (now + 50_000_000L < handoff) assertNotNull(session.frame(now += 50_000_000L));
-            if (capture) session.beginCapture(now);
-            session.nextShot();
-            if (capture) session.endCapture(now += 2_000_000_000L);
-            assertNotNull(session.frame(now += 100_000_000L));
-            assertEquals(1, session.take(), "Next applied the old pending plan before the next tick");
-            for (int tick = 0; tick < 80; tick++) frame(session, now += 50_000_000L);
-            assertEquals(3, accepted.size(), "Next did not replace the discarded plan exactly once");
-            assertEquals(2, session.take(), "Next caused a second unintended cut");
         }
     }
 
@@ -216,6 +224,45 @@ class ShotSequenceTest {
             assertEquals(accepted.get(take - 1).sample(0), session.current());
         }
         assertTrue(take >= 4);
+    }
+
+    @Test void fadesKeepMovingAndWaitForBothOpaqueFramesAcrossCaptureHolds() {
+        var config = new CinematicConfig();
+        config.subject = CinematicConfig.Subject.SCENERY;
+        config.shots = EnumSet.of(Shot.Type.ARC);
+        config.pace = CinematicConfig.Pace.QUICK;
+        config.transition = CinematicConfig.Transition.FADE;
+        var session = new CinematicSession(ANCHOR, ENTRY, 0, config, geometry(new ArrayList<>(), new boolean[1]), new Random(4));
+        long now = 0;
+        while (session.fadeOpacity() == 0 && now < 20_000_000_000L) frame(session, now += 50_000_000L);
+        assertTrue(session.fadeOpacity() > 0 && session.fadeOpacity() < 1);
+        Pose held = session.current();
+        double opacity = session.fadeOpacity();
+        session.beginCapture(now);
+        session.beginCapture(now);
+        assertEquals(held, session.frame(now + 2_000_000_000L));
+        assertEquals(opacity, session.fadeOpacity());
+        session.endCapture(now + 2_000_000_000L);
+        assertEquals(held, session.frame(now + 3_000_000_000L));
+        session.endCapture(now += 3_000_000_000L);
+        assertEquals(held, session.frame(now));
+        assertEquals(opacity, session.fadeOpacity());
+        frame(session, now += 50_000_000L);
+        assertTrue(held.position().distance(session.current().position()) > .001, "Fade froze the outgoing move");
+        for (int i = 0; i < 10; i++) frame(session, now += 50_000_000L);
+        assertEquals(1, session.fadeOpacity());
+        assertEquals(1, session.take(), "A timer alone committed the covered cut");
+        session.coveredFrame();
+        frame(session, now += 50_000_000L);
+        assertEquals(2, session.take());
+        assertEquals(1, session.fadeOpacity());
+        for (int i = 0; i < 6; i++) frame(session, now += 50_000_000L);
+        assertEquals(1, session.fadeOpacity(), "Destination was revealed before its opaque frame");
+        session.coveredFrame();
+        frame(session, now += 100_000_000L);
+        assertTrue(session.fadeOpacity() > 0 && session.fadeOpacity() < 1);
+        frame(session, now += 300_000_000L);
+        assertEquals(0, session.fadeOpacity());
     }
 
     @Test void aReadyCutWaitsForNestedCaptureReleaseWithoutSkippingTime() {
@@ -308,7 +355,12 @@ class ShotSequenceTest {
     }
 
     private static CinematicSession session(Geometry geometry, Shot.Type... types) {
+        return session(geometry, CinematicConfig.Transition.CUT, types);
+    }
+
+    private static CinematicSession session(Geometry geometry, CinematicConfig.Transition transition, Shot.Type... types) {
         var config = new CinematicConfig();
+        config.transition = transition;
         config.subject = CinematicConfig.Subject.SCENERY;
         config.pace = CinematicConfig.Pace.SHORT;
         config.shots = EnumSet.copyOf(List.of(types));

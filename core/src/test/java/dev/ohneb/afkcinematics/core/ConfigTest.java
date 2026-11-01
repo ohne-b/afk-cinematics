@@ -74,6 +74,8 @@ class ConfigTest {
         assertTrue(store.config().music);
         assertEquals(EnumSet.of(Shot.Type.PAN, Shot.Type.CRANE), store.config().shots);
         assertEquals(CinematicConfig.Pace.LONG, store.config().pace);
+        assertEquals(CinematicConfig.Transition.CUT, store.config().transition);
+        store.config().transition = CinematicConfig.Transition.FADE;
         assertEquals(CinematicConfig.Subject.MIXED, store.config().subject);
         assertTrue(store.config().useGameFov);
         assertEquals(90, store.config().customFov);
@@ -96,15 +98,17 @@ class ConfigTest {
         upgraded.add(Shot.Type.values()[Shot.Type.values().length - 1]);
         assertEquals(upgraded, new ConfigStore(path).config().shots);
         assertEquals(CinematicConfig.Subject.SCENERY, new ConfigStore(path).config().subject);
+        assertEquals(CinematicConfig.Transition.FADE, new ConfigStore(path).config().transition);
         assertFalse(new ConfigStore(path).config().useGameFov);
         assertEquals(140, new ConfigStore(path).config().customFov);
         assertEquals(CinematicConfig.Soundtrack.CUSTOM, new ConfigStore(path).config().soundtrack);
         assertEquals("example:quiet_music", new ConfigStore(path).config().customMusic);
         assertEquals(35, new ConfigStore(path).config().musicVolume);
-        Files.writeString(path, "{\"shots\":[],\"pace\":\"invalid\"}");
+        Files.writeString(path, "{\"shots\":[],\"pace\":\"invalid\",\"transition\":\"invalid\"}");
         var defaults = new ConfigStore(path).config();
         assertEquals(EnumSet.allOf(Shot.Type.class), defaults.shots);
         assertEquals(CinematicConfig.Pace.RELAXED, defaults.pace);
+        assertEquals(CinematicConfig.Transition.CUT, defaults.transition);
         assertTrue(defaults.useGameFov);
         for (String invalid : new String[]{"null", "\"140\"", "140.5", "1e30"}) {
             Files.writeString(path, "{\"customFov\":" + invalid + "}");

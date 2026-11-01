@@ -15,9 +15,10 @@ public final class CinematicSession {
     private Shot shot;
     private Scene scene;
     private final ShotHistory history = new ShotHistory();
+    private final ShotFade fade = new ShotFade();
     private Pose current;
     private Vec currentFocus;
-    private long shotStarted, handoff, clockOffset, retryAt;
+    private long shotStarted, handoff, clockOffset, retryAt, frameTime;
     private long lastUpdate = Long.MIN_VALUE;
     private long captureStarted;
     private int captures, take;
@@ -51,6 +52,7 @@ public final class CinematicSession {
         if (shot != null) {
             if (scene.animal() != null && !geometry.available(scene, current.position())) advanceRequested = true;
             if (advanceRequested && !manualAdvance) {
+                fade.cancel(now);
                 planner = planner();
                 pending = null;
                 manualAdvance = true;
@@ -82,12 +84,18 @@ public final class CinematicSession {
         if (capturing()) return shot == null ? null : valid(current, currentFocus, current.position(), scene) ? current : end();
         now = timeline(now);
         if (ended) return null;
+        frameTime = now;
+        fade.sample(now);
         boolean turning = !manualAdvance && !earlyAdvance && activity.travel() && geometry instanceof MovingGeometry moving && moving.turning();
-        if (pending != null && (shot == null || now >= handoff && !turning)) {
+        if (pending == null || turning) fade.cancel(now);
+        boolean fading = shot != null && config.transition == CinematicConfig.Transition.FADE;
+        if (pending != null && (shot == null || now >= handoff - (fading ? ShotFade.DURATION : 0) && !turning)
+            && (!fading || fade.prepare(now))) {
             var plan = pending;
             if (!geometry.available(plan.scene(), plan.shot().start())) {
                 pending = null;
                 planner = planner();
+                fade.cancel(now);
             } else {
                 Shot destination = aimed(plan.shot(), plan.scene());
                 Pose next = destination.sample(0);
@@ -107,6 +115,7 @@ public final class CinematicSession {
                     history.add(scene, shot);
                     current = next;
                     currentFocus = destination.focus(0);
+                    if (fading) fade.swapped(now);
                     return current;
                 }
             }
@@ -135,6 +144,7 @@ public final class CinematicSession {
     }
 
     private void keepTravel(long now) {
+        fade.cancel(now);
         planner = null;
         pending = null;
         manualAdvance = advanceRequested = earlyAdvance = false;
@@ -183,6 +193,8 @@ public final class CinematicSession {
     public int take() { return take; }
     public Shot.Type type() { return shot == null ? null : shot.type(); }
     public boolean capturing() { return captures > 0; }
+    public double fadeOpacity() { return showing() ? fade.opacity() : 0; }
+    public void coveredFrame() { if (showing()) fade.coveredFrame(); }
     public double lensStrength() { return showing() ? 1 : 0; }
     public boolean scenery() { return scene != null && scene.scenery(); }
     public boolean underwater() { return scene != null && scene.kind() == Scene.Kind.WATER; }
@@ -191,7 +203,10 @@ public final class CinematicSession {
         if (ended || manualAdvance) return;
         advanceRequested = true;
         // Rendering can reach the handoff before the next tick processes this request.
-        if (shot != null) pending = null;
+        if (shot != null) {
+            pending = null;
+            fade.cancel(frameTime);
+        }
     }
 
     /** An approaching framing boundary consumes an already prepared successor instead of discarding it. */
@@ -214,6 +229,8 @@ public final class CinematicSession {
         shotStarted += elapsed;
         if (handoff != 0) handoff += elapsed;
         retryAt += elapsed;
+        frameTime += elapsed;
+        fade.pause(elapsed);
         lastUpdate = now;
     }
 
