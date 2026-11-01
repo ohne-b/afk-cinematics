@@ -18,7 +18,7 @@ class ShotOptionsTest {
             if (type.sceneryOnly() || type.travelOnly() || type.fishingOnly()) continue;
             var config = new CinematicConfig();
             config.shots = EnumSet.of(type);
-            Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, null, true, false, new Random(2)).next(OPEN);
+            Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), 0, config, null, new Random(2)).next(OPEN);
             assertNotNull(shot, type.name());
             assertEquals(type, shot.type());
             Pose first = shot.sample(0), last = shot.sample(shot.duration());
@@ -31,25 +31,6 @@ class ShotOptionsTest {
         }
     }
 
-    @Test void changingFromAPanPreservesTheExactStartingView() {
-        var config = new CinematicConfig();
-        config.shots = EnumSet.of(Shot.Type.PAN);
-        Shot pan = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, null, true, false, new Random(2)).next(OPEN);
-        Pose previous = pan.sample(pan.duration());
-        for (Shot.Type type : Shot.Type.values()) {
-            if (type.sceneryOnly() || type.travelOnly() || type.fishingOnly()) continue;
-            config.shots = EnumSet.of(type);
-            Shot next = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), previous, 0, config, pan.type(), false, false, new Random(3)).next(OPEN);
-            assertNotNull(next);
-            Pose start = next.sample(0);
-            assertEquals(previous.position(), start.position());
-            assertEquals(0, Math.IEEEremainder(start.yaw() - previous.yaw(), 360), 1e-9);
-            assertEquals(previous.pitch(), start.pitch(), 1e-9);
-            if (type == Shot.Type.PAN) assertTrue(Math.abs(Math.IEEEremainder(
-                next.sample(next.duration()).yaw() - start.yaw(), 360)) > 1, "A consecutive panorama must keep turning");
-        }
-    }
-
     @Test void aLowCeilingFallsBackOnlyToAnEnabledStyle() {
         Geometry low = new Geometry() {
             public boolean clear(Vec from, Vec to, double margin) { return Math.max(from.y(), to.y()) + margin <= 2.5; }
@@ -57,11 +38,11 @@ class ShotOptionsTest {
         };
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.CRANE, Shot.Type.DRIFT);
-        Shot shot = find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, null, true, false, new Random(2)), low);
+        Shot shot = find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), 0, config, null, new Random(2)), low);
         assertNotNull(shot);
         assertEquals(Shot.Type.DRIFT, shot.type());
         config.shots = EnumSet.of(Shot.Type.CRANE);
-        assertNull(find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, null, true, false, new Random(2)), low));
+        assertNull(find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), 0, config, null, new Random(2)), low));
     }
 
     @Test void visibilityFollowsTheWholePan() {
@@ -71,7 +52,7 @@ class ShotOptionsTest {
         };
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.PAN);
-        assertNull(find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, null, true, false, new Random(2)), narrow));
+        assertNull(find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), 0, config, null, new Random(2)), narrow));
     }
 
     @Test void pacingControlsDurationAndAvailableStylesAvoidImmediateRepeats() {
@@ -80,7 +61,7 @@ class ShotOptionsTest {
         Shot reference = null;
         for (var pace : CinematicConfig.Pace.values()) {
             config.pace = pace;
-            Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0, config, Shot.Type.ARC, true, false, new Random(2)).next(OPEN);
+            Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), 0, config, Shot.Type.ARC, new Random(2)).next(OPEN);
             assertEquals(Shot.Type.DOLLY, shot.type());
             assertTrue(shot.duration() >= pace.minimumSeconds && shot.duration() < pace.maximumSeconds);
             if (reference != null) {
@@ -113,8 +94,7 @@ class ShotOptionsTest {
         config.shots = EnumSet.of(Shot.Type.STILL);
         var random = new Random(4);
         for (int seed = 0; seed < 64; seed++) {
-            Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0,
-                config, null, true, true, random).next(OPEN);
+            Shot shot = new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), 0, config, null, random).next(OPEN);
             Vec offset = shot.start().subtract(SUBJECT);
             double distance = Math.hypot(offset.x(), offset.z());
             assertTrue(distance >= 6.999 && distance <= 14.001);
@@ -134,8 +114,7 @@ class ShotOptionsTest {
         };
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.STILL);
-        Shot shot = find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0,
-            config, null, true, false, new Random(4)), limited);
+        Shot shot = find(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), 0, config, null, new Random(4)), limited);
         assertNotNull(shot, "The previous wide distance must remain available when farther views are blocked");
         Vec offset = shot.start().subtract(SUBJECT);
         assertEquals(5.5, Math.hypot(offset.x(), offset.z()), 1e-9);
@@ -144,10 +123,9 @@ class ShotOptionsTest {
     @Test void overheadIsAvailableForSceneryButNeverForThePlayer() {
         var config = new CinematicConfig();
         config.shots = EnumSet.of(Shot.Type.OVERHEAD);
-        assertTrue(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), ENTRY, 0,
-            config, null, true, true, new Random(1)).exhausted());
+        assertTrue(new ShotSearch(new Scene(SUBJECT, ENTRY.position(), Scene.Kind.PLAYER, 0), 0, config, null, new Random(1)).exhausted());
         var scene = new Scene(SUBJECT, SUBJECT.add(new Vec(0, 4, -8)), Scene.Kind.LANDSCAPE, 1);
-        assertNotNull(find(new ShotSearch(scene, ENTRY, 0, config, null, true, true, new Random(1)), OPEN));
+        assertNotNull(find(new ShotSearch(scene, 0, config, null, new Random(1)), OPEN));
     }
 
     private static Shot find(ShotSearch search, Geometry geometry) {

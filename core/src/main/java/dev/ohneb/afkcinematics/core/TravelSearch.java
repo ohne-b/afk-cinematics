@@ -52,7 +52,7 @@ final class TravelSearch {
             double seconds = Math.min(8, config.pace.minimumSeconds);
             Shot shot = new Shot(type, start, start, start, subject, subject, seconds);
             Scene scene = new Scene(subject, start, kind, 0);
-            return geometry.valid(shot, start) ? new ShotPlanner.Plan(shot, scene, true, true) : null;
+            return geometry.valid(shot, start) ? new ShotPlanner.Plan(shot, scene) : null;
         }
         double distance = switch (type) {
             case LOW_ESCORT -> flying ? 12 : 8;
@@ -99,6 +99,6 @@ final class TravelSearch {
         Scene scene = new Scene(subject, start, kind, 0);
         Geometry environment = geometry.forScene(scene);
         return environment.valid(shot, start) && environment.visible(start, subject)
-            ? new ShotPlanner.Plan(shot, scene, true, true) : null;
+            ? new ShotPlanner.Plan(shot, scene) : null;
     }
 }

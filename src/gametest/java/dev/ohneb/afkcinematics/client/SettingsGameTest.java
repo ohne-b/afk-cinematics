@@ -112,6 +112,21 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     press(settings, "Enable all");
                     go(settings, "Camera");
                     require(!button(settings, "Camera").active, "Sidebar did not mark the current category");
+                    int cameraWidth = settings.width, cameraHeight = settings.height;
+                    settings.resize(480, 320);
+                    var transition = button(settings, "Transition: Cut");
+                    settings.mouseScrolled(transition.getX() + 5, transition.getY() + 5, 0, -1);
+                    require(fixture.config().transition == dev.ohneb.afkcinematics.core.CinematicConfig.Transition.CUT,
+                        "Scrolling a page that fits changed a setting");
+                    settings.setFocused(transition);
+                    transition.setFocused(true);
+                    settings.keyPressed(new KeyEvent(InputConstants.KEY_RIGHT, 0, 0));
+                    require(fixture.config().transition == dev.ohneb.afkcinematics.core.CinematicConfig.Transition.FADE,
+                        "Right arrow did not advance the focused choice");
+                    settings.keyPressed(new KeyEvent(InputConstants.KEY_LEFT, 0, 0));
+                    require(fixture.config().transition == dev.ohneb.afkcinematics.core.CinematicConfig.Transition.CUT,
+                        "Left arrow did not return to the previous choice");
+                    settings.resize(cameraWidth, cameraHeight);
                     press(settings, "Transition: Cut");
                     require(fixture.config().transition == dev.ohneb.afkcinematics.core.CinematicConfig.Transition.FADE,
                         "Transition choice did not select Fade");

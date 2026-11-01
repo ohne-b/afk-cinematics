@@ -61,11 +61,11 @@ class SceneryTest {
         for (Shot.Type type : new Shot.Type[]{Shot.Type.STILL, Shot.Type.PAN}) {
             var config = new CinematicConfig();
             config.shots = EnumSet.of(type);
-            Shot shot = new ShotSearch(elevated, ENTRY, 0, config, null, true, true, new Random(3)).next(open);
+            Shot shot = new ShotSearch(elevated, 0, config, null, new Random(3)).next(open);
             assertNotNull(shot);
             assertEquals(shot.start(), shot.control(), type + " changed position at an elevated viewpoint");
             assertEquals(shot.start(), shot.end(), type + " drifted downward");
-            assertNull(new ShotSearch(elevated, ENTRY, 0, config, null, true, true, new Random(3)).next(ledge),
+            assertNull(new ShotSearch(elevated, 0, config, null, new Random(3)).next(ledge),
                 "Clamping must not place the camera inside a ledge");
         }
     }
@@ -178,9 +178,8 @@ class SceneryTest {
         var random = new Random(4);
         int players = 0;
         for (int i = 0; i < 12; i++) {
-            var next = find(new ShotPlanner(PLAYER, ENTRY, ENTRY, 0, config, history, random), open);
+            var next = find(new ShotPlanner(PLAYER, ENTRY, 0, config, history, random), open);
             if (!next.scene().scenery()) players++;
-            if (i > 0) assertTrue(next.cut());
             history.add(next.scene(), next.shot());
         }
         assertTrue(players >= 2 && players <= 4, "Mixed ignored its 25% player preference");
@@ -191,7 +190,7 @@ class SceneryTest {
             public boolean valid(Shot shot, Vec entry) { return shot.focusStart().equals(SURFACE.focus()); }
             public Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return probe == 0 ? SURFACE : null; }
         };
-        assertTrue(find(new ShotPlanner(PLAYER, ENTRY, ENTRY, 0, config, new ShotHistory(), random), sceneryOnly).scene().scenery());
+        assertTrue(find(new ShotPlanner(PLAYER, ENTRY, 0, config, new ShotHistory(), random), sceneryOnly).scene().scenery());
     }
 
     private ShotPlanner.Plan find(ShotPlanner planner, Geometry geometry) {

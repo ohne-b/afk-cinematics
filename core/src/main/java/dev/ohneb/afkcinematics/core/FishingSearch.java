@@ -81,7 +81,7 @@ final class FishingSearch {
         Shot sightline = new Shot(type, start, shot.control(), shot.end(), bobber, bobber, duration);
         Shot angler = new Shot(type, start, shot.control(), shot.end(), subject, subject, duration);
         return environment.valid(shot, start) && environment.valid(sightline, start) && environment.valid(angler, start)
-            ? new ShotPlanner.Plan(shot, scene, true, true) : null;
+            ? new ShotPlanner.Plan(shot, scene) : null;
     }
 
     static double weight(Shot.Type type) { return type == Shot.Type.FLOAT ? .3 : type == Shot.Type.CAST_LINE ? .38 : .45; }

@@ -235,6 +235,6 @@ public final class CinematicSession {
     }
 
     private ShotPlanner planner() {
-        return new ShotPlanner(subject, current, entry, bearing, config, history, random, activity, fishingTarget);
+        return new ShotPlanner(subject, entry, bearing, config, history, random, activity, fishingTarget);
     }
 }

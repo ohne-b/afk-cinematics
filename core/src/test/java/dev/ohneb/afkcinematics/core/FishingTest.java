@@ -18,7 +18,6 @@ class FishingTest {
             config.shots = EnumSet.of(type);
             var plan = find(new FishingSearch(PLAYER, BOBBER, config, new ShotHistory(), new Random(1)), OPEN);
             assertNotNull(plan, type.name());
-            assertTrue(plan.cut());
             assertEquals(type, plan.shot().type());
             assertTrue(plan.shot().start().distance(plan.shot().end()) > .5);
         }

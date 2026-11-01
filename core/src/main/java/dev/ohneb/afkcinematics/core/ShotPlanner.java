@@ -9,9 +9,8 @@ import java.util.Random;
 final class ShotPlanner {
     private static final int SCENERY_CANDIDATES = 4;
     private static final int SCENERY_ATTEMPTS = 25;
-    record Plan(Shot shot, Scene scene, boolean cut, boolean entering) { }
+    record Plan(Shot shot, Scene scene) { }
     private final Vec anchor;
-    private final Pose previous;
     private final Pose original;
     private final double bearing;
     private final double sceneryBearing;
@@ -24,21 +23,19 @@ final class ShotPlanner {
     private int probe, candidate, attempts;
     private Scene selected;
     private ShotSearch search;
-    private boolean cut, entering;
     private final TravelSearch travel;
     private final FishingSearch fishing;
     private final boolean tryWildlife;
     private int animalProbe;
 
-    ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
+    ShotPlanner(Vec anchor, Pose original, double bearing, CinematicConfig config,
                 ShotHistory history, Random random) {
-        this(anchor, previous, original, bearing, config, history, random, Scene.Kind.PLAYER, null);
+        this(anchor, original, bearing, config, history, random, Scene.Kind.PLAYER, null);
     }
 
-    ShotPlanner(Vec anchor, Pose previous, Pose original, double bearing, CinematicConfig config,
+    ShotPlanner(Vec anchor, Pose original, double bearing, CinematicConfig config,
                 ShotHistory history, Random random, Scene.Kind activity, Vec bobber) {
         this.anchor = anchor;
-        this.previous = previous;
         this.original = original;
         this.bearing = bearing;
         this.sceneryBearing = bearing + random.nextDouble() * 360;
@@ -87,14 +84,12 @@ final class ShotPlanner {
                 animal.focus(), animal.focus(), CinematicConfig.Pace.LONG.maximumSeconds).cutAfter(config.pace.minimumSeconds
                     + random.nextDouble() * (config.pace.maximumSeconds - config.pace.minimumSeconds));
             return Scene.inRange(end, anchor) && geometry.forScene(animal).valid(shot, start)
-                ? new Plan(shot, animal, true, true) : null;
+                ? new Plan(shot, animal) : null;
         }
         if (search == null) {
             if (!triedPlayer && (!sceneryFirst || triedScenery)) {
                 triedPlayer = true;
                 selected = new Scene(anchor, original.position(), Scene.Kind.PLAYER, 0);
-                cut = true;
-                entering = true;
             } else if (!triedScenery) {
                 if (probe < Scene.PROBES) {
                     Scene scene = geometry.scenery(anchor, original, sceneryBearing, probe++);
@@ -106,16 +101,14 @@ final class ShotPlanner {
                 }
                 if (candidate >= Math.min(SCENERY_CANDIDATES, candidates.size())) { triedScenery = true; return null; }
                 selected = candidates.get(candidate++);
-                cut = true;
-                entering = true;
             } else return null;
-            search = new ShotSearch(selected, previous, bearing, config, history.lastType(), entering, cut, random);
+            search = new ShotSearch(selected, bearing, config, history.lastType(), random);
             search.prioritize(history);
             attempts = 0;
         }
         Shot shot = search.next(geometry.forScene(selected));
         if (shot != null && Scene.inRange(shot.start(), anchor) && Scene.inRange(shot.control(), anchor)
-            && Scene.inRange(shot.end(), anchor)) return new Plan(shot, selected, cut, entering);
+            && Scene.inRange(shot.end(), anchor)) return new Plan(shot, selected);
         if (search.exhausted() || selected.scenery() && ++attempts >= SCENERY_ATTEMPTS) search = null;
         return null;
     }
