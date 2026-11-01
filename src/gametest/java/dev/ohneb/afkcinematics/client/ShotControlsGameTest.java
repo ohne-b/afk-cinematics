@@ -67,6 +67,26 @@ public final class ShotControlsGameTest implements FabricClientGameTest {
             });
             context.waitFor(client -> client.level.getBlockState(client.player.blockPosition().above(2)).is(Blocks.STONE));
             context.waitTicks(5);
+            // Manual following can use its stationary fallback even when only scenery styles are selected.
+            manual(context);
+            context.runOnClient(client -> {
+                require(AfkCinematics.manualControl(), "Manual fallback lost its control permission");
+                AfkCinematics.stop();
+            });
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                BlockPos feet = player.blockPosition();
+                for (BlockPos block : BlockPos.betweenClosed(feet.offset(-1, 0, -1), feet.offset(1, 1, 1)))
+                    if (block.getX() != feet.getX() || block.getZ() != feet.getZ())
+                        player.level().setBlockAndUpdate(block, Blocks.STONE.defaultBlockState());
+            });
+            context.waitFor(client -> {
+                BlockPos feet = client.player.blockPosition();
+                for (BlockPos block : BlockPos.betweenClosed(feet.offset(-1, 0, -1), feet.offset(1, 1, 1)))
+                    if ((block.getX() != feet.getX() || block.getZ() != feet.getZ()) && !client.level.getBlockState(block).is(Blocks.STONE))
+                        return false;
+                return true;
+            });
             context.runOnClient(client -> AfkCinematics.requestStart());
             context.waitFor(client -> AfkCinematics.ownsCamera());
             context.waitFor(client -> !AfkCinematics.ownsCamera(), 80);

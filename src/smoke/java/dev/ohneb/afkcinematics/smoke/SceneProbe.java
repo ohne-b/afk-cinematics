@@ -31,6 +31,13 @@ import java.util.EnumSet;
 
 /** Opens only a disposable fixture explicitly provided by the test runner. */
 final class SceneProbe {
+    private static void startAfk() {
+        try {
+            var start = AfkCinematics.class.getDeclaredMethod("start", boolean.class);
+            start.setAccessible(true);
+            start.invoke(null, false);
+        } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
+    }
     private static long started;
     private static int stage;
     private static int ticks;
@@ -105,7 +112,7 @@ final class SceneProbe {
             position = client.player.position();
             yaw = client.player.getYRot();
             pitch = client.player.getXRot();
-            AfkCinematics.requestStart();
+            startAfk();
             stage = 2;
             ticks = 0;
         } else if (stage == 2 && AfkCinematics.showing()) {
@@ -137,7 +144,7 @@ final class SceneProbe {
             });
         } else if (stage == 4 && prepared && client.level.getBlockState(client.player.blockPosition().above(7)).is(Blocks.GRASS_BLOCK)) {
             AfkCinematics.config().subject = CinematicConfig.Subject.MIXED;
-            AfkCinematics.requestStart();
+            startAfk();
             stage = 5;
             ticks = 0;
         } else if (stage == 5 && AfkCinematics.scenery() && AfkCinematics.fade() == 0) {

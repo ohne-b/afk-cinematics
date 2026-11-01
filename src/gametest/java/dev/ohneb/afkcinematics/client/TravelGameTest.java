@@ -36,8 +36,6 @@ public final class TravelGameTest implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
         configure(context);
         context.runOnClient(client -> {
-            AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.MANUAL;
-            AfkCinematics.config().travelControls = true;
             AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL);
         });
         boolean rotateWithCart = context.computeOnClient(client -> client.options.rotateWithMinecart().get());
@@ -78,7 +76,7 @@ public final class TravelGameTest implements FabricClientGameTest {
             context.waitFor(client -> client.player.isPassenger());
             context.waitTicks(40);
             key(context, InputConstants.KEY_W, InputConstants.PRESS);
-            start(context);
+            manual(context);
             context.waitTicks(25);
             Vec3 before = context.computeOnClient(client -> client.player.position());
             Vec3 cameraBefore = context.computeOnClient(client -> camera(client).position());
@@ -93,20 +91,18 @@ public final class TravelGameTest implements FabricClientGameTest {
             key(context, InputConstants.KEY_W, InputConstants.RELEASE);
             screenshot(context, "raft-trail");
             key(context, InputConstants.KEY_Q, InputConstants.PRESS);
-            key(context, InputConstants.KEY_Q, InputConstants.REPEAT);
+
             key(context, InputConstants.KEY_Q, InputConstants.RELEASE);
             context.waitTicks(3);
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst()
-                .getInventory().countItem(Items.EMERALD) == 32, "Travel wake dropped an item"));
+                .getInventory().countItem(Items.EMERALD) == 31, "Manual drop did not reach vanilla"));
             context.runOnClient(client -> {
-                AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.AUTOMATIC;
                 AfkCinematics.config().idleSeconds = 10;
             });
-            context.waitFor(client -> AfkCinematics.showing(), 400);
+            start(context);
             key(context, InputConstants.KEY_W, InputConstants.PRESS);
             context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Automatic boat view accepted steering"));
             key(context, InputConstants.KEY_W, InputConstants.RELEASE);
-            context.runOnClient(client -> AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.MANUAL);
 
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
@@ -133,8 +129,7 @@ public final class TravelGameTest implements FabricClientGameTest {
                 driverFirst(client.player.getVehicle());
                 require(client.player.getVehicle().getControllingPassenger() != client.player, "Fixture retained local steering");
             });
-            context.runOnClient(client -> AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.AUTOMATIC);
-            context.waitFor(client -> AfkCinematics.showing(), 400);
+            start(context);
             context.waitTicks(20);
             for (int step = 0; step < 12; step++) {
                 final int index = step;
@@ -156,7 +151,6 @@ public final class TravelGameTest implements FabricClientGameTest {
                 client.player.setYRot(client.player.getYRot() + 15);
             });
             context.waitFor(client -> !AfkCinematics.ownsCamera(), 5);
-            context.runOnClient(client -> AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.MANUAL);
 
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
@@ -203,8 +197,7 @@ public final class TravelGameTest implements FabricClientGameTest {
             context.waitTicks(30);
             context.runOnClient(client -> require(client.level.enabledFeatures().contains(net.minecraft.world.flag.FeatureFlags.MINECART_IMPROVEMENTS),
                 "Minecart rotation fixture did not enable experimental movement"));
-            context.runOnClient(client -> AfkCinematics.config().boats = AfkCinematics.config().minecarts = AfkCinematics.config().flight = CinematicConfig.StartMode.AUTOMATIC);
-            context.waitFor(client -> AfkCinematics.showing(), 400);
+            start(context);
             context.waitTicks(15);
             Vec3 cartBefore = context.computeOnClient(client -> client.player.getVehicle().position());
             Vec3 cartCameraBefore = context.computeOnClient(client -> camera(client).position());
@@ -224,33 +217,25 @@ public final class TravelGameTest implements FabricClientGameTest {
                 require(turnedWithCart.get(), "The fixture did not rotate the rider through a rail corner");
                 require(client.player.getVehicle().position().distanceTo(cartBefore) > 2, "Minecart did not travel on the rails");
                 require(camera(client).position().distanceTo(cartCameraBefore) > 2, "Camera did not follow the minecart");
-                require(AfkCinematics.frameLimit() == 0, "Minecart view overrode normal FPS");
-                AfkCinematics.config().minecarts = dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.OFF;
-                AfkCinematics.config().boats = AfkCinematics.config().flight = CinematicConfig.StartMode.MANUAL;
+                require(AfkCinematics.frameLimit() == AfkCinematics.config().cinematicFps, "Automatic view lost the AFK cap");
+                client.player.setYRot(client.player.getYRot() + 15);
             });
             context.waitFor(client -> !AfkCinematics.ownsCamera(), 5);
-            context.runOnClient(client -> AfkCinematics.requestStart());
-            context.waitTicks(25);
-            context.runOnClient(client -> {
-                require(!AfkCinematics.ownsCamera(), "Disabled minecart cinematics still started");
-                AfkCinematics.config().minecarts = dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.MANUAL;
-            });
-            start(context);
+            manual(context);
             context.runOnClient(client -> AfkCinematics.mouseMoved(2, 1));
             context.runOnClient(client -> require(AfkCinematics.showing(), "Looking around ended a manual minecart view"));
             screenshot(context, "minecart-trail");
             context.runOnClient(client -> {
-                AfkCinematics.config().travelControls = false;
                 client.player.setYRot(client.player.getYRot() + 15);
             });
-            context.waitFor(client -> !AfkCinematics.ownsCamera(), 5);
-            context.runOnClient(client -> AfkCinematics.config().travelControls = true);
-            start(context);
+            context.waitTicks(3);
+            context.runOnClient(client -> require(AfkCinematics.showing(), "Manual rotation ended the camera"));
             key(context, InputConstants.KEY_LSHIFT, InputConstants.PRESS);
-            context.waitFor(client -> !client.player.isPassenger() && !AfkCinematics.ownsCamera(), 20);
+            context.waitFor(client -> !client.player.isPassenger(), 20);
+            context.runOnClient(client -> require(AfkCinematics.ownsCamera(), "Dismount ended the manual session"));
             key(context, InputConstants.KEY_LSHIFT, InputConstants.RELEASE);
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst()
-                .getInventory().countItem(Items.EMERALD) == 32, "Minecart view changed inventory"));
+                .getInventory().countItem(Items.EMERALD) == 31, "Minecart view changed inventory"));
 
             context.waitTicks(65); // Let vanilla's 60-tick dismount cooldown expire before the next fixture.
             world.getServer().runOnServer(server -> {
@@ -278,7 +263,7 @@ public final class TravelGameTest implements FabricClientGameTest {
             });
             context.waitFor(client -> client.player.isPassenger());
             context.waitTicks(20);
-            start(context);
+            manual(context);
             Vec3 tunnelBefore = context.computeOnClient(client -> client.player.position());
             context.waitTicks(15);
             context.runOnClient(client -> {
@@ -302,7 +287,7 @@ public final class TravelGameTest implements FabricClientGameTest {
             context.waitTicks(10);
             context.runOnClient(client -> AfkCinematics.config().shots = EnumSet.of(Shot.Type.ESCORT));
             key(context, InputConstants.KEY_W, InputConstants.PRESS);
-            start(context);
+            manual(context);
             context.waitTicks(30);
             context.runOnClient(client -> {
                 require(AfkCinematics.showing(), "Flight input ended the manual camera");
@@ -317,7 +302,8 @@ public final class TravelGameTest implements FabricClientGameTest {
                 player.getAbilities().flying = false;
                 player.onUpdateAbilities();
             });
-            context.waitFor(client -> !AfkCinematics.ownsCamera(), 20);
+            context.waitTicks(10);
+            context.runOnClient(client -> { require(AfkCinematics.ownsCamera(), "Leaving ability flight ended manual mode"); AfkCinematics.stop(); });
 
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
@@ -331,7 +317,7 @@ public final class TravelGameTest implements FabricClientGameTest {
             });
             context.waitFor(client -> client.player.isFallFlying() && client.player.getMainHandItem().is(Items.FIREWORK_ROCKET));
             context.runOnClient(client -> { client.player.setXRot(-5); AfkCinematics.config().shots = EnumSet.of(Shot.Type.TRAIL); });
-            start(context);
+            manual(context);
             rocket(context);
             context.waitFor(client -> client.player.getMainHandItem().getCount() == 7);
             context.runOnClient(client -> require(AfkCinematics.showing() && client.player.isFallFlying(),
@@ -355,31 +341,54 @@ public final class TravelGameTest implements FabricClientGameTest {
             });
             context.waitFor(client -> client.player.getMainHandItem().is(Items.APPLE));
             mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS);
-            context.waitTicks(6);
-            context.runOnClient(client -> require(!AfkCinematics.ownsCamera() && !client.options.keyUse.isDown()
-                && !client.player.isUsingItem(), "An offhand rocket authorized unrelated main-hand use"));
+            context.waitTicks(3);
+            context.runOnClient(client -> require(AfkCinematics.ownsCamera() && client.options.keyUse.isDown(),
+                "Manual mode blocked genuine item use"));
             mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.RELEASE);
+            context.runOnClient(client -> AfkCinematics.stop());
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
-                require(player.getMainHandItem().getCount() == 16 && player.getOffhandItem().getCount() == 4,
-                    "The waking press consumed an item");
-                player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-                player.inventoryMenu.broadcastFullState();
+                player.setGameMode(GameType.CREATIVE);
+                player.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
+                player.stopFallFlying();
+                player.teleportTo(center.get().x, center.get().y + 1, center.get().z);
+                floor(player);
             });
-            context.waitFor(client -> client.player.getMainHandItem().isEmpty());
-            context.runOnClient(client -> AfkCinematics.config().travelControls = false);
-            start(context);
-            rocket(context);
-            context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Disabled travel controls still permitted a boost"));
-            world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst()
-                .getOffhandItem().getCount() == 4, "Disabled travel controls consumed a rocket"));
+            context.waitFor(client -> client.player.onGround() && !client.player.isFallFlying());
+            manual(context);
+            Object owner = context.computeOnClient(client -> cameraOwner());
+            Vec3 walking = context.computeOnClient(client -> client.player.position());
+            key(context, InputConstants.KEY_W, InputConstants.PRESS);
+            context.waitTicks(12);
+            key(context, InputConstants.KEY_W, InputConstants.RELEASE);
+            context.runOnClient(client -> require(cameraOwner() == owner && client.player.position().distanceTo(walking) > .5,
+                "Manual view blocked walking or replaced its owner"));
+            world.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                //? if >=26.2 {
+                /*var mount = EntityTypes.PIG.create(player.level(), EntitySpawnReason.COMMAND);
+                *///?} else {
+                var mount = EntityType.PIG.create(player.level(), EntitySpawnReason.COMMAND);
+                //?}
+                require(mount != null, "Missing animal fixture");
+                mount.snapTo(player.position());
+                mount.setNoAi(true);
+                player.level().addFreshEntity(mount);
+                require(player.startRiding(mount), "Could not mount the animal fixture");
+            });
+            context.waitFor(client -> client.player.isPassenger());
+            context.waitTicks(30);
+            context.runOnClient(client -> require(cameraOwner() == owner && AfkCinematics.showing(), "Mounting an animal replaced the manual session"));
+            screenshot(context, "animal-follow");
+            key(context, InputConstants.KEY_LSHIFT, InputConstants.PRESS);
+            context.waitFor(client -> !client.player.isPassenger(), 20);
+            key(context, InputConstants.KEY_LSHIFT, InputConstants.RELEASE);
+            context.runOnClient(client -> require(cameraOwner() == owner, "Dismounting the animal replaced the session"));
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
                 cameraTimings = null;
                 client.options.rotateWithMinecart().set(rotateWithCart);
-                AfkCinematics.config().boats = AfkCinematics.config().flight = CinematicConfig.StartMode.MANUAL;
-                AfkCinematics.config().travelControls = true;
                 focused = null;
             });
         }

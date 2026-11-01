@@ -37,13 +37,18 @@ final class SmokeProbe {
     private static void checkChoices() {
         var config = AfkCinematics.config();
         var previous = config.soundtrack;
+        boolean music = config.music;
         try {
+            config.music = true;
             config.soundtrack = dev.ohneb.afkcinematics.core.CinematicConfig.Soundtrack.CREATIVE;
             var screen = new SettingsScreen(null);
             AfkCinematics.showScreen(screen);
-            press(screen.children().stream().filter(net.minecraft.client.gui.components.Button.class::isInstance)
-                .map(net.minecraft.client.gui.components.Button.class::cast).filter(button -> button.getMessage().getString().equals("Sound"))
-                .findFirst().orElseThrow());
+            for (int i = 0; i < 20; i++) {
+                var header = screen.children().stream().filter(net.minecraft.client.gui.components.Button.class::isInstance)
+                    .map(net.minecraft.client.gui.components.Button.class::cast).filter(button -> button.getMessage().getString().equals("Music")).findFirst();
+                if (header.isPresent()) { press(header.get()); break; }
+                screen.mouseScrolled(0, 0, 0, -1);
+            }
             press(playlist(screen));
             if (config.soundtrack != dev.ohneb.afkcinematics.core.CinematicConfig.Soundtrack.DISCS)
                 throw new AssertionError("Playlist did not advance from its nonzero selection");
@@ -55,15 +60,21 @@ final class SmokeProbe {
                 throw new AssertionError("Playlist did not cycle backward");
         } finally {
             config.soundtrack = previous;
+            config.music = music;
             AfkCinematics.showScreen(new SettingsScreen(null));
         }
     }
 
     private static net.minecraft.client.gui.components.CycleButton<?> playlist(SettingsScreen screen) {
-        return screen.children().stream().filter(net.minecraft.client.gui.components.CycleButton.class::isInstance)
-            .map(child -> (net.minecraft.client.gui.components.CycleButton<?>)child)
-            .filter(button -> button.getValue() instanceof dev.ohneb.afkcinematics.core.CinematicConfig.Soundtrack)
-            .findFirst().orElseThrow();
+        for (int i = 0; i < 20; i++) {
+            var found = screen.children().stream().filter(net.minecraft.client.gui.components.CycleButton.class::isInstance)
+                .map(child -> (net.minecraft.client.gui.components.CycleButton<?>)child)
+                .filter(button -> button.getValue() instanceof dev.ohneb.afkcinematics.core.CinematicConfig.Soundtrack)
+                .findFirst();
+            if (found.isPresent()) return found.get();
+            screen.mouseScrolled(0, 0, 0, -1);
+        }
+        throw new AssertionError("Missing playlist control");
     }
 
     private static void press(net.minecraft.client.gui.components.AbstractButton button) {

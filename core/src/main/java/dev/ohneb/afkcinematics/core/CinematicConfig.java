@@ -3,7 +3,6 @@ package dev.ohneb.afkcinematics.core;
 import java.util.EnumSet;
 
 public final class CinematicConfig {
-    public enum StartMode { OFF, MANUAL, AUTOMATIC }
     public enum Soundtrack { GAME, CREATIVE, DISCS, CUSTOM }
     public enum Motion { GENTLE, REDUCED, STILL }
     public enum Subject { MIXED, PLAYER, SCENERY }
@@ -32,6 +31,7 @@ public final class CinematicConfig {
 
     public boolean enabled = true;
     public boolean automatic = true;
+    public boolean autoFishing = true;
     public int idleSeconds = 30;
     public Motion motion = Motion.GENTLE;
     public Subject subject = Subject.MIXED;
@@ -48,21 +48,6 @@ public final class CinematicConfig {
     public int musicVolume = 100;
     public String customMusic = "minecraft:music.creative";
     public boolean unfocused = false;
-    public StartMode boats = StartMode.AUTOMATIC;
-    public StartMode minecarts = StartMode.AUTOMATIC;
-    public StartMode flight = StartMode.AUTOMATIC;
-    public boolean travelControls = true;
     public boolean keepChat = true;
-    public boolean manualLook = false;
-    public StartMode fishing = StartMode.AUTOMATIC;
-
-    public boolean automatic(Scene.Kind activity) {
-        return switch (activity) {
-            case BOAT -> boats == StartMode.AUTOMATIC;
-            case MINECART -> minecarts == StartMode.AUTOMATIC;
-            case FLIGHT -> flight == StartMode.AUTOMATIC;
-            case FISHING -> fishing == StartMode.AUTOMATIC;
-            default -> automatic;
-        };
-    }
+    public boolean wildlife = true;
 }

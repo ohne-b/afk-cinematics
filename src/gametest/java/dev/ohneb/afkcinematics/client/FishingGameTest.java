@@ -29,8 +29,6 @@ public final class FishingGameTest implements FabricClientGameTest {
         double masterVolume = context.computeOnClient(client -> client.options.getSoundSourceVolume(net.minecraft.sounds.SoundSource.MASTER));
         double musicVolume = context.computeOnClient(client -> client.options.getSoundSourceVolume(net.minecraft.sounds.SoundSource.MUSIC));
         context.runOnClient(client -> {
-            AfkCinematics.config().fishing = dev.ohneb.afkcinematics.core.CinematicConfig.StartMode.MANUAL;
-            AfkCinematics.config().fishing = CinematicConfig.StartMode.AUTOMATIC;
             AfkCinematics.config().shots = EnumSet.of(Shot.Type.ANGLER);
             sceneryFrames = new ArrayList<>();
             revealedShot = null;
@@ -59,9 +57,16 @@ public final class FishingGameTest implements FabricClientGameTest {
             context.waitTicks(15);
             click(context);
             context.waitFor(client -> FishingActivity.hook(client.player, client.level) != null, 100);
+            context.waitTicks(20);
+            context.runOnClient(client -> {
+                require(!AfkCinematics.ownsCamera(), "Casting started a camera with automatic fishing disabled");
+                AfkCinematics.config().autoFishing = true;
+            });
+            context.waitFor(client -> AfkCinematics.showing(), 100);
             context.waitFor(client -> revealedShot != null && revealedShot.type() == Shot.Type.ANGLER, 80);
             context.runOnClient(client -> {
-                require(AfkCinematics.showing(), "Idle fishing did not start a view");
+                require(!AfkCinematics.manualControl() && !AfkCinematics.config().automatic,
+                    "Fishing start depended on manual mode or the AFK timer");
                 require(AfkCinematics.frameLimit() == 0, "Fishing view overrode normal FPS");
                 AfkCinematics.mouseMoved(2, 1);
                 require(AfkCinematics.showing(), "Looking around ended fishing");
@@ -90,6 +95,8 @@ public final class FishingGameTest implements FabricClientGameTest {
             context.runOnClient(client -> releaseCapture.run());
             world.getServer().runOnServer(server -> server.overworld().setBlockAndUpdate(obstruction, Blocks.AIR.defaultBlockState()));
             context.waitFor(client -> client.level.getBlockState(obstruction).isAir());
+            context.waitTicks(20);
+            context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "The same cast restarted after cancellation"));
             start(context);
             context.runOnClient(client -> {
                 client.options.getSoundSourceOptionInstance(net.minecraft.sounds.SoundSource.MASTER).set(.1);
@@ -133,25 +140,6 @@ public final class FishingGameTest implements FabricClientGameTest {
             context.runOnClient(client -> require(((dev.ohneb.afkcinematics.mixin.MusicManagerAccess)client.getMusicManager()).afkCinematics$current() == track,
                 "Recasting restarted the fishing soundtrack"));
             context.waitTicks(20);
-            var use = context.computeOnClient(client -> ((dev.ohneb.afkcinematics.mixin.KeyMappingAccess)client.options.keyUse).afkCinematics$key());
-            try {
-                context.runOnClient(client -> {
-                    client.options.keyUse.setKey(keyboardKey(InputConstants.KEY_W));
-                    net.minecraft.client.KeyMapping.resetMapping();
-                });
-                key(context, InputConstants.KEY_W, InputConstants.PRESS);
-                context.runOnClient(client -> require(!AfkCinematics.ownsCamera() && !client.options.keyUse.isDown()
-                    && !client.options.keyUp.isDown(), "A shared movement key inherited rod-use permission"));
-                key(context, InputConstants.KEY_W, InputConstants.RELEASE);
-            } finally {
-                context.runOnClient(client -> { client.options.keyUse.setKey(use); net.minecraft.client.KeyMapping.resetMapping(); });
-            }
-            world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst().fishing != null,
-                "The shared wake key reeled the bobber"));
-            context.waitTicks(10);
-            context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Waking restarted the same cast automatically"));
-            start(context);
-            context.waitTicks(20);
             context.runOnClient(client -> {
                 var mouse = (dev.ohneb.afkcinematics.testmixin.MouseInvoker)client.mouseHandler;
                 var button = new net.minecraft.client.input.MouseButtonInfo(InputConstants.MOUSE_BUTTON_RIGHT, 0);
@@ -159,7 +147,7 @@ public final class FishingGameTest implements FabricClientGameTest {
                 require(client.options.keyUse.isDown(), "The real rod press was not accepted");
                 focused = false;
                 mouse.press(AfkCinematics.window(), button, InputConstants.RELEASE);
-                require(!AfkCinematics.ownsCamera() && !client.options.keyUse.isDown() && !client.options.keyUse.consumeClick(),
+                require(!client.options.keyUse.isDown() && !client.options.keyUse.consumeClick(),
                     "An inactive rod release left use pressed or queued");
                 var token = InputConstants.Type.MOUSE.getOrCreate(InputConstants.MOUSE_BUTTON_RIGHT);
                 require(AfkCinematics.suppressed(token), "An inactive release lost rod suppression");
@@ -174,46 +162,32 @@ public final class FishingGameTest implements FabricClientGameTest {
             context.waitTicks(5);
             world.getServer().runOnServer(server -> require(server.getPlayerList().getPlayers().getFirst().fishing != null,
                 "Focus loss dispatched the queued rod press"));
-            start(context);
+            manual(context);
             context.waitTicks(20);
-            world.getServer().runOnServer(server -> {
-                var player = server.getPlayerList().getPlayers().getFirst();
-                player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.APPLE, 16));
-                player.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.FISHING_ROD));
-                player.inventoryMenu.broadcastFullState();
-            });
-            context.waitFor(client -> client.player.getMainHandItem().is(Items.APPLE) && client.player.getOffhandItem().is(Items.FISHING_ROD));
-            context.runOnClient(client -> require(AfkCinematics.showing(), "Changing rod hands ended the passive fishing view"));
-            mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.PRESS);
-            context.waitTicks(6);
-            context.runOnClient(client -> {
-                require(!AfkCinematics.ownsCamera(), "An unrelated main-hand action did not wake the view");
-                require(!client.options.keyUse.isDown() && !client.player.isUsingItem(), "Wake use escaped suppression");
-            });
-            mouse(context, InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.RELEASE);
-            world.getServer().runOnServer(server -> {
-                var player = server.getPlayerList().getPlayers().getFirst();
-                require(player.getInventory().countItem(Items.APPLE) == 16 && player.fishing != null,
-                    "An offhand rod authorized eating or reeling with the waking press");
-                player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.FISHING_ROD));
-                player.inventoryMenu.broadcastFullState();
-            });
-            context.waitFor(client -> client.player.getMainHandItem().is(Items.FISHING_ROD));
-            start(context);
-            context.waitFor(client -> CinematicMusic.manages(), 80);
             click(context);
-            context.waitFor(client -> client.player.fishing == null && !AfkCinematics.ownsCamera(), 40);
+            context.waitFor(client -> client.player.fishing == null && AfkCinematics.ownsCamera(), 40);
+            context.waitFor(client -> cameraOwner() instanceof dev.ohneb.afkcinematics.core.CinematicSession owner
+                && owner.settled() && !owner.fishingView(), 100);
+            var holdManual = context.computeOnClient(client -> AfkCinematics.holdForScreenshot());
+            click(context);
+            context.waitFor(client -> FishingActivity.hook(client.player, client.level) != null, 100);
+            context.runOnClient(client -> {
+                require(cameraOwner() instanceof dev.ohneb.afkcinematics.core.CinematicSession owner
+                    && owner.capturing() && !owner.fishingView(), "The manual camera adapted before cancellation");
+                AfkCinematics.stop();
+                holdManual.run();
+            });
+            context.waitTicks(30);
+            context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Stopping manual mode restarted the same cast automatically"));
             context.waitFor(client -> !CinematicMusic.manages(), 180);
-            context.runOnClient(client -> require(((dev.ohneb.afkcinematics.mixin.MusicManagerAccess)client.getMusicManager()).afkCinematics$current() == null,
-                "Fishing music did not release its slot after the recast window"));
         } finally {
             context.runOnClient(client -> {
                 AfkCinematics.stop();
                 CinematicMusic.clear();
                 AfkCinematics.config().music = false;
+                AfkCinematics.config().autoFishing = false;
                 client.options.getSoundSourceOptionInstance(net.minecraft.sounds.SoundSource.MASTER).set(masterVolume);
                 client.options.getSoundSourceOptionInstance(net.minecraft.sounds.SoundSource.MUSIC).set(musicVolume);
-                AfkCinematics.config().fishing = CinematicConfig.StartMode.MANUAL;
                 sceneryFrames = null;
                 revealedShot = null;
                 focused = null;

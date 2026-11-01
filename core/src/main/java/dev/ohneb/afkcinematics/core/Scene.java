@@ -1,10 +1,12 @@
 package dev.ohneb.afkcinematics.core;
 
 /** A subject and a starting viewpoint, both selected from loaded terrain. */
-public record Scene(Vec focus, Vec vantage, Kind kind, double interest) {
+public record Scene(Vec focus, Vec vantage, Kind kind, double interest, Animal animal) {
+    public record Animal(int id, java.util.UUID uuid, String species) { }
+    public Scene(Vec focus, Vec vantage, Kind kind, double interest) { this(focus, vantage, kind, interest, null); }
     public enum Kind {
-        PLAYER, LANDSCAPE, AERIAL, GROUND, WATER, BOAT, MINECART, FLIGHT, FISHING;
-        public boolean travel() { return this == BOAT || this == MINECART || this == FLIGHT; }
+        PLAYER, LANDSCAPE, AERIAL, GROUND, WATER, WILDLIFE, BOAT, MINECART, FLIGHT, FOLLOW, SWIM, RIDE, FISHING;
+        public boolean travel() { return this == BOAT || this == MINECART || this == FLIGHT || this == FOLLOW || this == SWIM || this == RIDE; }
     }
     public static final int PROBES = 64;
     public Scene {

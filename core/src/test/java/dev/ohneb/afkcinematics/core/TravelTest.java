@@ -12,6 +12,35 @@ class TravelTest {
         public boolean visible(Vec a, Vec b, double margin) { return true; }
     };
 
+    @Test void oneManualSessionCanChangeActivityWithoutLosingItsCaptureOwner() {
+        var config = new CinematicConfig();
+        var moving = new MovingGeometry(OPEN, ZERO, 0);
+        moving.course(0);
+        var session = new CinematicSession(ZERO, new Pose(new Vec(0, 1, -4), 0, 0), 0, config, moving, new Random(9), Scene.Kind.FOLLOW);
+        long now = 0;
+        for (Scene.Kind kind : new Scene.Kind[]{Scene.Kind.FOLLOW, Scene.Kind.RIDE, Scene.Kind.SWIM, Scene.Kind.FLIGHT, Scene.Kind.FISHING, Scene.Kind.FOLLOW}) {
+            for (int i = 0; i < 200 && !session.settled(); i++) {
+                now += 50_000_000L;
+                session.tick(now); session.frame(now); session.coveredFrame();
+            }
+            assertTrue(session.settled());
+            int take = session.take();
+            session.beginCapture(now);
+            session.activity(kind, kind == Scene.Kind.FISHING ? new Vec(0, 0, 8) : null);
+            assertTrue(session.capturing());
+            assertEquals(take, session.take());
+            session.endCapture(now + 50_000_000L);
+            now += 50_000_000L;
+            session.activity(kind, kind == Scene.Kind.FISHING ? new Vec(0, 0, 8) : null);
+            for (int i = 0; i < 200 && session.take() == take; i++) {
+                now += 50_000_000L;
+                session.tick(now); session.frame(now); session.coveredFrame();
+                assertFalse(session.ended());
+            }
+            assertTrue(session.take() > take, "Activity framing never changed to " + kind);
+        }
+    }
+
     @Test void optionalSightlinePaddingDoesNotRejectARiderBesideABlockCorner() {
         Geometry corner = new Geometry() {
             private boolean line(Vec a, Vec b, double margin) {

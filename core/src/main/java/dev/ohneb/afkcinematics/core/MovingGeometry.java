@@ -41,6 +41,10 @@ public final class MovingGeometry implements Geometry {
         if (!followsCourse) { heading = degrees; followsCourse = true; }
     }
 
+    public void holdCourse() { desiredHeading = heading; turnVelocity = 0; }
+
+    public Vec relative(Vec offset) { return rotate(offset, -heading); }
+
     public boolean needsReframe(Scene.Kind kind) {
         double threshold = kind == Scene.Kind.MINECART ? 135 : 75;
         if (!followsCourse || reframeRequested || Math.abs(Math.IEEEremainder(desiredHeading - heading, 360)) < threshold) return false;

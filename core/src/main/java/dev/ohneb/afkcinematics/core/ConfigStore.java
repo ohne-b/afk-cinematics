@@ -45,13 +45,9 @@ public final class ConfigStore {
             if (custom != null && custom.isJsonPrimitive() && custom.getAsJsonPrimitive().isString()
                 && custom.getAsString().length() <= 256) config.customMusic = custom.getAsString();
             config.unfocused = bool("unfocused", false);
-            config.boats = enumeration("boats", CinematicConfig.StartMode.AUTOMATIC);
-            config.minecarts = enumeration("minecarts", CinematicConfig.StartMode.AUTOMATIC);
-            config.flight = enumeration("flight", CinematicConfig.StartMode.AUTOMATIC);
-            config.travelControls = bool("travelControls", true);
             config.keepChat = bool("keepChat", true);
-            config.manualLook = bool("manualLook", false);
-            config.fishing = enumeration("fishing", CinematicConfig.StartMode.AUTOMATIC);
+            config.wildlife = bool("wildlife", true);
+            config.autoFishing = bool("autoFishing", true);
         } catch (IOException | RuntimeException exception) {
             readable = false;
             config.enabled = false;
@@ -129,13 +125,9 @@ public final class ConfigStore {
         updated.addProperty("musicVolume", Math.clamp(config.musicVolume, 0, 100));
         updated.addProperty("customMusic", config.customMusic);
         updated.addProperty("unfocused", config.unfocused);
-        updated.addProperty("boats", config.boats.name().toLowerCase(Locale.ROOT));
-        updated.addProperty("minecarts", config.minecarts.name().toLowerCase(Locale.ROOT));
-        updated.addProperty("flight", config.flight.name().toLowerCase(Locale.ROOT));
-        updated.addProperty("travelControls", config.travelControls);
         updated.addProperty("keepChat", config.keepChat);
-        updated.addProperty("manualLook", config.manualLook);
-        updated.addProperty("fishing", config.fishing.name().toLowerCase(Locale.ROOT));
+        updated.addProperty("wildlife", config.wildlife);
+        updated.addProperty("autoFishing", config.autoFishing);
         Path temporary = null;
         try {
             Path directory = path.toAbsolutePath().getParent();

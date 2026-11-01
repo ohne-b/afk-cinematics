@@ -9,7 +9,7 @@ public final class CinematicSession {
     private final Geometry geometry;
     private final Vec subject;
     private final double bearing;
-    private final Scene.Kind activity;
+    private Scene.Kind activity;
     private final CinematicConfig config;
     private final Random random;
     private final Pose entry;
@@ -20,12 +20,14 @@ public final class CinematicSession {
     private final ShotHistory history = new ShotHistory();
     private Pose current;
     private Vec currentFocus;
-    private long started, outgoingStarted, handoff, clockOffset;
+    private long started, outgoingStarted, handoff, clockOffset, retryAt;
     private long lastUpdate = Long.MIN_VALUE;
     private long captureStarted;
     private int captures;
     private int take;
     private Vec fishingTarget;
+    private Vec activeFishingTarget;
+    private boolean changingActivity;
     private Phase phase = Phase.ENTRY;
     private boolean ended;
     private boolean covered;
@@ -52,6 +54,7 @@ public final class CinematicSession {
         this.geometry = geometry;
         this.activity = activity;
         this.fishingTarget = bobber;
+        this.activeFishingTarget = bobber;
         this.random = random;
         planner = planner(current);
     }
@@ -61,13 +64,15 @@ public final class CinematicSession {
         now = timeline(now);
         if (ended) return;
         if (shot != null && phase == Phase.SHOT) {
+            if (scene.animal() != null && !geometry.available(scene, current.position()))
+                advanceRequested = true;
             if (advanceRequested && !manualAdvance) {
                 planner = planner(current);
                 pending = null;
                 manualAdvance = true;
                 handoff = now;
                 advanceRequested = false;
-            } else if (planner == null && pending == null
+            } else if (planner == null && pending == null && now >= retryAt
                 && (now - started) / 1e9 >= shot.duration() - FADE_OUT_SECONDS
                     - (activity == Scene.Kind.PLAYER ? ShotPlanner.preparationSeconds(config) : 4)) {
                 planner = planner(shot.sample(shot.duration()));
@@ -101,6 +106,11 @@ public final class CinematicSession {
             currentFocus = focus;
         }
         var plan = pending;
+        if (!geometry.available(plan.scene(), plan.shot().start())) {
+            pending = null;
+            planner = planner(current);
+            return;
+        }
         if (!geometry.forScene(plan.scene()).valid(aimed(plan.shot(), plan.scene()), plan.cut() ? plan.shot().start() : current.position())) {
             if (adaptiveTravel() && shot != null) keepTravel(now);
             else end();
@@ -158,6 +168,18 @@ public final class CinematicSession {
         }
         if (phase == Phase.CUT) {
             if (!covered) return adaptiveTravel() || geometry.forScene(scene).clear(current.position(), current.position()) ? current : end();
+            if (!geometry.available(pending.scene(), pending.shot().start())) {
+                // Reveal the previous take again if the animal left during the cover.
+                // Continue from its endpoint rather than rewinding its movement.
+                pending = null;
+                planner = null;
+                phase = Phase.FADE_IN;
+                shot = new Shot(shot.type(), current.position(), current.position(), current.position(),
+                    currentFocus, currentFocus, shot.duration());
+                started = now;
+                advanceRequested = true;
+                return current;
+            }
             Shot destination = aimed(pending.shot(), pending.scene());
             Pose next = destination.sample(0);
             if (!valid(next, destination.focus(0), next.position(), pending.scene())) return end();
@@ -205,7 +227,7 @@ public final class CinematicSession {
     }
 
     private boolean adaptiveTravel() {
-        return activity.travel() && geometry instanceof MovingGeometry moving && moving.adaptsTravel();
+        return activity != Scene.Kind.PLAYER && geometry instanceof MovingGeometry moving && moving.adaptsTravel();
     }
 
     private void keepTravel(long now) {
@@ -213,12 +235,14 @@ public final class CinematicSession {
         pending = null;
         manualAdvance = false;
         advanceRequested = false;
-        started = now;
+        retryAt = now + 2_000_000_000L;
     }
 
     private Shot aimed(Shot candidate, Scene view) {
-        if (activity != Scene.Kind.FISHING || view == null) return candidate;
-        Vec shift = fishingTarget.subtract(view.focus()).scale(FishingSearch.weight(candidate.type()));
+        if (view == null || view.kind() != Scene.Kind.FISHING) return candidate;
+        Vec target = view == scene ? activeFishingTarget : fishingTarget;
+        if (target == null) return candidate;
+        Vec shift = target.subtract(view.focus()).scale(FishingSearch.weight(candidate.type()));
         return new Shot(candidate.type(), candidate.start(), candidate.control(), candidate.end(),
             candidate.focusStart().add(shift), candidate.focusEnd().add(shift), candidate.duration());
     }
@@ -241,6 +265,17 @@ public final class CinematicSession {
     public void fishing(Vec target) {
         if (activity != Scene.Kind.FISHING) return;
         fishingTarget = target;
+        if (!changingActivity) activeFishingTarget = target;
+    }
+    public boolean fishingView() { return scene != null && scene.kind() == Scene.Kind.FISHING && !changingActivity; }
+
+    public void activity(Scene.Kind next, Vec bobber) {
+        if (!settled() || capturing()) return;
+        activity = next;
+        fishingTarget = bobber;
+        changingActivity = true;
+        manualAdvance = false;
+        advanceRequested = true;
     }
     public int take() { return take; }
     public boolean capturing() { return captures > 0; }
@@ -268,6 +303,8 @@ public final class CinematicSession {
     private void setScene(Scene next) {
         take++;
         scene = next;
+        changingActivity = false;
+        activeFishingTarget = fishingTarget;
         history.add(scene, shot);
     }
 

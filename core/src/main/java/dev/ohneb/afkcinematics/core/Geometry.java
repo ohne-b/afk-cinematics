@@ -10,6 +10,8 @@ public interface Geometry {
     default Geometry forScene(Scene scene) { return this; }
 
     default Scene scenery(Vec anchor, Pose original, double bearing, int probe) { return null; }
+    default Scene wildlife(Vec anchor, double bearing, String lastSpecies, int probe) { return null; }
+    default boolean available(Scene scene, Vec camera) { return true; }
     default double viewQuality(Pose view) { return 0; }
 
     default boolean valid(Shot shot, Vec entry) {
