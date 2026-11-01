@@ -350,6 +350,12 @@ public final class AfkCinematics {
 
     public static void stop() {
         var client = Minecraft.getInstance();
+        if (manualControl()) {
+            var hook = player.fishing;
+            // Stopping during entry or a capture must also dismiss the current cast.
+            if (hook != null && !hook.isRemoved() && hook.getPlayerOwner() == player && hook.level() == world)
+                lastFishingStart = hook;
+        }
         if (session != null && !manualSession && activity == Scene.Kind.FISHING && fishingHook != null && player != null
             && player == client.player && world == client.level && connection == client.getConnection()
             && (player.fishing == null || fishingHook.isRemoved())) CinematicMusic.finishCast();

@@ -166,7 +166,19 @@ public final class FishingGameTest implements FabricClientGameTest {
             context.waitTicks(20);
             click(context);
             context.waitFor(client -> client.player.fishing == null && AfkCinematics.ownsCamera(), 40);
-            context.runOnClient(client -> AfkCinematics.stop());
+            context.waitFor(client -> cameraOwner() instanceof dev.ohneb.afkcinematics.core.CinematicSession owner
+                && owner.settled() && !owner.fishingView(), 100);
+            var holdManual = context.computeOnClient(client -> AfkCinematics.holdForScreenshot());
+            click(context);
+            context.waitFor(client -> FishingActivity.hook(client.player, client.level) != null, 100);
+            context.runOnClient(client -> {
+                require(cameraOwner() instanceof dev.ohneb.afkcinematics.core.CinematicSession owner
+                    && owner.capturing() && !owner.fishingView(), "The manual camera adapted before cancellation");
+                AfkCinematics.stop();
+                holdManual.run();
+            });
+            context.waitTicks(30);
+            context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Stopping manual mode restarted the same cast automatically"));
             context.waitFor(client -> !CinematicMusic.manages(), 180);
         } finally {
             context.runOnClient(client -> {
