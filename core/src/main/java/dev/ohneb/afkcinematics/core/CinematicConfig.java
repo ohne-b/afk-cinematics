@@ -31,6 +31,7 @@ public final class CinematicConfig {
 
     public boolean enabled = true;
     public boolean automatic = true;
+    public boolean autoFishing = true;
     public int idleSeconds = 30;
     public Motion motion = Motion.GENTLE;
     public Subject subject = Subject.MIXED;

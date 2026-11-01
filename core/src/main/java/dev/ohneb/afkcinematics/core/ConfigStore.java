@@ -47,6 +47,7 @@ public final class ConfigStore {
             config.unfocused = bool("unfocused", false);
             config.keepChat = bool("keepChat", true);
             config.wildlife = bool("wildlife", true);
+            config.autoFishing = bool("autoFishing", true);
         } catch (IOException | RuntimeException exception) {
             readable = false;
             config.enabled = false;
@@ -126,6 +127,7 @@ public final class ConfigStore {
         updated.addProperty("unfocused", config.unfocused);
         updated.addProperty("keepChat", config.keepChat);
         updated.addProperty("wildlife", config.wildlife);
+        updated.addProperty("autoFishing", config.autoFishing);
         Path temporary = null;
         try {
             Path directory = path.toAbsolutePath().getParent();

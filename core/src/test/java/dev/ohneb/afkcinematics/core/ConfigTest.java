@@ -43,12 +43,15 @@ class ConfigTest {
         Path path = directory.resolve("afk.json");
         var store = new ConfigStore(path);
         assertTrue(store.config().wildlife);
+        assertTrue(store.config().autoFishing);
         store.config().wildlife = false;
         store.config().automatic = false;
+        store.config().autoFishing = false;
         assertTrue(store.save());
         var restored = new ConfigStore(path).config();
         assertFalse(restored.wildlife);
         assertFalse(restored.automatic);
+        assertFalse(restored.autoFishing);
     }
 
     @Test void reportsAnUnwritableDestinationWithoutRemovingIt() throws Exception {

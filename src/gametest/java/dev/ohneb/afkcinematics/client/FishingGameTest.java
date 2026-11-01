@@ -58,11 +58,15 @@ public final class FishingGameTest implements FabricClientGameTest {
             click(context);
             context.waitFor(client -> FishingActivity.hook(client.player, client.level) != null, 100);
             context.waitTicks(20);
-            context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "Casting started a camera with AFK disabled"));
-            manual(context);
+            context.runOnClient(client -> {
+                require(!AfkCinematics.ownsCamera(), "Casting started a camera with automatic fishing disabled");
+                AfkCinematics.config().autoFishing = true;
+            });
+            context.waitFor(client -> AfkCinematics.showing(), 100);
             context.waitFor(client -> revealedShot != null && revealedShot.type() == Shot.Type.ANGLER, 80);
             context.runOnClient(client -> {
-                require(AfkCinematics.showing(), "Manual fishing did not start a view");
+                require(!AfkCinematics.manualControl() && !AfkCinematics.config().automatic,
+                    "Fishing start depended on manual mode or the AFK timer");
                 require(AfkCinematics.frameLimit() == 0, "Fishing view overrode normal FPS");
                 AfkCinematics.mouseMoved(2, 1);
                 require(AfkCinematics.showing(), "Looking around ended fishing");
@@ -91,7 +95,9 @@ public final class FishingGameTest implements FabricClientGameTest {
             context.runOnClient(client -> releaseCapture.run());
             world.getServer().runOnServer(server -> server.overworld().setBlockAndUpdate(obstruction, Blocks.AIR.defaultBlockState()));
             context.waitFor(client -> client.level.getBlockState(obstruction).isAir());
-            manual(context);
+            context.waitTicks(20);
+            context.runOnClient(client -> require(!AfkCinematics.ownsCamera(), "The same cast restarted after cancellation"));
+            start(context);
             context.runOnClient(client -> {
                 client.options.getSoundSourceOptionInstance(net.minecraft.sounds.SoundSource.MASTER).set(.1);
                 client.options.getSoundSourceOptionInstance(net.minecraft.sounds.SoundSource.MUSIC).set(.1);
@@ -120,7 +126,7 @@ public final class FishingGameTest implements FabricClientGameTest {
             var track = context.computeOnClient(client -> ((dev.ohneb.afkcinematics.mixin.MusicManagerAccess)client.getMusicManager()).afkCinematics$current());
             float trackVolume = context.computeOnClient(client -> track.getVolume());
             click(context);
-            context.waitFor(client -> client.player.fishing == null && AfkCinematics.ownsCamera(), 40);
+            context.waitFor(client -> client.player.fishing == null && !AfkCinematics.ownsCamera(), 40);
             context.waitTicks(30);
             context.runOnClient(client -> require(CinematicMusic.manages()
                 && ((dev.ohneb.afkcinematics.mixin.MusicManagerAccess)client.getMusicManager()).afkCinematics$current() == track
@@ -167,6 +173,7 @@ public final class FishingGameTest implements FabricClientGameTest {
                 AfkCinematics.stop();
                 CinematicMusic.clear();
                 AfkCinematics.config().music = false;
+                AfkCinematics.config().autoFishing = false;
                 client.options.getSoundSourceOptionInstance(net.minecraft.sounds.SoundSource.MASTER).set(masterVolume);
                 client.options.getSoundSourceOptionInstance(net.minecraft.sounds.SoundSource.MUSIC).set(musicVolume);
                 sceneryFrames = null;

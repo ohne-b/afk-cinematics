@@ -44,6 +44,7 @@ public final class TestSupport {
             var config = AfkCinematics.config();
             config.enabled = true;
             config.automatic = false;
+            config.autoFishing = false;
             config.unfocused = true;
             config.music = false;
             config.motion = CinematicConfig.Motion.GENTLE;

@@ -16,7 +16,9 @@ Expose the transient F1 flag to mod HUDs only while rendering; restore it in `fi
 Keep suppression across world/player replacement and vanilla key-state restoration.
 Consumed cinematic controls retain suppression through screens until physical release.
 Chat may retain an existing session; screen-consumed keys cannot become gameplay on close.
-Automatic sessions wake on gameplay input. Manual sessions retain real controls and
+AFK sessions wake on gameplay input. Automatic fishing permits real rod use and look,
+starts once per cast, and may retain its owned music briefly between casts.
+Manual sessions retain real controls and
 adapt to movement, mounts, water and casts without replacing their owner. Follow the rendered subject
 without changing its pose; validate movement from the last applied world-camera position.
 Fishing views follow only the current player's live bobber. Preserve vanilla's hand
