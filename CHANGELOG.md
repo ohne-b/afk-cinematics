@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.0.1-alpha.2
+
 - Let automatic AFK resume after focus changes without releasing quarantined input. (#64)
 - Lower following cameras beneath low cover to keep a wider, continuous view while walking or riding. (#63)
 - Keep swimming shots through surface hops; allow Roadside and Overlook from rest and at ordinary minecart speeds. (#62)
