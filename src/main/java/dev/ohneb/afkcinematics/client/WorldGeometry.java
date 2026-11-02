@@ -4,6 +4,7 @@ import dev.ohneb.afkcinematics.core.Geometry;
 import dev.ohneb.afkcinematics.core.Pose;
 import dev.ohneb.afkcinematics.core.Scene;
 import dev.ohneb.afkcinematics.core.Vec;
+import dev.ohneb.afkcinematics.core.RoadsideView;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -38,7 +39,8 @@ public final class WorldGeometry implements Geometry {
 
     @Override public WorldGeometry forScene(Scene scene) {
         // A player view may straddle the surface; underwater scenery must remain submerged.
-        Medium selected = scene == null || !scene.scenery() ? Medium.PLAYER
+        Medium selected = scene != null && scene.kind() == Scene.Kind.SLEEP ? Medium.DRY
+            : scene == null || !scene.scenery() ? Medium.PLAYER
             : scene.kind() == Scene.Kind.WATER ? Medium.SUBMERGED : Medium.DRY;
         var view = views[selected.ordinal()];
         return view != null ? view : new WorldGeometry(level, selected, views);
@@ -71,6 +73,14 @@ public final class WorldGeometry implements Geometry {
     }
 
     @Override public boolean available(Scene scene, Vec camera) {
+        if (scene != null && scene.kind() == Scene.Kind.SLEEP) {
+            var client = Minecraft.getInstance();
+            var config = AfkCinematics.config();
+            var window = client.getWindow();
+            return RoadsideView.fits(Pose.lookingAt(camera, scene.focus()), scene.focus(), .9, .3,
+                config.fieldOfView(client.options.fov().get()) * (config.useGameFov ? .85 : 1),
+                (double)window.getWidth() / Math.max(1, window.getHeight()), config.letterbox ? .82 : 1, .85);
+        }
         if (scene == null || scene.animal() == null) return true;
         var animal = level.getEntity(scene.animal().id());
         if (animal == null || !animal.getUUID().equals(scene.animal().uuid()) || !animal.isAlive() || animal.isInvisible()) return false;

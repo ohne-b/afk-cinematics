@@ -25,6 +25,7 @@ final class ShotPlanner {
     private ShotSearch search;
     private final TravelSearch travel;
     private final FishingSearch fishing;
+    private final SleepSearch sleep;
     private final boolean tryWildlife;
     private int animalProbe;
 
@@ -45,17 +46,23 @@ final class ShotPlanner {
         travel = activity.travel() || activity == Scene.Kind.FISHING
             ? new TravelSearch(anchor, activity, config, history, random) : null;
         fishing = activity == Scene.Kind.FISHING ? new FishingSearch(anchor, bobber, config, history, random) : null;
+        sleep = activity == Scene.Kind.SLEEP ? new SleepSearch(anchor, bearing, config, history, random) : null;
         triedPlayer = config.subject == CinematicConfig.Subject.SCENERY;
         triedScenery = config.subject == CinematicConfig.Subject.PLAYER;
         if (triedPlayer || triedScenery) sceneryFirst = triedPlayer;
         else sceneryFirst = history.sceneryFirst(config.playerShare, random);
+        if (sleep != null) {
+            triedPlayer = true;
+            triedScenery = history.empty();
+        }
         tryWildlife = activity == Scene.Kind.PLAYER && config.wildlife && !triedScenery
             && (config.subject == CinematicConfig.Subject.SCENERY || config.playerShare < 100)
             && history.wildlifeReady() && random.nextDouble() < .15
             && (config.shots.contains(Shot.Type.DRIFT) || config.shots.contains(Shot.Type.STILL));
     }
 
-    boolean exhausted() { return travel != null ? (fishing == null || fishing.exhausted()) && travel.exhausted() : search == null && triedPlayer && triedScenery; }
+    boolean exhausted() { return travel != null ? (fishing == null || fishing.exhausted()) && travel.exhausted()
+        : (sleep == null || sleep.exhausted()) && search == null && triedPlayer && triedScenery; }
 
     static double preparationSeconds(CinematicConfig config) {
         int player = config.subject == CinematicConfig.Subject.SCENERY ? 0 : ShotSearch.playerAttempts(config);
@@ -70,6 +77,7 @@ final class ShotPlanner {
     }
 
     Plan next(Geometry geometry) {
+        if (sleep != null && !sleep.exhausted() && (history.empty() || triedScenery)) return sleep.next(geometry);
         if (fishing != null && !fishing.exhausted()) return fishing.next(geometry);
         if (travel != null) return travel.next(geometry);
         if (tryWildlife && animalProbe < 8) {
@@ -93,7 +101,8 @@ final class ShotPlanner {
             } else if (!triedScenery) {
                 if (probe < Scene.PROBES) {
                     Scene scene = geometry.scenery(anchor, original, sceneryBearing, probe++);
-                    if (scene != null && scene.scenery() && scene.near(anchor) && !ShotSearch.stylesFor(scene, config).isEmpty()
+                    if (scene != null && scene.scenery() && (sleep == null || scene.kind() != Scene.Kind.WATER)
+                        && scene.near(anchor) && !ShotSearch.stylesFor(scene, config).isEmpty()
                         && candidates.stream().noneMatch(other -> other.focus().distance(scene.focus()) < 3
                             && other.vantage().distance(scene.vantage()) < 3)) candidates.add(scene);
                     if (probe == Scene.PROBES) candidates.sort(Comparator.comparingDouble(history::sceneScore).reversed());

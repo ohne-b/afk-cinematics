@@ -29,6 +29,7 @@ class ConfigTest {
         assertEquals(CinematicConfig.Motion.GENTLE, store.config().motion);
         assertTrue(store.config().hideHud);
         assertTrue(store.config().hidePlayerNames);
+        assertTrue(store.config().autoSleep);
         store.config().hidePlayerNames = false;
         assertTrue(store.config().keepChat);
         store.config().keepChat = false;
@@ -48,12 +49,14 @@ class ConfigTest {
         store.config().wildlife = false;
         store.config().automatic = false;
         store.config().autoFishing = false;
+        store.config().autoSleep = false;
         store.config().frontTravel = false;
         assertTrue(store.save());
         var restored = new ConfigStore(path).config();
         assertFalse(restored.wildlife);
         assertFalse(restored.automatic);
         assertFalse(restored.autoFishing);
+        assertFalse(restored.autoSleep);
         assertFalse(restored.frontTravel);
     }
 

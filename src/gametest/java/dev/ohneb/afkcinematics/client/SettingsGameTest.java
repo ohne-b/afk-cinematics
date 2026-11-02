@@ -60,6 +60,8 @@ public final class SettingsGameTest implements FabricClientGameTest {
                     press(settings, "Front travel shots: OFF");
                     press(settings, "Start when fishing: ON");
                     require(!fixture.config().autoFishing, "Fishing start setting did not change");
+                    press(settings, "Start when sleeping: ON");
+                    require(!fixture.config().autoSleep, "Sleep start setting did not change");
                     go(settings, "AFK");
                     field(settings, "seconds idle").setValue("45");
                     require(fixture.config().idleSeconds == 45, "Typed idle delay was lost");

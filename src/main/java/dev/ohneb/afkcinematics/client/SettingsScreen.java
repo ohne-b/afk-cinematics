@@ -206,6 +206,7 @@ public final class SettingsScreen extends Screen {
                 widgets.add(binding);
                 widgets.add(toggle("frontTravel", () -> config.frontTravel, value -> config.frontTravel = value));
                 widgets.add(toggle("autoFishing", () -> config.autoFishing, value -> config.autoFishing = value));
+                widgets.add(toggle("autoSleep", () -> config.autoSleep, value -> config.autoSleep = value));
                 widgets.add(toggle("hideHud", () -> config.hideHud, value -> config.hideHud = value));
                 widgets.add(toggle("hidePlayerNames", () -> config.hidePlayerNames, value -> config.hidePlayerNames = value));
                 widgets.add(toggle("letterbox", () -> config.letterbox, value -> config.letterbox = value));

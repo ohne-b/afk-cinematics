@@ -60,7 +60,7 @@ public final class CinematicSession {
                 handoff = now;
             } else if (planner == null && pending == null && now >= retryAt
                 && (shot.type().fixedTravel() || (now - shotStarted) / 1e9 >= shot.duration()
-                    - (activity == Scene.Kind.PLAYER ? ShotPlanner.preparationSeconds(config) : 4))) {
+                    - (activity == Scene.Kind.SLEEP ? 12 : activity == Scene.Kind.PLAYER ? ShotPlanner.preparationSeconds(config) : 4))) {
                 planner = planner();
                 handoff = shotStarted + Math.round(shot.duration() * 1e9);
             }
@@ -135,6 +135,11 @@ public final class CinematicSession {
         // MovingGeometry validates the final transformed view, including held captures.
         if (adaptiveTravel()) return Scene.inRange(pose.position(), subject);
         Geometry environment = geometry.forScene(view);
+        if (view.kind() == Scene.Kind.SLEEP) {
+            Vec along = new Vec(-Math.sin(Math.toRadians(bearing)), 0, Math.cos(Math.toRadians(bearing))).scale(.65);
+            if (!geometry.available(view, pose.position()) || !environment.visible(pose.position(), focus.add(along))
+                || !environment.visible(pose.position(), focus.subtract(along))) return false;
+        }
         return Scene.inRange(pose.position(), subject) && environment.clear(previous, pose.position())
             && environment.visible(pose.position(), focus);
     }

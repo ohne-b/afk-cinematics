@@ -5,7 +5,7 @@ public record Scene(Vec focus, Vec vantage, Kind kind, double interest, Animal a
     public record Animal(int id, java.util.UUID uuid, String species) { }
     public Scene(Vec focus, Vec vantage, Kind kind, double interest) { this(focus, vantage, kind, interest, null); }
     public enum Kind {
-        PLAYER, LANDSCAPE, AERIAL, GROUND, WATER, WILDLIFE, BOAT, MINECART, FLIGHT, FOLLOW, SWIM, RIDE, FISHING;
+        PLAYER, LANDSCAPE, AERIAL, GROUND, WATER, WILDLIFE, BOAT, MINECART, FLIGHT, FOLLOW, SWIM, RIDE, FISHING, SLEEP;
         public boolean travel() { return this == BOAT || this == MINECART || this == FLIGHT || this == FOLLOW || this == SWIM || this == RIDE; }
     }
     public static final int PROBES = 64;
@@ -14,7 +14,7 @@ public record Scene(Vec focus, Vec vantage, Kind kind, double interest, Animal a
             throw new IllegalArgumentException("Invalid scene");
     }
 
-    public boolean scenery() { return kind != Kind.PLAYER && !kind.travel() && kind != Kind.FISHING; }
+    public boolean scenery() { return kind != Kind.PLAYER && !kind.travel() && kind != Kind.FISHING && kind != Kind.SLEEP; }
 
     public boolean near(Vec anchor) {
         Vec target = focus.subtract(anchor), view = vantage.subtract(anchor);
