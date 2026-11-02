@@ -29,6 +29,7 @@
     "PlayerAudioMixin",
     "ScreenshotMixin",
     "ScreenEffectVisibilityMixin",
+    "SleepScreenMixin",
     "ToastMixin",
     "UnderwaterAdditionsMixin",
     "UnderwaterLoopMixin"

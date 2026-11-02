@@ -42,14 +42,14 @@ public final class CinematicMusic {
             && (angler.getMainHandItem().is(net.minecraft.world.item.Items.FISHING_ROD)
                 || angler.getOffhandItem().is(net.minecraft.world.item.Items.FISHING_ROD));
         if (!betweenCasts || AfkCinematics.showing()) clearRecast();
-        boolean wanted = (AfkCinematics.showing() || betweenCasts) && config.music && config.musicVolume > 0;
+        boolean wanted = (AfkCinematics.showing() || AfkCinematics.sleeping() || betweenCasts) && config.music && config.musicVolume > 0;
         if (owned != null) {
             // Paused sound engines do not advance tickable fades.
             if ((!wanted && client.isPaused()) || access.afkCinematics$current() != owned
                 || owned.isStopped() || !client.getSoundManager().isActive(owned)) clear();
             else owned.fading = !wanted || skip || !owned.matches(config);
         }
-        if (wanted && AfkCinematics.showing() && owned == null && access.afkCinematics$current() == null
+        if (wanted && AfkCinematics.showing() && !AfkCinematics.sleeping() && owned == null && access.afkCinematics$current() == null
             && client.options.getSoundSourceVolume(SoundSource.MUSIC) > 0
             && client.options.getSoundSourceVolume(SoundSource.MASTER) > 0) {
             SoundEvent sound = nextSound(config);

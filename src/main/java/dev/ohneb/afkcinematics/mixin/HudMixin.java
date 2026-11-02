@@ -14,6 +14,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(net.minecraft.client.gui.Gui.class)
 //?}
 public abstract class HudMixin {
+    //? if >=26.1 {
+    /*@Inject(method = "extractSleepOverlay", at = @At("HEAD"), cancellable = true)
+    *///?} else {
+    @Inject(method = "renderSleepOverlay", at = @At("HEAD"), cancellable = true)
+    //?}
+    private void afkCinematics$sleep(GuiGraphics graphics, DeltaTracker delta, CallbackInfo ci) {
+        if (dev.ohneb.afkcinematics.client.AfkCinematics.hideSleepOverlay()) ci.cancel();
+    }
+
     @Inject(method = "render", at = @At("RETURN"))
     private void afkCinematics$bars(GuiGraphics graphics, DeltaTracker delta, CallbackInfo ci) {
         CinematicOverlay.draw(graphics);

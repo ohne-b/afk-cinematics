@@ -1,7 +1,7 @@
 package dev.ohneb.afkcinematics.core;
 
 /** A planted camera: only its head moves. Framing includes the subject's body and letterbox crop. */
-final class RoadsideView {
+public final class RoadsideView {
     private Pose pose;
 
     RoadsideView(Vec position, Vec focus) { pose = Pose.lookingAt(position, focus); }
@@ -15,7 +15,7 @@ final class RoadsideView {
         return pose;
     }
 
-    static boolean fits(Pose view, Vec subject, double width, double height, double fov, double aspect, double crop, double fill) {
+    public static boolean fits(Pose view, Vec subject, double width, double height, double fov, double aspect, double crop, double fill) {
         Vec offset = subject.subtract(view.position());
         double yaw = Math.toRadians(view.yaw()), pitch = Math.toRadians(view.pitch());
         double sy = Math.sin(yaw), cy = Math.cos(yaw), sp = Math.sin(pitch), cp = Math.cos(pitch);

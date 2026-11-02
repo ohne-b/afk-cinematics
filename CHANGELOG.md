@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Sleep cinematics frame your bed, then nearby scenery during longer waits. Vanilla chat, Leave Bed and sleep timing stay intact; automatic sleep views can be disabled in settings.
+
 ## 0.1.0-alpha.1
 
 Press **F6** to film while you walk, swim, ride, fly or fish. Press it again to return to your normal view. The key is configurable; automatic AFK views still use the idle timer.

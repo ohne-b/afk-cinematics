@@ -46,6 +46,7 @@ public final class TestSupport {
             config.enabled = true;
             config.automatic = false;
             config.autoFishing = false;
+            config.autoSleep = false;
             config.unfocused = true;
             config.music = false;
             config.motion = CinematicConfig.Motion.GENTLE;

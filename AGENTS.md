@@ -18,6 +18,8 @@ Consumed cinematic controls retain suppression through screens until physical re
 Chat may retain an existing session; screen-consumed keys cannot become gameplay on close.
 AFK sessions wake on gameplay input. Automatic fishing permits real rod use and look,
 starts once per cast, and may retain its owned music briefly between casts.
+Sleep cinematics start once per bed entry, preserve vanilla bed/chat controls and end on waking.
+Suppress only the rendered sleep overlay; never alter sleeping state or timing. Sleep starts no music.
 Manual sessions retain real controls and
 adapt to movement, mounts, water and casts without replacing their owner. Follow the rendered subject
 without changing its pose; validate movement from the last applied world-camera position.

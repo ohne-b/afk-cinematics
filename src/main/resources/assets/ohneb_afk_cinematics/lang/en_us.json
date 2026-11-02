@@ -153,6 +153,8 @@
   "ohneb_afk_cinematics.page.shots": "Shots",
   "ohneb_afk_cinematics.page.music": "Music",
   "ohneb_afk_cinematics.autoFishing": "Start when fishing",
+  "ohneb_afk_cinematics.autoSleep": "Start when sleeping",
+  "ohneb_afk_cinematics.autoSleep.help": "Film your bed and surroundings while you sleep. Leave Bed and chat work normally. Sleep timing stays unchanged.",
   "ohneb_afk_cinematics.autoFishing.help": "Start once your bobber reaches water. Reel in normally to return; music carries over if you cast again soon.",
   "ohneb_afk_cinematics.frontTravel": "Front travel shots",
   "ohneb_afk_cinematics.frontTravel.help": "Allow cameras ahead of you while travelling. Turn off to keep rear and side views, including when the camera moves around an obstacle. AFK and fishing shots are unchanged.",
