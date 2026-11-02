@@ -135,6 +135,9 @@ Game requirements enumerate supported versions; they never admit future patches.
 The pinned [mc-publish action](https://github.com/Kira-NT/mc-publish) handles these
 uploads. Configure the destinations you use in GitHub's `release` environment:
 
+Modrinth version identifiers use the group's oldest Minecraft version to fit its
+32-character limit. Titles, supported-version lists and jar metadata retain the full group.
+
 | Destination | Variable | Secret |
 | --- | --- | --- |
 | Modrinth | `MODRINTH_PROJECT_ID` | `MODRINTH_TOKEN` |
@@ -150,3 +153,5 @@ files before retrying only failed jobs; rerunning successful jobs may create dup
 If upload acknowledgement was lost, verify the destination before retrying. A failed
 GitHub publication may leave a draft: inspect and finish it manually without replacing
 existing files. Never delete or rewrite a published release to recover a failed run.
+If recovery needs an updated workflow, use its comma-separated `targets` input to
+select only the groups that still need uploading; leaving it empty uploads all groups.
