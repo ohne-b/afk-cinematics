@@ -575,7 +575,7 @@ public final class AfkCinematics {
             INPUT.consume(token);
             clearBindings(key);
             // Function-key bindings work in bed; printable keys and mouse buttons belong to chat.
-            if (matches(TOGGLE, key) && key.getName().matches("key[.]keyboard[.]f[0-9]{1,2}")) {
+            if (!screenshot && matches(TOGGLE, key) && key.getName().matches("key[.]keyboard[.]f[0-9]{1,2}")) {
                 if (action == InputConstants.PRESS) stop();
                 return true;
             }
