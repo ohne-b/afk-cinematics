@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 0.0.1-alpha.2
+## 0.1.0-alpha.2
 
 Press **F6** to film while you walk, swim, ride, fly or fish. Press it again to return to your normal view. The key is configurable; automatic AFK views still use the idle timer.
 
