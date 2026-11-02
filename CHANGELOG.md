@@ -23,6 +23,10 @@ Install only the jar listing your Minecraft version and loader. Fabric requires 
 
 Still an early alpha. Camera views need nearby loaded terrain; shader packs and individual HUD or camera mods may behave differently.
 
+Changelog: https://github.com/ohne-b/afk-cinematics/compare/v0.0.1-alpha.1...v0.1.0-alpha.2
+
+Please [open an issue](https://github.com/ohne-b/afk-cinematics/issues/new) to report bugs or request features.
+
 ## 0.0.1-alpha.1
 
 First public alpha for Fabric and NeoForge, with separate jars for Minecraft 1.21 through 26.3.

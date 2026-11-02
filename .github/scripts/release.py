@@ -243,9 +243,7 @@ def bundle(root, version, sha, incoming, output):
     checksums = "".join(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n"
                         for path in sorted(output.iterdir()))
     (output / "SHA256SUMS").write_text(checksums, encoding="utf-8")
-    notes += (f"\n\n[Source and build instructions](https://github.com/{REPOSITORY}/tree/{sha})"
-              f"\n\n[Complete source archive](https://github.com/{REPOSITORY}/releases/download/v{version}/{source})\n")
-    (output / "release-notes.md").write_text(notes, encoding="utf-8")
+    (output / "release-notes.md").write_text(notes + "\n", encoding="utf-8")
     return [target for target, _, _ in packaged]
 
 
