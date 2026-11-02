@@ -305,7 +305,7 @@ public final class ControlBindingsGameTest implements FabricClientGameTest {
     }
 
     private static void character(Minecraft client, int character) {
-        //? if >=26.3 {
+        //? if >=26.1 {
         /*var event = new CharacterEvent(character);
         *///?} else {
         var event = new CharacterEvent(character, 0);
