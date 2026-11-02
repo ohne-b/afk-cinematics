@@ -9,10 +9,13 @@ import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.InBedChatScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import java.util.concurrent.atomic.AtomicReference;
 import static dev.ohneb.afkcinematics.client.TestSupport.*;
 
@@ -36,7 +39,7 @@ public final class SleepGameTest implements FabricClientGameTest {
                 server.overworld().getGameRules().set(GameRules.PLAYERS_SLEEPING_PERCENTAGE, 101, server);
             });
             context.waitFor(client -> client.player.onGround() && client.level.getBlockState(bed.get()).getBlock() instanceof BedBlock);
-            world.getServer().runOnServer(server -> server.getPlayerList().getPlayers().getFirst().startSleeping(bed.get()));
+            world.getServer().runOnServer(server -> sleep(server.getPlayerList().getPlayers().getFirst(), bed.get()));
             context.waitFor(client -> AfkCinematics.screen() instanceof InBedChatScreen);
             context.waitTicks(10);
             context.runOnClient(client -> {
@@ -48,7 +51,7 @@ public final class SleepGameTest implements FabricClientGameTest {
                 AfkCinematics.config().autoSleep = true;
                 AfkCinematics.config().keepChat = false;
             });
-            world.getServer().runOnServer(server -> server.getPlayerList().getPlayers().getFirst().startSleeping(bed.get()));
+            world.getServer().runOnServer(server -> sleep(server.getPlayerList().getPlayers().getFirst(), bed.get()));
             context.waitFor(client -> AfkCinematics.sleeping() && AfkCinematics.hideSleepOverlay(), 40);
             context.runOnClient(client -> {
                 require(AfkCinematics.screen() instanceof InBedChatScreen, "Sleep replaced vanilla's bed controls");
@@ -66,7 +69,7 @@ public final class SleepGameTest implements FabricClientGameTest {
                 AfkCinematics.screen().onClose();
             });
             context.waitFor(client -> !client.player.isSleeping() && AfkCinematics.screen() == null);
-            world.getServer().runOnServer(server -> server.getPlayerList().getPlayers().getFirst().startSleeping(bed.get()));
+            world.getServer().runOnServer(server -> sleep(server.getPlayerList().getPlayers().getFirst(), bed.get()));
             context.waitFor(client -> AfkCinematics.sleeping() && AfkCinematics.showing(), 40);
             context.runOnClient(client -> {
                 release.run();
@@ -98,5 +101,12 @@ public final class SleepGameTest implements FabricClientGameTest {
                 AfkCinematics.stop();
             });
         }
+    }
+
+    private static void sleep(ServerPlayer player, BlockPos bed) {
+        // Bed interaction also registers the sleeper for vanilla's night-skip calculation.
+        player.level().getBlockState(bed).useWithoutItem(player.level(), player,
+            new BlockHitResult(Vec3.atCenterOf(bed), Direction.UP, bed, false));
+        require(player.isSleeping(), "Vanilla bed interaction did not put the fixture player to sleep");
     }
 }
