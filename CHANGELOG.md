@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 0.1.0-alpha.2
+## 0.1.0-alpha.1
 
 Press **F6** to film while you walk, swim, ride, fly or fish. Press it again to return to your normal view. The key is configurable; automatic AFK views still use the idle timer.
 
@@ -22,6 +22,10 @@ Press **F6** to film while you walk, swim, ride, fly or fish. Press it again to 
 Install only the jar listing your Minecraft version and loader. Fabric requires Fabric API. No server installation is needed.
 
 Still an early alpha. Camera views need nearby loaded terrain; shader packs and individual HUD or camera mods may behave differently.
+
+Changelog: https://github.com/ohne-b/afk-cinematics/compare/v0.0.1-alpha.1...v0.1.0-alpha.1
+
+Please [open an issue](https://github.com/ohne-b/afk-cinematics/issues/new) to report bugs or request features.
 
 ## 0.0.1-alpha.1
 

@@ -220,6 +220,11 @@ side = "CLIENT"
         self.assertEqual([t["game_versions"] for t, _, _ in groups], ["26.1\n26.1.1", "26.1.2"])
 
     def test_complete_bundle_copies_only_primary_jars_and_archives_pinned_source(self):
+        notes = ("- A change (#1).\n\n"
+                 f"Changelog: https://github.com/{release.REPOSITORY}/compare/v0.0.9...v0.1.0\n\n"
+                 f"Please [open an issue](https://github.com/{release.REPOSITORY}/issues/new) "
+                 "to report bugs or request features.")
+        (self.root / "CHANGELOG.md").write_text(f"## Unreleased\n\n{notes}\n")
         release.prepare(self.root, "0.1.0")
         target = self.target("fabric")
         license_text = "SPDX-License-Identifier: GPL-3.0-only\n"
@@ -248,7 +253,9 @@ side = "CLIENT"
         self.assertEqual((out / jar_path.name).read_bytes(), jar_path.read_bytes())
         self.assertFalse((out / "unrelated-sources.jar").exists())
         self.assertEqual(len((out / "SHA256SUMS").read_text().splitlines()), 2)
-        self.assertIn("/tree/" + "a" * 40, (out / "release-notes.md").read_text())
+        self.assertEqual((out / "release-notes.md").read_text(), notes + "\n")
+        with ZipFile(out / "afk-cinematics-0.1.0-source.zip") as source:
+            self.assertEqual(source.read("LICENSE.md").decode(), license_text)
         # Ambiguous downloads must fail before replacing any release files.
         (incoming / "duplicate").mkdir()
         (incoming / "duplicate" / target["file"]).write_bytes(jar_path.read_bytes())
