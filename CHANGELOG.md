@@ -2,44 +2,26 @@
 
 ## Unreleased
 
-- Let automatic AFK resume after focus changes without releasing quarantined input. (#64)
-- Lower following cameras beneath low cover to keep a wider, continuous view while walking or riding. (#63)
-- Keep swimming shots through surface hops; allow Roadside and Overlook from rest and at ordinary minecart speeds. (#62)
-- Keep scrolling from changing settings, add arrow-key choice controls and remove obsolete shot-planning code. (#61)
-- Retain clear travel angles around trees and check approaching obstructions before moving the camera. (#60)
-- Add planted Roadside and Overlook travel shots with panning and early handoffs. (#60)
-- Ease black bars in more smoothly; remove them immediately on exit. (#60)
-- Choose instant cuts or brief fades between shots; keep camera speed and animated bars independent. (#59)
-- Keep camera movement calm at every shot length; use game FOV by default with an optional 30–140° slider. (#58)
-- Cut directly between shots, animate letterbox entry and exit, and add 6–10 second shots. (#57)
-- Tighten travel views through sharp turns, blend nearby angles and keep moving shots flowing through fades. (#56)
-- Keep walking views wider beside walls, ease hill adjustments and soften forward jump pulses. (#55)
-- Remove white click-focus bars and place slider percentages beside their tracks. (#55)
-- Smooth F6 walking, jumps, hills and falls, with a switch to exclude front travel shots. (#54)
-- Compact settings rows, a narrower sidebar and a two-column shot picker; remove the Start cinematic button. (#54)
-- One F6 mode for walking, swimming, riding, flight and fishing with normal controls. Automatic fishing still starts per cast and keeps music between quick casts. (#53)
-- Fixed settings categories with controls on the right, plus occasional wildlife views during AFK scenery. (#53)
-- Pull travel cameras closer around obstacles, retain usable takes when replacement shots fail, and use F6 as the default start key. (#52)
-- Keep minecart views through passive rider rotation and aim close tunnel views at the rider. (#51)
-- Keep fishing music between quick casts and keep minecart takes through ordinary bends. (#50)
-- Hide third-party HUDs that respect F1, including direct visibility reads during rendering. (#49)
-- Open travel and fishing shot choices directly from Activities. (#48)
-- Keep a close trailing minecart view available in straight rail tunnels. (#47)
-- Use familiar settings choices, show the start key and explain unavailable starts. (#46)
-- Choose cinematic playlists, set their volume and control music from chat. (#45)
-- Keep cinematics running in chat, with optional mouse look after a manual start. (#44)
-- Simplify settings navigation and give each activity its own start choice. (#43)
-- Hide HUD follows F1 visibility without changing the player's saved HUD state (#42).
-- Minecart travel views, normal FPS caps during activities and a configurable K start/stop key (#41).
-- Four new scenery drives, less repetitive sequences, adjustable player-shot frequency and new shots enabled on update (#31).
-- Controller-look wake detection and smooth resumption after client hitches (#32).
-- Boat, raft and flight tracking views with optional steering during manually started cinematics (#33).
-- Fishing views follow the angler, line and bobber, with prompt entry and normal reeling controls (#34).
-- Low, high and broadside travel views follow gradual turns and cover sharp course changes (#35).
-- Manually started Elytra views keep filming during normal rocket boosts (#36).
-- Moving takes continue through Next-shot preparation and fades (#37).
-- The shot picker separates scenery, travel and fishing selections, with presets scoped to each set (#38).
-- Compatible Minecraft versions share release jars, reducing downloads from 34 files to 19 while keeping every supported version (#39).
+## 0.1.0-alpha.2
+
+Press **F6** to film while you walk, swim, ride, fly or fish. Press it again to return to your normal view. The key is configurable; automatic AFK views still use the idle timer.
+
+- Travel cameras for boats, rafts, minecarts, mounts and flight, with normal controls and Elytra rocket use. Front-facing travel shots can be switched off. (#33, #35, #36, #41, #52–54)
+- Smoother following over jumps, hills and sharp turns. Cameras adjust around trees, walls and low cover, and swimming views stay steady through surface hops. (#47, #50–52, #54–56, #60, #62, #63)
+- Roadside and Overlook shots plant the camera beside your route and pan as you pass. (#60, #62)
+- Fishing views frame the angler and bobber, start once per cast and keep music playing briefly between casts. (#34, #50, #53)
+- More scenery drives, less repetition and occasional wildlife views during automatic AFK cinematics. New shot types are enabled when added. (#31, #53)
+- Choose instant cuts or short fades, including a 6–10 second shot length without speeding up camera movement. Black bars ease in on entry and disappear immediately on exit. (#37, #57–60)
+- Use your game FOV or choose a cinematic FOV from 30–140°. (#58)
+- Cleaner settings with a compact sidebar, grouped shot choices, clearer sliders and keyboard navigation. (#38, #43, #46, #48, #53–55, #61)
+- Choose game music, creative music, music discs or a custom sound event, adjust volume and control music from chat. Chat can stay open during cinematics. (#44, #45)
+- Hide HUD exposes F1 visibility to other HUD mods during rendering without changing your saved F1 state. The cinematic FPS cap applies only to automatic AFK views. (#41, #42, #49)
+- Fix automatic AFK failing to restart after focus changes; improve controller-look detection and recovery after client hitches. (#32, #64)
+- Compatible Minecraft versions now share jars: 19 downloads cover the same 17 versions on Fabric and NeoForge. (#39)
+
+Install only the jar listing your Minecraft version and loader. Fabric requires Fabric API. No server installation is needed.
+
+Still an early alpha. Camera views need nearby loaded terrain; shader packs and individual HUD or camera mods may behave differently.
 
 ## 0.0.1-alpha.1
 
